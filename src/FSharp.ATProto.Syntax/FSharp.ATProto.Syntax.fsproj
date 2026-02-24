@@ -12,6 +12,11 @@
     <Compile Include="Did.fs" />
     <Compile Include="RecordKey.fs" />
     <Compile Include="Cid.fs" />
+    <Compile Include="AtUri.fs" />
+    <Compile Include="AtDateTime.fs" />
+    <Compile Include="AtIdentifier.fs" />
+    <Compile Include="Language.fs" />
+    <Compile Include="Uri.fs" />
   </ItemGroup>
 
 </Project>

@@ -13,6 +13,11 @@
     <Compile Include="DidTests.fs" />
     <Compile Include="RecordKeyTests.fs" />
     <Compile Include="CidTests.fs" />
+    <Compile Include="AtUriTests.fs" />
+    <Compile Include="AtDateTimeTests.fs" />
+    <Compile Include="AtIdentifierTests.fs" />
+    <Compile Include="LanguageTests.fs" />
+    <Compile Include="UriTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 
