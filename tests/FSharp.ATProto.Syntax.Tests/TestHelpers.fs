@@ -16,3 +16,4 @@ let loadTestLines (relativePath: string) =
     let fullPath = Path.Combine(basePath, "extern", "atproto-interop-tests", relativePath)
     File.ReadAllLines(fullPath)
     |> Array.filter (fun line -> line.Length > 0 && not (line.StartsWith("#")))
+    |> Array.distinct
