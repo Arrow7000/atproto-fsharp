@@ -9,6 +9,7 @@
     <Compile Include="TestHelpers.fs" />
     <Compile Include="TidTests.fs" />
     <Compile Include="HandleTests.fs" />
+    <Compile Include="NsidTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 

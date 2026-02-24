@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="Tid.fs" />
     <Compile Include="Handle.fs" />
+    <Compile Include="Nsid.fs" />
   </ItemGroup>
 
 </Project>
