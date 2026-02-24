@@ -12,6 +12,7 @@
     <Compile Include="NsidTests.fs" />
     <Compile Include="DidTests.fs" />
     <Compile Include="RecordKeyTests.fs" />
+    <Compile Include="CidTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 

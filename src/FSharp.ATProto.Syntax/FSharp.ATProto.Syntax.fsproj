@@ -11,6 +11,7 @@
     <Compile Include="Nsid.fs" />
     <Compile Include="Did.fs" />
     <Compile Include="RecordKey.fs" />
+    <Compile Include="Cid.fs" />
   </ItemGroup>
 
 </Project>
