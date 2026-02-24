@@ -9,6 +9,7 @@
     <Compile Include="Tid.fs" />
     <Compile Include="Handle.fs" />
     <Compile Include="Nsid.fs" />
+    <Compile Include="Did.fs" />
   </ItemGroup>
 
 </Project>

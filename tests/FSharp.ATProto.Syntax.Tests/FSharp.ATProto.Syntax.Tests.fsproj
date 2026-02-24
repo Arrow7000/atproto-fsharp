@@ -10,6 +10,7 @@
     <Compile Include="TidTests.fs" />
     <Compile Include="HandleTests.fs" />
     <Compile Include="NsidTests.fs" />
+    <Compile Include="DidTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 
