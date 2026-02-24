@@ -1,5 +1,6 @@
 module DrislTests
 
+open System
 open Expecto
 open FSharp.ATProto.DRISL
 open FSharp.ATProto.Syntax
@@ -75,5 +76,84 @@ let tests =
                 Expect.equal bytes.[2] 0x58uy "byte string 1-byte length"
                 Expect.equal bytes.[3] 0x25uy "37 bytes"
                 Expect.equal bytes.[4] 0x00uy "identity multibase prefix"
+        ]
+
+        testList "decode" [
+            testCase "null" <| fun () ->
+                let result = Drisl.decode [| 0xF6uy |]
+                Expect.equal result (Ok AtpValue.Null) "null"
+
+            testCase "true" <| fun () ->
+                let result = Drisl.decode [| 0xF5uy |]
+                Expect.equal result (Ok (AtpValue.Bool true)) "true"
+
+            testCase "integer 123" <| fun () ->
+                let result = Drisl.decode [| 0x18uy; 0x7Buy |]
+                Expect.equal result (Ok (AtpValue.Integer 123L)) "integer 123"
+
+            testCase "negative integer" <| fun () ->
+                let result = Drisl.decode [| 0x20uy |]
+                Expect.equal result (Ok (AtpValue.Integer -1L)) "negative -1"
+
+            testCase "string" <| fun () ->
+                let result = Drisl.decode [| 0x63uy; 0x61uy; 0x62uy; 0x63uy |]
+                Expect.equal result (Ok (AtpValue.String "abc")) "string abc"
+
+            testCase "empty array" <| fun () ->
+                let result = Drisl.decode [| 0x80uy |]
+                Expect.equal result (Ok (AtpValue.Array [])) "empty array"
+
+            testCase "empty map" <| fun () ->
+                let result = Drisl.decode [| 0xA0uy |]
+                Expect.equal result (Ok (AtpValue.Object Map.empty)) "empty map"
+
+            testCase "rejects floats" <| fun () ->
+                // 0xFB = double float, followed by 8 bytes
+                let bytes = Array.concat [| [| 0xFBuy |]; BitConverter.GetBytes(1.5) |> Array.rev |]
+                let result = Drisl.decode bytes
+                Expect.isError result "should reject floats"
+
+            testCase "rejects trailing bytes" <| fun () ->
+                let result = Drisl.decode [| 0xF6uy; 0x00uy |]
+                Expect.isError result "should reject trailing bytes"
+        ]
+
+        testList "roundtrip" [
+            testCase "encode then decode primitives" <| fun () ->
+                let values = [
+                    AtpValue.Null
+                    AtpValue.Bool true
+                    AtpValue.Bool false
+                    AtpValue.Integer 0L
+                    AtpValue.Integer 123L
+                    AtpValue.Integer -1L
+                    AtpValue.Integer Int64.MaxValue
+                    AtpValue.Integer Int64.MinValue
+                    AtpValue.String ""
+                    AtpValue.String "hello world"
+                    AtpValue.Bytes [||]
+                    AtpValue.Bytes [| 0x01uy; 0x02uy |]
+                ]
+                for v in values do
+                    let encoded = Drisl.encode v
+                    let decoded = Drisl.decode encoded |> Result.defaultWith failwith
+                    let reEncoded = Drisl.encode decoded
+                    Expect.equal reEncoded encoded (sprintf "roundtrip %A" v)
+
+            testCase "encode then decode nested structure" <| fun () ->
+                let value = AtpValue.Object (Map.ofList [
+                    ("arr", AtpValue.Array [AtpValue.Integer 1L; AtpValue.Integer 2L])
+                    ("nested", AtpValue.Object (Map.ofList [("x", AtpValue.String "y")]))
+                ])
+                let encoded = Drisl.encode value
+                let decoded = Drisl.decode encoded
+                Expect.equal decoded (Ok value) "nested roundtrip"
+
+            testCase "encode then decode CID link" <| fun () ->
+                let cid = CidBinary.compute [| 0xAAuy; 0xBBuy |]
+                let value = AtpValue.Link cid
+                let encoded = Drisl.encode value
+                let decoded = Drisl.decode encoded
+                Expect.equal decoded (Ok value) "CID link roundtrip"
         ]
     ]

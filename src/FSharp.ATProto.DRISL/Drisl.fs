@@ -50,3 +50,65 @@ module Drisl =
         let writer = CborWriter(CborConformanceMode.Canonical)
         writeValue writer value
         writer.Encode()
+
+    let rec private readValue (reader: CborReader) : AtpValue =
+        match reader.PeekState() with
+        | CborReaderState.Null ->
+            reader.ReadNull()
+            AtpValue.Null
+        | CborReaderState.Boolean ->
+            AtpValue.Bool (reader.ReadBoolean())
+        | CborReaderState.UnsignedInteger
+        | CborReaderState.NegativeInteger ->
+            AtpValue.Integer (reader.ReadInt64())
+        | CborReaderState.TextString ->
+            AtpValue.String (reader.ReadTextString())
+        | CborReaderState.ByteString ->
+            AtpValue.Bytes (reader.ReadByteString())
+        | CborReaderState.Tag ->
+            let tag = reader.ReadTag()
+            if tag <> cidTag then
+                failwithf "Unsupported CBOR tag: %d" (uint64 tag)
+            let bytes = reader.ReadByteString()
+            if bytes.Length < 2 || bytes.[0] <> 0x00uy then
+                failwith "Invalid CID in tag 42: missing 0x00 prefix"
+            let cidBytes = bytes.[1..]
+            match CidBinary.fromBytes cidBytes with
+            | Ok cid -> AtpValue.Link cid
+            | Error e -> failwithf "Invalid CID in tag 42: %s" e
+        | CborReaderState.StartArray ->
+            let _count = reader.ReadStartArray()
+            let items = System.Collections.Generic.List<AtpValue>()
+            while reader.PeekState() <> CborReaderState.EndArray do
+                items.Add(readValue reader)
+            reader.ReadEndArray()
+            AtpValue.Array (items |> Seq.toList)
+        | CborReaderState.StartMap ->
+            let _count = reader.ReadStartMap()
+            let mutable map = Map.empty
+            while reader.PeekState() <> CborReaderState.EndMap do
+                if reader.PeekState() <> CborReaderState.TextString then
+                    failwith "DRISL map keys must be text strings"
+                let key = reader.ReadTextString()
+                let value = readValue reader
+                map <- Map.add key value map
+            reader.ReadEndMap()
+            AtpValue.Object map
+        | CborReaderState.HalfPrecisionFloat
+        | CborReaderState.SinglePrecisionFloat
+        | CborReaderState.DoublePrecisionFloat ->
+            failwith "Floats are not allowed in DRISL"
+        | state ->
+            failwithf "Unexpected CBOR state: %A" state
+
+    /// Decode DRISL-CBOR bytes to an AtpValue.
+    let decode (data: byte[]) : Result<AtpValue, string> =
+        try
+            let reader = CborReader(ReadOnlyMemory(data), CborConformanceMode.Canonical)
+            let result = readValue reader
+            if reader.BytesRemaining > 0 then
+                Error "Trailing bytes after CBOR value"
+            else
+                Ok result
+        with ex ->
+            Error ex.Message
