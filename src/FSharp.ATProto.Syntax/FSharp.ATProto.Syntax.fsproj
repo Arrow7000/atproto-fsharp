@@ -10,6 +10,7 @@
     <Compile Include="Handle.fs" />
     <Compile Include="Nsid.fs" />
     <Compile Include="Did.fs" />
+    <Compile Include="RecordKey.fs" />
   </ItemGroup>
 
 </Project>
