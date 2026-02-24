@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Varint.fs" />
+    <Compile Include="Base32.fs" />
+    <Compile Include="CidBinary.fs" />
+    <Compile Include="AtpValue.fs" />
+    <Compile Include="Drisl.fs" />
+    <Compile Include="AtpJson.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FSharp.ATProto.Syntax\FSharp.ATProto.Syntax.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Formats.Cbor" Version="9.0.3" />
+  </ItemGroup>
+
+</Project>

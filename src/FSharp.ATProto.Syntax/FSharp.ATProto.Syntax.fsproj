@@ -19,4 +19,8 @@
     <Compile Include="Uri.fs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="FSharp.ATProto.DRISL" />
+  </ItemGroup>
+
 </Project>
