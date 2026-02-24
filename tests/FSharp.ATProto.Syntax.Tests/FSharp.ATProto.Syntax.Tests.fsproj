@@ -18,6 +18,7 @@
     <Compile Include="AtIdentifierTests.fs" />
     <Compile Include="LanguageTests.fs" />
     <Compile Include="UriTests.fs" />
+    <Compile Include="PropertyTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 
