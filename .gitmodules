@@ -1,3 +1,6 @@
 [submodule "extern/atproto-interop-tests"]
 	path = extern/atproto-interop-tests
 	url = https://github.com/bluesky-social/atproto-interop-tests.git
+[submodule "extern/atproto"]
+	path = extern/atproto
+	url = https://github.com/bluesky-social/atproto.git
