@@ -9,6 +9,27 @@ open FSharp.ATProto.Core
 open FSharp.ATProto.Syntax
 
 /// <summary>
+/// A reference to a specific version of a record (post, like, etc.).
+/// Contains both the AT-URI (identifying the record) and the CID (identifying the exact version).
+/// </summary>
+type PostRef =
+    { /// <summary>The AT-URI of the record.</summary>
+      Uri: AtUri
+      /// <summary>The CID (content identifier) of the record version.</summary>
+      Cid: Cid }
+
+/// <summary>
+/// Image data for upload with a post.
+/// </summary>
+type ImageUpload =
+    { /// <summary>The raw binary image data.</summary>
+      Data: byte[]
+      /// <summary>The MIME type (e.g., <c>image/jpeg</c>, <c>image/png</c>).</summary>
+      MimeType: string
+      /// <summary>Alt text describing the image for accessibility.</summary>
+      AltText: string }
+
+/// <summary>
 /// High-level convenience methods for common Bluesky operations:
 /// posting, replying, liking, reposting, following, blocking, uploading blobs, and deleting records.
 /// All methods require an authenticated <see cref="AtpAgent"/>.
@@ -34,6 +55,9 @@ module Bluesky =
               SwapCommit = None
               Validate = None }
 
+    let private toPostRef (output: ComAtprotoRepo.CreateRecord.Output) : PostRef =
+        { Uri = output.Uri; Cid = output.Cid }
+
     /// <summary>
     /// Create a post with pre-resolved facets. Use this when you have already detected
     /// and resolved rich text facets, or when you want full control over facet content.
@@ -41,15 +65,18 @@ module Bluesky =
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="text">The post text content.</param>
     /// <param name="facets">Pre-resolved facets (mentions, links, hashtags). Pass an empty list for plain text.</param>
-    /// <returns>The created record's AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>A <see cref="PostRef"/> with the AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
     let postWith (agent: AtpAgent) (text: string) (facets: AppBskyRichtext.Facet.Facet list)
-        : Task<Result<ComAtprotoRepo.CreateRecord.Output, XrpcError>> =
-        let record =
-            {| ``$type`` = AppBskyFeed.Post.TypeId
-               text = text
-               createdAt = nowTimestamp ()
-               facets = if facets.IsEmpty then null else facets |> box |}
-        createRecord agent "app.bsky.feed.post" record
+        : Task<Result<PostRef, XrpcError>> =
+        task {
+            let record =
+                {| ``$type`` = AppBskyFeed.Post.TypeId
+                   text = text
+                   createdAt = nowTimestamp ()
+                   facets = if facets.IsEmpty then null else facets |> box |}
+            let! result = createRecord agent "app.bsky.feed.post" record
+            return result |> Result.map toPostRef
+        }
 
     /// <summary>
     /// Create a post with automatic rich text detection.
@@ -57,7 +84,7 @@ module Bluesky =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="text">The post text. Mentions (<c>@handle</c>), links (<c>https://...</c>), and hashtags (<c>#tag</c>) are auto-detected.</param>
-    /// <returns>The created record's AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>A <see cref="PostRef"/> with the AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
     /// <remarks>
     /// Internally calls <see cref="RichText.parse"/> to detect and resolve facets before creating the post.
     /// Unresolvable mentions are silently omitted from facets.
@@ -69,7 +96,7 @@ module Bluesky =
     /// </code>
     /// </example>
     let post (agent: AtpAgent) (text: string)
-        : Task<Result<ComAtprotoRepo.CreateRecord.Output, XrpcError>> =
+        : Task<Result<PostRef, XrpcError>> =
         task {
             let! facets = RichText.parse agent text
             return! postWith agent text facets
@@ -80,19 +107,17 @@ module Bluesky =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="text">The reply text. Mentions, links, and hashtags are auto-detected.</param>
-    /// <param name="parentUri">The AT-URI of the post being directly replied to.</param>
-    /// <param name="parentCid">The CID of the post being directly replied to.</param>
-    /// <param name="rootUri">The AT-URI of the thread root post. Same as <paramref name="parentUri"/> for top-level replies.</param>
-    /// <param name="rootCid">The CID of the thread root post. Same as <paramref name="parentCid"/> for top-level replies.</param>
-    /// <returns>The created record's AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
+    /// <param name="parent">A <see cref="PostRef"/> for the post being directly replied to.</param>
+    /// <param name="root">A <see cref="PostRef"/> for the thread root post. Same as <paramref name="parent"/> for top-level replies.</param>
+    /// <returns>A <see cref="PostRef"/> with the AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
     /// <remarks>
     /// The AT Protocol threading model requires both parent and root references.
     /// For a reply to a top-level post, the parent and root are the same.
     /// For a reply deeper in a thread, the root points to the original post
     /// while the parent points to the immediate post being replied to.
     /// </remarks>
-    let reply (agent: AtpAgent) (text: string) (parentUri: string) (parentCid: string) (rootUri: string) (rootCid: string)
-        : Task<Result<ComAtprotoRepo.CreateRecord.Output, XrpcError>> =
+    let reply (agent: AtpAgent) (text: string) (parent: PostRef) (root: PostRef)
+        : Task<Result<PostRef, XrpcError>> =
         task {
             let! facets = RichText.parse agent text
             let record =
@@ -100,25 +125,29 @@ module Bluesky =
                    text = text
                    createdAt = nowTimestamp ()
                    facets = if facets.IsEmpty then null else facets |> box
-                   reply = {| parent = {| uri = parentUri; cid = parentCid |}
-                              root = {| uri = rootUri; cid = rootCid |} |} |}
-            return! createRecord agent "app.bsky.feed.post" record
+                   reply = {| parent = {| uri = AtUri.value parent.Uri; cid = Cid.value parent.Cid |}
+                              root = {| uri = AtUri.value root.Uri; cid = Cid.value root.Cid |} |} |}
+            let! result = createRecord agent "app.bsky.feed.post" record
+            return result |> Result.map toPostRef
         }
 
     /// <summary>
     /// Like a post or other record.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="uri">The AT-URI of the record to like (e.g., <c>at://did:plc:.../app.bsky.feed.post/...</c>).</param>
+    /// <param name="uri">The AT-URI of the record to like.</param>
     /// <param name="cid">The CID of the record to like.</param>
-    /// <returns>The created like record's AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
-    let like (agent: AtpAgent) (uri: string) (cid: string)
-        : Task<Result<ComAtprotoRepo.CreateRecord.Output, XrpcError>> =
-        let record =
-            {| ``$type`` = AppBskyFeed.Like.TypeId
-               createdAt = nowTimestamp ()
-               subject = {| uri = uri; cid = cid |} |}
-        createRecord agent "app.bsky.feed.like" record
+    /// <returns>The AT-URI of the created like record on success, or an <see cref="XrpcError"/>.</returns>
+    let like (agent: AtpAgent) (uri: AtUri) (cid: Cid)
+        : Task<Result<AtUri, XrpcError>> =
+        task {
+            let record =
+                {| ``$type`` = AppBskyFeed.Like.TypeId
+                   createdAt = nowTimestamp ()
+                   subject = {| uri = AtUri.value uri; cid = Cid.value cid |} |}
+            let! result = createRecord agent "app.bsky.feed.like" record
+            return result |> Result.map (fun o -> o.Uri)
+        }
 
     /// <summary>
     /// Repost (retweet) a post or other record.
@@ -126,59 +155,68 @@ module Bluesky =
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="uri">The AT-URI of the record to repost.</param>
     /// <param name="cid">The CID of the record to repost.</param>
-    /// <returns>The created repost record's AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
-    let repost (agent: AtpAgent) (uri: string) (cid: string)
-        : Task<Result<ComAtprotoRepo.CreateRecord.Output, XrpcError>> =
-        let record =
-            {| ``$type`` = AppBskyFeed.Repost.TypeId
-               createdAt = nowTimestamp ()
-               subject = {| uri = uri; cid = cid |} |}
-        createRecord agent "app.bsky.feed.repost" record
+    /// <returns>The AT-URI of the created repost record on success, or an <see cref="XrpcError"/>.</returns>
+    let repost (agent: AtpAgent) (uri: AtUri) (cid: Cid)
+        : Task<Result<AtUri, XrpcError>> =
+        task {
+            let record =
+                {| ``$type`` = AppBskyFeed.Repost.TypeId
+                   createdAt = nowTimestamp ()
+                   subject = {| uri = AtUri.value uri; cid = Cid.value cid |} |}
+            let! result = createRecord agent "app.bsky.feed.repost" record
+            return result |> Result.map (fun o -> o.Uri)
+        }
 
     /// <summary>
     /// Follow a user by their DID.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="did">The DID of the user to follow.</param>
-    /// <returns>The created follow record's AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
-    let follow (agent: AtpAgent) (did: string)
-        : Task<Result<ComAtprotoRepo.CreateRecord.Output, XrpcError>> =
-        let record =
-            {| ``$type`` = AppBskyGraph.Follow.TypeId
-               createdAt = nowTimestamp ()
-               subject = did |}
-        createRecord agent "app.bsky.graph.follow" record
+    /// <returns>The AT-URI of the created follow record on success, or an <see cref="XrpcError"/>.</returns>
+    let follow (agent: AtpAgent) (did: Did)
+        : Task<Result<AtUri, XrpcError>> =
+        task {
+            let record =
+                {| ``$type`` = AppBskyGraph.Follow.TypeId
+                   createdAt = nowTimestamp ()
+                   subject = Did.value did |}
+            let! result = createRecord agent "app.bsky.graph.follow" record
+            return result |> Result.map (fun o -> o.Uri)
+        }
 
     /// <summary>
     /// Block a user by their DID.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="did">The DID of the user to block.</param>
-    /// <returns>The created block record's AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
-    let block (agent: AtpAgent) (did: string)
-        : Task<Result<ComAtprotoRepo.CreateRecord.Output, XrpcError>> =
-        let record =
-            {| ``$type`` = AppBskyGraph.Block.TypeId
-               createdAt = nowTimestamp ()
-               subject = did |}
-        createRecord agent "app.bsky.graph.block" record
+    /// <returns>The AT-URI of the created block record on success, or an <see cref="XrpcError"/>.</returns>
+    let block (agent: AtpAgent) (did: Did)
+        : Task<Result<AtUri, XrpcError>> =
+        task {
+            let record =
+                {| ``$type`` = AppBskyGraph.Block.TypeId
+                   createdAt = nowTimestamp ()
+                   subject = Did.value did |}
+            let! result = createRecord agent "app.bsky.graph.block" record
+            return result |> Result.map (fun o -> o.Uri)
+        }
 
     /// <summary>
     /// Delete a record by its AT-URI.
     /// Can be used to unlike, un-repost, unfollow, unblock, or delete a post.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="atUri">The AT-URI of the record to delete (e.g., <c>at://did:plc:.../app.bsky.feed.like/...</c>).</param>
+    /// <param name="atUri">The AT-URI of the record to delete.</param>
     /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
     /// <remarks>
     /// The AT-URI is parsed to extract the repo DID, collection, and record key.
     /// This is a general-purpose delete; pass the AT-URI returned when the record was created.
     /// </remarks>
-    let deleteRecord (agent: AtpAgent) (atUri: string)
+    let deleteRecord (agent: AtpAgent) (atUri: AtUri)
         : Task<Result<unit, XrpcError>> =
         task {
             // Parse AT-URI: at://did/collection/rkey
-            let parts = atUri.Replace("at://", "").Split('/')
+            let parts = (AtUri.value atUri).Replace("at://", "").Split('/')
             let repo = parts.[0]
             let collection = Nsid.parse parts.[1] |> Result.defaultWith failwith
             let rkey = RecordKey.parse parts.[2] |> Result.defaultWith failwith
@@ -255,25 +293,25 @@ module Bluesky =
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="text">The post text. Mentions, links, and hashtags are auto-detected.</param>
     /// <param name="images">
-    /// A list of images to attach, each as a tuple of <c>(imageBytes, mimeType, altText)</c>.
-    /// The MIME type should be e.g. <c>image/jpeg</c> or <c>image/png</c>.
-    /// Alt text is required for accessibility.
+    /// A list of <see cref="ImageUpload"/> records describing the images to attach.
+    /// Alt text is required for accessibility. Bluesky supports up to 4 images per post.
     /// </param>
-    /// <returns>The created record's AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>A <see cref="PostRef"/> with the AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
     /// <remarks>
     /// Images are uploaded sequentially. If any image upload fails, the entire operation
-    /// returns the error without creating the post. Bluesky supports up to 4 images per post.
+    /// returns the error without creating the post.
     /// </remarks>
     /// <example>
     /// <code>
     /// let imageBytes = System.IO.File.ReadAllBytes("photo.jpg")
-    /// let! result = Bluesky.postWithImages agent "Check this out!" [ (imageBytes, "image/jpeg", "A photo") ]
+    /// let! result = Bluesky.postWithImages agent "Check this out!"
+    ///     [ { Data = imageBytes; MimeType = "image/jpeg"; AltText = "A photo" } ]
     /// </code>
     /// </example>
-    let postWithImages (agent: AtpAgent) (text: string) (images: (byte[] * string * string) list)
-        : Task<Result<ComAtprotoRepo.CreateRecord.Output, XrpcError>> =
+    let postWithImages (agent: AtpAgent) (text: string) (images: ImageUpload list)
+        : Task<Result<PostRef, XrpcError>> =
         task {
-            match! uploadAllBlobs agent images with
+            match! uploadAllBlobs agent (images |> List.map (fun i -> (i.Data, i.MimeType, i.AltText))) with
             | Error e -> return Error e
             | Ok blobRefs ->
                 let! facets = RichText.parse agent text
@@ -287,5 +325,6 @@ module Bluesky =
                        createdAt = nowTimestamp ()
                        facets = if facets.IsEmpty then null else facets |> box
                        embed = embed |}
-                return! createRecord agent "app.bsky.feed.post" record
+                let! result = createRecord agent "app.bsky.feed.post" record
+                return result |> Result.map toPostRef
         }

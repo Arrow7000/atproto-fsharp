@@ -6,6 +6,17 @@ open FSharp.ATProto.Core
 open FSharp.ATProto.Syntax
 
 /// <summary>
+/// Errors that can occur during identity resolution.
+/// </summary>
+type IdentityError =
+    /// <summary>An XRPC call failed (e.g., handle resolution).</summary>
+    | XrpcError of XrpcError
+    /// <summary>Bidirectional verification failed (e.g., handle-DID mismatch).</summary>
+    | VerificationFailed of string
+    /// <summary>A DID document could not be fetched or parsed.</summary>
+    | DocumentParseError of string
+
+/// <summary>
 /// AT Protocol identity resolution: DID documents, handle resolution, and bidirectional verification.
 /// Supports both <c>did:plc</c> (via PLC directory) and <c>did:web</c> (via .well-known) methods.
 /// </summary>
@@ -99,32 +110,33 @@ module Identity =
     /// or <c>did:web:</c> (resolved via <c>.well-known/did.json</c>).
     /// </param>
     /// <returns>
-    /// <c>Ok</c> with the parsed identity on success, or <c>Error</c> with a descriptive message
+    /// <c>Ok</c> with the parsed identity on success, or <c>Error</c> with an <see cref="IdentityError"/>
     /// on HTTP failure or unsupported DID method.
     /// </returns>
-    let resolveDid (agent: AtpAgent) (did: string) : Task<Result<AtprotoIdentity, string>> =
+    let resolveDid (agent: AtpAgent) (did: Did) : Task<Result<AtprotoIdentity, IdentityError>> =
         task {
-            if did.StartsWith("did:plc:") then
-                let url = $"{plcDirectoryUrl}/{did}"
+            let didStr = Did.value did
+            if didStr.StartsWith("did:plc:") then
+                let url = $"{plcDirectoryUrl}/{didStr}"
                 let! response = agent.HttpClient.GetAsync(url)
                 if response.IsSuccessStatusCode then
                     let! json = response.Content.ReadAsStringAsync()
                     let doc = JsonSerializer.Deserialize<JsonElement>(json)
-                    return parseDidDocument doc
+                    return parseDidDocument doc |> Result.mapError DocumentParseError
                 else
-                    return Error $"PLC directory returned {int response.StatusCode} for {did}"
-            elif did.StartsWith("did:web:") then
-                let domain = did.Substring(8)
+                    return Error (DocumentParseError $"PLC directory returned {int response.StatusCode} for {didStr}")
+            elif didStr.StartsWith("did:web:") then
+                let domain = didStr.Substring(8)
                 let url = $"https://{domain}/.well-known/did.json"
                 let! response = agent.HttpClient.GetAsync(url)
                 if response.IsSuccessStatusCode then
                     let! json = response.Content.ReadAsStringAsync()
                     let doc = JsonSerializer.Deserialize<JsonElement>(json)
-                    return parseDidDocument doc
+                    return parseDidDocument doc |> Result.mapError DocumentParseError
                 else
-                    return Error $"did:web resolution returned {int response.StatusCode} for {did}"
+                    return Error (DocumentParseError $"did:web resolution returned {int response.StatusCode} for {didStr}")
             else
-                return Error $"Unsupported DID method: {did}"
+                return Error (DocumentParseError $"Unsupported DID method: {didStr}")
         }
 
     /// <summary>
@@ -133,14 +145,13 @@ module Identity =
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="handle">The handle to resolve (e.g., <c>alice.bsky.social</c>).</param>
     /// <returns>
-    /// <c>Ok</c> with the DID string on success, or <c>Error</c> with an <see cref="XrpcError"/>
+    /// <c>Ok</c> with the resolved <see cref="Did"/> on success, or <c>Error</c> with an <see cref="IdentityError"/>
     /// if the handle cannot be resolved.
     /// </returns>
-    let resolveHandle (agent: AtpAgent) (handle: string) : Task<Result<string, XrpcError>> =
+    let resolveHandle (agent: AtpAgent) (handle: Handle) : Task<Result<Did, IdentityError>> =
         task {
-            let handleTyped = Handle.parse handle |> Result.defaultWith failwith
-            let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handleTyped }
-            return result |> Result.map (fun o -> Did.value o.Did)
+            let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handle }
+            return result |> Result.map (fun o -> o.Did) |> Result.mapError XrpcError
         }
 
     /// <summary>
@@ -168,31 +179,32 @@ module Identity =
     /// let! identity = Identity.resolveIdentity agent "alice.bsky.social"
     /// match identity with
     /// | Ok id -> printfn "DID: %s, Handle verified: %b" id.Did id.Handle.IsSome
-    /// | Error msg -> printfn "Resolution failed: %s" msg
+    /// | Error msg -> printfn "Resolution failed: %A" msg
     /// </code>
     /// </example>
-    let resolveIdentity (agent: AtpAgent) (identifier: string) : Task<Result<AtprotoIdentity, string>> =
+    let resolveIdentity (agent: AtpAgent) (identifier: string) : Task<Result<AtprotoIdentity, IdentityError>> =
         task {
             let isDid = identifier.StartsWith("did:")
             if isDid then
-                let! identity = resolveDid agent identifier
+                let did = Did.parse identifier |> Result.defaultWith (fun e -> failwith $"Invalid DID: {e}")
+                let! identity = resolveDid agent did
                 match identity with
                 | Error e -> return Error e
                 | Ok id ->
                     match id.Handle with
                     | None -> return Ok id
                     | Some handle ->
-                        let! reverseResult = resolveHandle agent handle
+                        let handleTyped = Handle.parse handle |> Result.defaultWith (fun _ -> failwith $"Invalid handle in DID doc: {handle}")
+                        let! reverseResult = resolveHandle agent handleTyped
                         match reverseResult with
-                        | Ok reverseDid when reverseDid = identifier -> return Ok id
+                        | Ok reverseDid when Did.value reverseDid = identifier -> return Ok id
                         | _ -> return Ok { id with Handle = None }
             else
                 // identifier is a handle
-                let! handleResult = resolveHandle agent identifier
+                let handleTyped = Handle.parse identifier |> Result.defaultWith (fun _ -> failwith $"Invalid handle: {identifier}")
+                let! handleResult = resolveHandle agent handleTyped
                 match handleResult with
-                | Error e ->
-                    let errorMsg = e.Error |> Option.defaultValue "unknown"
-                    return Error $"Handle resolution failed: {errorMsg}"
+                | Error e -> return Error e
                 | Ok did ->
                     let! identity = resolveDid agent did
                     match identity with

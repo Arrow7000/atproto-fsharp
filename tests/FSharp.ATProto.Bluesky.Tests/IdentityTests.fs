@@ -5,6 +5,7 @@ open System.Net
 open System.Text.Json
 open FSharp.ATProto.Bluesky
 open FSharp.ATProto.Core
+open FSharp.ATProto.Syntax
 open TestHelpers
 
 let private parseJson (json: string) =
@@ -97,7 +98,8 @@ let resolveTests =
                     jsonResponse HttpStatusCode.OK (JsonSerializer.Deserialize<JsonElement>(plcDidDoc))
                 else
                     emptyResponse HttpStatusCode.NotFound)
-            let result = Identity.resolveDid agent "did:plc:abc123" |> Async.AwaitTask |> Async.RunSynchronously
+            let did = Did.parse "did:plc:abc123" |> Result.defaultWith failwith
+            let result = Identity.resolveDid agent did |> Async.AwaitTask |> Async.RunSynchronously
             let identity = Expect.wantOk result "should resolve"
             Expect.equal identity.Did "did:plc:abc123" "did"
             Expect.equal identity.Handle (Some "alice.example.com") "handle"
@@ -110,13 +112,15 @@ let resolveTests =
                     jsonResponse HttpStatusCode.OK (JsonSerializer.Deserialize<JsonElement>(webDidDoc))
                 else
                     emptyResponse HttpStatusCode.NotFound)
-            let result = Identity.resolveDid agent "did:web:bob.example.com" |> Async.AwaitTask |> Async.RunSynchronously
+            let did = Did.parse "did:web:bob.example.com" |> Result.defaultWith failwith
+            let result = Identity.resolveDid agent did |> Async.AwaitTask |> Async.RunSynchronously
             let identity = Expect.wantOk result "should resolve"
             Expect.equal identity.Did "did:web:bob.example.com" "did"
 
         testCase "resolveDid returns error for unsupported method" <| fun _ ->
             let agent = createMockAgent (fun _ -> emptyResponse HttpStatusCode.NotFound)
-            let result = Identity.resolveDid agent "did:key:abc" |> Async.AwaitTask |> Async.RunSynchronously
+            let did = Did.parse "did:key:abc" |> Result.defaultWith failwith
+            let result = Identity.resolveDid agent did |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isError result "unsupported DID method"
 
         testCase "resolveHandle calls XRPC resolveHandle" <| fun _ ->
@@ -126,9 +130,10 @@ let resolveTests =
                 else
                     emptyResponse HttpStatusCode.NotFound)
             agent.Session <- Some { AccessJwt = "t"; RefreshJwt = "t"; Did = "did:plc:me"; Handle = "me.test" }
-            let result = Identity.resolveHandle agent "alice.example.com" |> Async.AwaitTask |> Async.RunSynchronously
+            let handle = Handle.parse "alice.example.com" |> Result.defaultWith failwith
+            let result = Identity.resolveHandle agent handle |> Async.AwaitTask |> Async.RunSynchronously
             let did = Expect.wantOk result "should resolve"
-            Expect.equal did "did:plc:abc123" "resolved DID"
+            Expect.equal (Did.value did) "did:plc:abc123" "resolved DID"
 
         testCase "resolveIdentity does bidirectional verification from handle" <| fun _ ->
             let agent = createMockAgent (fun req ->

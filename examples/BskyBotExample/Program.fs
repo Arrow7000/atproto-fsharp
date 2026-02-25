@@ -61,10 +61,9 @@ let main _ =
         // ---------------------------------------------------------------
         // For a reply, you need both the parent ref and the root ref.
         // When replying to a top-level post, parent and root are the same.
-        let postUriStr = AtUri.value post.Uri
-        let postCidStr = Cid.value post.Cid
+        // The post result is already a PostRef with typed Uri and Cid.
         let! replyResult =
-            Bluesky.reply agent "Replying to my own post!" postUriStr postCidStr postUriStr postCidStr
+            Bluesky.reply agent "Replying to my own post!" post post
 
         let _reply =
             match replyResult with
@@ -74,19 +73,19 @@ let main _ =
         // ---------------------------------------------------------------
         // 4. Like a post
         // ---------------------------------------------------------------
-        let! likeResult = Bluesky.like agent postUriStr postCidStr
+        let! likeResult = Bluesky.like agent post.Uri post.Cid
 
         match likeResult with
-        | Ok l -> printfn "Liked: %s" (AtUri.value l.Uri)
+        | Ok likeUri -> printfn "Liked: %s" (AtUri.value likeUri)
         | Error e -> printfn "Like failed: %A" e
 
         // ---------------------------------------------------------------
         // 5. Repost
         // ---------------------------------------------------------------
-        let! repostResult = Bluesky.repost agent postUriStr postCidStr
+        let! repostResult = Bluesky.repost agent post.Uri post.Cid
 
         match repostResult with
-        | Ok r -> printfn "Reposted: %s" (AtUri.value r.Uri)
+        | Ok repostUri -> printfn "Reposted: %s" (AtUri.value repostUri)
         | Error e -> printfn "Repost failed: %A" e
 
         // ---------------------------------------------------------------
@@ -94,31 +93,32 @@ let main _ =
         // ---------------------------------------------------------------
         // Use Identity.resolveIdentity (shown below) to resolve a handle to
         // a DID first if needed.
-        let! followResult = Bluesky.follow agent session.Did // following ourselves as demo
+        let sessionDid = Did.parse session.Did |> Result.defaultWith failwith
+        let! followResult = Bluesky.follow agent sessionDid // following ourselves as demo
 
         match followResult with
-        | Ok f -> printfn "Followed: %s" (AtUri.value f.Uri)
+        | Ok followUri -> printfn "Followed: %s" (AtUri.value followUri)
         | Error e -> printfn "Follow failed: %A" e
 
         // ---------------------------------------------------------------
         // 7. Delete a record (e.g. delete the post we just created)
         // ---------------------------------------------------------------
-        let! deleteResult = Bluesky.deleteRecord agent postUriStr
+        let! deleteResult = Bluesky.deleteRecord agent post.Uri
 
         match deleteResult with
-        | Ok () -> printfn "Deleted: %s" postUriStr
+        | Ok () -> printfn "Deleted: %s" (AtUri.value post.Uri)
         | Error e -> printfn "Delete failed: %A" e
 
         // ---------------------------------------------------------------
         // 8. Upload image + post
         // ---------------------------------------------------------------
-        // postWithImages takes a list of (bytes, mimeType, altText) tuples.
+        // postWithImages takes a list of ImageUpload records.
         // Up to 4 images per post.
         let dummyImage = Array.create 100 0uy // placeholder; use real image bytes
 
         let! imgPostResult =
             Bluesky.postWithImages agent "Post with an image attached" [
-                (dummyImage, "image/png", "A test image")
+                { Data = dummyImage; MimeType = "image/png"; AltText = "A test image" }
             ]
 
         match imgPostResult with
@@ -231,7 +231,7 @@ let main _ =
             printfn "  Handle: %s" (id.Handle |> Option.defaultValue "(unverified)")
             printfn "  PDS: %s" (id.PdsEndpoint |> Option.defaultValue "(unknown)")
         | Error e ->
-            printfn "Identity resolution failed: %s" e
+            printfn "Identity resolution failed: %A" e
 
         // ---------------------------------------------------------------
         // Pagination example (bonus)
@@ -278,7 +278,7 @@ let main _ =
         // 16. Get or create a conversation
         // ---------------------------------------------------------------
         // Pass a list of member DIDs. Using our own DID as a demo (self-chat).
-        let! convoResult = Chat.getConvoForMembers chatAgent [ session.Did ]
+        let! convoResult = Chat.getConvoForMembers chatAgent [ sessionDid ]
 
         let convo =
             match convoResult with

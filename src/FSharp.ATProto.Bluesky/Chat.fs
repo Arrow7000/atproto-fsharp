@@ -29,11 +29,10 @@ module Chat =
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="members">A list of DIDs of the conversation members (excluding the authenticated user, who is added automatically).</param>
     /// <returns>The conversation details, or an <see cref="XrpcError"/>.</returns>
-    let getConvoForMembers (agent: AtpAgent) (members: string list)
+    let getConvoForMembers (agent: AtpAgent) (members: Did list)
         : Task<Result<ChatBskyConvo.GetConvoForMembers.Output, XrpcError>> =
-        let membersDid = members |> List.map (fun m -> Did.parse m |> Result.defaultWith failwith)
         ChatBskyConvo.GetConvoForMembers.query agent
-            { Members = membersDid }
+            { Members = members }
 
     /// <summary>
     /// Send a plain text message to a conversation.
