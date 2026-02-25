@@ -7,7 +7,21 @@ open System.Text
 open System.Text.Json
 open System.Threading.Tasks
 
-/// XRPC transport for AT Protocol API calls.
+/// <summary>
+/// XRPC transport layer for AT Protocol API calls.
+/// Provides functions for executing queries (HTTP GET) and procedures (HTTP POST)
+/// against an authenticated <see cref="AtpAgent"/>.
+/// </summary>
+/// <remarks>
+/// All public functions in this module automatically handle:
+/// <list type="bullet">
+///   <item><description>Bearer token authentication from the agent's session.</description></item>
+///   <item><description>Automatic session refresh on 401 <c>ExpiredToken</c> responses (retries once with a new access token).</description></item>
+///   <item><description>Rate-limit retry on 429 responses (waits for the <c>Retry-After</c> duration, then retries once).</description></item>
+///   <item><description>JSON serialization/deserialization using <see cref="Json.options"/>.</description></item>
+///   <item><description>Extra headers from <see cref="AtpAgent.ExtraHeaders"/> (e.g. proxy headers).</description></item>
+/// </list>
+/// </remarks>
 module Xrpc =
 
     let private addAuth (agent: AtpAgent) (request: HttpRequestMessage) =
@@ -15,6 +29,8 @@ module Xrpc =
         | Some session ->
             request.Headers.Authorization <- AuthenticationHeaderValue("Bearer", session.AccessJwt)
         | None -> ()
+        for (key, value) in agent.ExtraHeaders do
+            request.Headers.TryAddWithoutValidation(key, value) |> ignore
 
     let private tryDeserializeError (response: HttpResponseMessage) : Task<XrpcError> =
         task {
@@ -77,7 +93,20 @@ module Xrpc =
                 return false
         }
 
-    /// Execute an XRPC query (HTTP GET) with no parameters.
+    /// <summary>
+    /// Executes an XRPC query (HTTP GET) with no query-string parameters.
+    /// </summary>
+    /// <param name="nsid">The NSID of the XRPC method (e.g. <c>"app.bsky.actor.getProfile"</c>).</param>
+    /// <param name="agent">The <see cref="AtpAgent"/> to send the request through.</param>
+    /// <typeparam name="O">The output type to deserialize the JSON response body into.</typeparam>
+    /// <returns>
+    /// A <c>Task</c> resolving to <c>Ok</c> with the deserialized output on success,
+    /// or <c>Error</c> with an <see cref="XrpcError"/> on failure.
+    /// </returns>
+    /// <remarks>
+    /// Automatically retries once on 429 (rate limit) after waiting for the <c>Retry-After</c> duration.
+    /// Automatically refreshes the session and retries once on 401 <c>ExpiredToken</c>.
+    /// </remarks>
     let queryNoParams<'O> (nsid: string) (agent: AtpAgent) : Task<Result<'O, XrpcError>> =
         task {
             let url = $"{agent.BaseUrl}xrpc/{nsid}"
@@ -124,7 +153,31 @@ module Xrpc =
                     return Error error
         }
 
-    /// Execute an XRPC query (HTTP GET).
+    /// <summary>
+    /// Executes an XRPC query (HTTP GET) with query-string parameters.
+    /// </summary>
+    /// <param name="nsid">The NSID of the XRPC method (e.g. <c>"app.bsky.feed.getTimeline"</c>).</param>
+    /// <param name="parameters">
+    /// An F# record whose fields are serialized to query-string parameters via <see cref="QueryParams.toQueryString"/>.
+    /// Option fields that are <c>None</c> are omitted; list fields are emitted as repeated parameters.
+    /// </param>
+    /// <param name="agent">The <see cref="AtpAgent"/> to send the request through.</param>
+    /// <typeparam name="P">The parameter record type.</typeparam>
+    /// <typeparam name="O">The output type to deserialize the JSON response body into.</typeparam>
+    /// <returns>
+    /// A <c>Task</c> resolving to <c>Ok</c> with the deserialized output on success,
+    /// or <c>Error</c> with an <see cref="XrpcError"/> on failure.
+    /// </returns>
+    /// <remarks>
+    /// Automatically retries once on 429 (rate limit) after waiting for the <c>Retry-After</c> duration.
+    /// Automatically refreshes the session and retries once on 401 <c>ExpiredToken</c>.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// type GetProfileParams = { Actor: string }
+    /// let! result = Xrpc.query "app.bsky.actor.getProfile" { Actor = "alice.bsky.social" } agent
+    /// </code>
+    /// </example>
     let query<'P, 'O> (nsid: string) (parameters: 'P) (agent: AtpAgent) : Task<Result<'O, XrpcError>> =
         task {
             let queryString = QueryParams.toQueryString parameters
@@ -173,7 +226,29 @@ module Xrpc =
                     return Error error
         }
 
-    /// Execute an XRPC procedure (HTTP POST with JSON body).
+    /// <summary>
+    /// Executes an XRPC procedure (HTTP POST) with a JSON request body and a JSON response body.
+    /// </summary>
+    /// <param name="nsid">The NSID of the XRPC method (e.g. <c>"com.atproto.repo.createRecord"</c>).</param>
+    /// <param name="input">The input value to serialize as the JSON request body.</param>
+    /// <param name="agent">The <see cref="AtpAgent"/> to send the request through.</param>
+    /// <typeparam name="I">The input type to serialize as the JSON request body.</typeparam>
+    /// <typeparam name="O">The output type to deserialize the JSON response body into.</typeparam>
+    /// <returns>
+    /// A <c>Task</c> resolving to <c>Ok</c> with the deserialized output on success,
+    /// or <c>Error</c> with an <see cref="XrpcError"/> on failure.
+    /// </returns>
+    /// <remarks>
+    /// The request body is serialized as <c>application/json</c> using <see cref="Json.options"/>.
+    /// Automatically retries once on 429 (rate limit) after waiting for the <c>Retry-After</c> duration.
+    /// Automatically refreshes the session and retries once on 401 <c>ExpiredToken</c>.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// let input = {| repo = did; collection = "app.bsky.feed.post"; record = post |}
+    /// let! result = Xrpc.procedure "com.atproto.repo.createRecord" input agent
+    /// </code>
+    /// </example>
     let procedure<'I, 'O> (nsid: string) (input: 'I) (agent: AtpAgent) : Task<Result<'O, XrpcError>> =
         task {
             let url = $"{agent.BaseUrl}xrpc/{nsid}"
@@ -225,7 +300,23 @@ module Xrpc =
                     return Error error
         }
 
-    /// Execute an XRPC procedure with no response body.
+    /// <summary>
+    /// Executes an XRPC procedure (HTTP POST) with a JSON request body that returns no response body.
+    /// </summary>
+    /// <param name="nsid">The NSID of the XRPC method (e.g. <c>"com.atproto.repo.deleteRecord"</c>).</param>
+    /// <param name="input">The input value to serialize as the JSON request body.</param>
+    /// <param name="agent">The <see cref="AtpAgent"/> to send the request through.</param>
+    /// <typeparam name="I">The input type to serialize as the JSON request body.</typeparam>
+    /// <returns>
+    /// A <c>Task</c> resolving to <c>Ok ()</c> on success,
+    /// or <c>Error</c> with an <see cref="XrpcError"/> on failure.
+    /// </returns>
+    /// <remarks>
+    /// Use this for XRPC procedures that return 200 with no body (e.g. delete operations).
+    /// The request body is serialized as <c>application/json</c> using <see cref="Json.options"/>.
+    /// Automatically retries once on 429 (rate limit) after waiting for the <c>Retry-After</c> duration.
+    /// Automatically refreshes the session and retries once on 401 <c>ExpiredToken</c>.
+    /// </remarks>
     let procedureVoid<'I> (nsid: string) (input: 'I) (agent: AtpAgent) : Task<Result<unit, XrpcError>> =
         task {
             let url = $"{agent.BaseUrl}xrpc/{nsid}"
@@ -273,7 +364,40 @@ module Xrpc =
                     return Error error
         }
 
-    /// Paginate through a cursor-based XRPC query.
+    /// <summary>
+    /// Paginates through a cursor-based XRPC query, returning an <c>IAsyncEnumerable</c> of pages.
+    /// </summary>
+    /// <param name="nsid">The NSID of the XRPC query method (e.g. <c>"app.bsky.feed.getTimeline"</c>).</param>
+    /// <param name="initialParams">The initial query parameters (typically with cursor set to <c>None</c>).</param>
+    /// <param name="getCursor">
+    /// A function that extracts the next-page cursor from a response.
+    /// Return <c>None</c> to signal that there are no more pages.
+    /// </param>
+    /// <param name="setCursor">
+    /// A function that produces updated parameters with the given cursor value set.
+    /// </param>
+    /// <param name="agent">The <see cref="AtpAgent"/> to send requests through.</param>
+    /// <typeparam name="P">The parameter record type.</typeparam>
+    /// <typeparam name="O">The output type for each page of results.</typeparam>
+    /// <returns>
+    /// An <c>IAsyncEnumerable</c> that yields one <c>Result</c> per page.
+    /// Enumeration stops when <paramref name="getCursor"/> returns <c>None</c> or when an error occurs.
+    /// On error, the error result is yielded as the final element.
+    /// </returns>
+    /// <remarks>
+    /// Each page is fetched lazily as the caller iterates the async enumerable.
+    /// The underlying <see cref="query"/> function handles rate limiting and token refresh automatically.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// let pages = Xrpc.paginate
+    ///     "app.bsky.feed.getTimeline"
+    ///     { Limit = Some 50; Cursor = None }
+    ///     (fun output -> output.Cursor)
+    ///     (fun cursor p -> { p with Cursor = cursor })
+    ///     agent
+    /// </code>
+    /// </example>
     let paginate<'P, 'O>
         (nsid: string)
         (initialParams: 'P)

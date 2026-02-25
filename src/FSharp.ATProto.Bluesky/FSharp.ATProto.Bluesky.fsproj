@@ -8,6 +8,7 @@
     <Compile Include="RichText.fs" />
     <Compile Include="Identity.fs" />
     <Compile Include="Bluesky.fs" />
+    <Compile Include="Chat.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FSharp.ATProto.Syntax\FSharp.ATProto.Syntax.fsproj" />

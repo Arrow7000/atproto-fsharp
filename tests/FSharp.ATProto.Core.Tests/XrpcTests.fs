@@ -30,7 +30,8 @@ let makeAgent (handler: HttpRequestMessage -> HttpResponseMessage) =
     let client = new HttpClient(new TestHelpers.MockHandler(handler))
     { HttpClient = client
       BaseUrl = System.Uri("https://bsky.social/")
-      Session = None }
+      Session = None
+      ExtraHeaders = [] }
 
 [<Tests>]
 let queryTests =

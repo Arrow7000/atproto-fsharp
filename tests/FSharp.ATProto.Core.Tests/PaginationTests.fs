@@ -51,7 +51,8 @@ let tests =
             let agent =
                 { HttpClient = new HttpClient(handler)
                   BaseUrl = System.Uri("https://bsky.social/")
-                  Session = None }
+                  Session = None
+                  ExtraHeaders = [] }
 
             let pages =
                 Xrpc.paginate<PageParams, PageOutput>
@@ -83,7 +84,8 @@ let tests =
             let agent =
                 { HttpClient = new HttpClient(handler)
                   BaseUrl = System.Uri("https://bsky.social/")
-                  Session = None }
+                  Session = None
+                  ExtraHeaders = [] }
 
             let pages =
                 Xrpc.paginate<PageParams, PageOutput>

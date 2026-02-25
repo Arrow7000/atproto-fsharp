@@ -10,6 +10,7 @@
     <Compile Include="AtpAgentTests.fs" />
     <Compile Include="RateLimitTests.fs" />
     <Compile Include="PaginationTests.fs" />
+    <Compile Include="ExtraHeadersTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>

@@ -28,7 +28,8 @@ let tests =
             let agent =
                 { HttpClient = new HttpClient(handler)
                   BaseUrl = System.Uri("https://bsky.social/")
-                  Session = None }
+                  Session = None
+                  ExtraHeaders = [] }
 
             let result =
                 Xrpc.query<SimpleParams, SimpleOutput> "test.method" { X = "a" } agent
@@ -47,7 +48,8 @@ let tests =
             let agent =
                 { HttpClient = new HttpClient(handler)
                   BaseUrl = System.Uri("https://bsky.social/")
-                  Session = None }
+                  Session = None
+                  ExtraHeaders = [] }
 
             let result =
                 Xrpc.query<SimpleParams, SimpleOutput> "test.method" { X = "a" } agent
