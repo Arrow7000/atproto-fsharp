@@ -310,7 +310,7 @@ let private collectInlineUnionsAndOverrides
 
     let groups =
         raw
-        |> List.groupBy (fun (_, u, _) -> u.Refs |> List.sort)
+        |> List.groupBy (fun (_, u, _) -> (u.Refs |> List.sort, u.Closed))
 
     let mutable widgets = []
     let mutable overrides = Map.empty
