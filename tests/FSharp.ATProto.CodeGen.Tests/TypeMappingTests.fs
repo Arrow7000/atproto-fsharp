@@ -40,21 +40,21 @@ let lexTypeToFSharpTypeTests =
             let result = lexTypeToFSharpType "AppBskyFeed" (String emptyStringConstraints)
             Expect.equal result "string" "String should map to string"
 
-        testCase "String with DID format maps to string" <| fun () ->
+        testCase "String with DID format maps to Did" <| fun () ->
             let result = lexTypeToFSharpType "AppBskyFeed" (String { emptyStringConstraints with Format = Some LexStringFormat.Did })
-            Expect.equal result "string" "String with DID format should still map to string"
+            Expect.equal result "Did" "String with DID format should map to Did"
 
-        testCase "String with datetime format maps to string" <| fun () ->
+        testCase "String with datetime format maps to AtDateTime" <| fun () ->
             let result = lexTypeToFSharpType "AppBskyFeed" (String { emptyStringConstraints with Format = Some LexStringFormat.Datetime })
-            Expect.equal result "string" "String with datetime format should still map to string"
+            Expect.equal result "AtDateTime" "String with datetime format should map to AtDateTime"
 
         testCase "Bytes maps to byte[]" <| fun () ->
             let result = lexTypeToFSharpType "AppBskyFeed" (Bytes emptyBytesConstraints)
             Expect.equal result "byte[]" "Bytes should map to byte[]"
 
-        testCase "CidLink maps to string" <| fun () ->
+        testCase "CidLink maps to Cid" <| fun () ->
             let result = lexTypeToFSharpType "AppBskyFeed" CidLink
-            Expect.equal result "string" "CidLink should map to string"
+            Expect.equal result "Cid" "CidLink should map to Cid"
 
         testCase "Unknown maps to JsonElement" <| fun () ->
             let result = lexTypeToFSharpType "AppBskyFeed" Unknown

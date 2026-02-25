@@ -672,6 +672,7 @@ let generateAll (docs: LexiconDoc list) : (string * string) list =
             Open("System.Text.Json.Serialization")
             Open("System.Threading.Tasks")
             Open("FSharp.ATProto.Core")
+            Open("FSharp.ATProto.Syntax")
 
             for nsName in order do
                 match Map.tryFind nsName groups with

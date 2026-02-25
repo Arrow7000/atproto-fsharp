@@ -37,7 +37,7 @@ let generateRecordTests =
             let source = generateRecord "AppBskyFeed" "Post" None obj
             Expect.stringContains source "type Post =" "should have type name"
             Expect.stringContains source "Text: string" "should have Text field"
-            Expect.stringContains source "CreatedAt: string" "should have CreatedAt field"
+            Expect.stringContains source "CreatedAt: AtDateTime" "should have CreatedAt field with typed format"
             // Both fields are required, neither should be option
             Expect.isFalse (source.Contains("option")) "required fields should not be option"
 

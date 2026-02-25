@@ -8,9 +8,22 @@ let rec lexTypeToFSharpType (currentNamespace: string) (lexType: LexType) : stri
     match lexType with
     | Boolean _ -> "bool"
     | Integer _ -> "int64"
-    | String _ -> "string"
+    | String s ->
+        match s.Format with
+        | Some LexStringFormat.Did -> "Did"
+        | Some LexStringFormat.Handle -> "Handle"
+        | Some LexStringFormat.AtUri -> "AtUri"
+        | Some LexStringFormat.Cid -> "Cid"
+        | Some LexStringFormat.Nsid -> "Nsid"
+        | Some LexStringFormat.Tid -> "Tid"
+        | Some LexStringFormat.RecordKey -> "RecordKey"
+        | Some LexStringFormat.Datetime -> "AtDateTime"
+        | Some LexStringFormat.Language -> "Language"
+        | Some LexStringFormat.Uri -> "Uri"
+        | Some LexStringFormat.AtIdentifier -> "string"
+        | None -> "string"
     | Bytes _ -> "byte[]"
-    | CidLink -> "string"
+    | CidLink -> "Cid"
     | Blob _ -> "JsonElement"
     | Unknown -> "JsonElement"
     | Array arr ->

@@ -218,6 +218,38 @@ let private recordDoc =
                         Nullable = [] } }
           ] }
 
+/// A record doc with typed string format fields and CidLink.
+let private typedStringFormatsDoc =
+    let didString = { emptyStringConstraints with Format = Some LexStringFormat.Did }
+    let handleString = { emptyStringConstraints with Format = Some LexStringFormat.Handle }
+    let atUriString = { emptyStringConstraints with Format = Some LexStringFormat.AtUri }
+    let atIdentifierString = { emptyStringConstraints with Format = Some LexStringFormat.AtIdentifier }
+
+    { Lexicon = 1
+      Id = mkNsid "app.bsky.test.typedFormats"
+      Revision = None
+      Description = None
+      Defs =
+          Map.ofList [
+              "main",
+              LexDef.Record
+                  { Key = "tid"
+                    Description = None
+                    Record =
+                      { Description = None
+                        Properties =
+                            Map.ofList [
+                                "did", LexType.String didString
+                                "handle", LexType.String handleString
+                                "uri", LexType.String atUriString
+                                "cid", LexType.CidLink
+                                "name", LexType.String emptyStringConstraints
+                                "actor", LexType.String atIdentifierString
+                            ]
+                        Required = [ "did"; "handle"; "uri"; "cid"; "name"; "actor" ]
+                        Nullable = [] } }
+          ] }
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -302,4 +334,22 @@ let wrapperTests =
             let (_, content) = result.[0]
             Expect.stringContains content "let query" "has query function"
             Expect.stringContains content "let call" "has call function"
+
+        testCase "typed string formats emit Syntax types instead of string" <| fun () ->
+            let result = FSharp.ATProto.CodeGen.NamespaceGen.generateAll [ typedStringFormatsDoc ]
+            let (_, content) = result.[0]
+            // DID format -> Did type
+            Expect.stringContains content "Did: Did" "did field is typed Did"
+            // Handle format -> Handle type
+            Expect.stringContains content "Handle: Handle" "handle field is typed Handle"
+            // AT-URI format -> AtUri type
+            Expect.stringContains content "Uri: AtUri" "uri field is typed AtUri"
+            // CidLink -> Cid type
+            Expect.stringContains content "Cid: Cid" "cid field is typed Cid"
+            // Unformatted string stays as string
+            Expect.stringContains content "Name: string" "unformatted string stays string"
+            // at-identifier stays as string (ambiguous DID/Handle)
+            Expect.stringContains content "Actor: string" "at-identifier stays string"
+            // Open statement for Syntax types
+            Expect.stringContains content "open FSharp.ATProto.Syntax" "has Syntax open"
     ]
