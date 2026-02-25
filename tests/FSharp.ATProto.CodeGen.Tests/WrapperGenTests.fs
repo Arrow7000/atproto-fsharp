@@ -142,6 +142,63 @@ let private procedureInputOnlyDoc =
                     Errors = [] }
           ] }
 
+/// A query with ref output (e.g. getProfile -> defs#profileViewDetailed).
+let private queryWithRefOutputDoc =
+    { Lexicon = 1
+      Id = mkNsid "app.bsky.actor.getProfile"
+      Revision = None
+      Description = None
+      Defs =
+          Map.ofList [
+              "main",
+              LexDef.Query
+                  { Description = None
+                    Parameters =
+                      Some
+                          { Description = None
+                            Properties = Map.ofList [ "actor", LexType.String emptyStringConstraints ]
+                            Required = [ "actor" ] }
+                    Output =
+                      Some
+                          { Description = None
+                            Encoding = "application/json"
+                            Schema =
+                              Some (LexType.Ref { Description = None; Ref = "app.bsky.actor.defs#profileViewDetailed" }) }
+                    Errors = [] }
+          ] }
+
+/// A procedure with inline input and ref output (e.g. sendMessage -> defs#messageView).
+let private procedureWithRefOutputDoc =
+    { Lexicon = 1
+      Id = mkNsid "chat.bsky.convo.sendMessage"
+      Revision = None
+      Description = None
+      Defs =
+          Map.ofList [
+              "main",
+              LexDef.Procedure
+                  { Description = None
+                    Parameters = None
+                    Input =
+                      Some
+                          { Description = None
+                            Encoding = "application/json"
+                            Schema =
+                              Some
+                                  (LexType.Object
+                                      { Description = None
+                                        Properties = Map.ofList [ "convoId", LexType.String emptyStringConstraints ]
+                                        Required = [ "convoId" ]
+                                        Nullable = [] }) }
+                    Output =
+                      Some
+                          { Description = None
+                            Encoding = "application/json"
+                            Schema =
+                              Some (LexType.Ref { Description = None; Ref = "chat.bsky.convo.defs#messageView" }) }
+                    Errors = [] }
+          ] }
+
 /// A record doc (should NOT get a wrapper).
 let private recordDoc =
     { Lexicon = 1
@@ -201,6 +258,22 @@ let wrapperTests =
             Expect.stringContains content "let call" "has call function"
             Expect.stringContains content "Xrpc.procedureVoid<Input>" "calls Xrpc.procedureVoid"
             Expect.stringContains content "Result<unit" "returns Result<unit, ...>"
+
+        testCase "query with ref output generates query function with Output type alias" <| fun () ->
+            let result = FSharp.ATProto.CodeGen.NamespaceGen.generateAll [ queryWithRefOutputDoc ]
+            let (_, content) = result.[0]
+            Expect.stringContains content "let query" "has query function"
+            Expect.stringContains content "Xrpc.query<Params, Output>" "calls Xrpc.query with type params"
+            Expect.stringContains content "type Output = " "has Output type alias"
+            Expect.stringContains content "parameters: Params" "takes Params parameter"
+
+        testCase "procedure with ref output generates call function with Output type alias" <| fun () ->
+            let result = FSharp.ATProto.CodeGen.NamespaceGen.generateAll [ procedureWithRefOutputDoc ]
+            let (_, content) = result.[0]
+            Expect.stringContains content "let call" "has call function"
+            Expect.stringContains content "Xrpc.procedure<Input, Output>" "calls Xrpc.procedure (not procedureVoid)"
+            Expect.stringContains content "type Output = " "has Output type alias"
+            Expect.stringContains content "input: Input" "takes Input parameter"
 
         testCase "record doc does not get a wrapper function" <| fun () ->
             let result = FSharp.ATProto.CodeGen.NamespaceGen.generateAll [ recordDoc ]

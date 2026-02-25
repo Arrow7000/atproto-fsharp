@@ -293,6 +293,20 @@ let private hasJsonObjectSchema (body: LexBody) : LexObject option =
     else
         None
 
+/// Check if a LexBody has a ref schema (application/json encoding with a ref to another type).
+let private hasJsonRefSchema (body: LexBody) : string option =
+    if body.Encoding = "application/json" then
+        match body.Schema with
+        | Some (LexType.Ref r) -> Some r.Ref
+        | _ -> None
+    else
+        None
+
+/// Check if a LexBody has any usable output schema (inline object or ref).
+let private hasJsonOutputSchema (body: LexBody) : bool =
+    hasJsonObjectSchema body |> Option.isSome
+    || hasJsonRefSchema body |> Option.isSome
+
 // ---------------------------------------------------------------------------
 // Module generation for each LexDef type
 // ---------------------------------------------------------------------------
@@ -350,7 +364,12 @@ let private generateQueryModule
             match hasJsonObjectSchema body with
             | Some obj ->
                 generateRecordWidget currentNamespace "Output" body.Description obj
-            | None -> ()
+            | None ->
+                match hasJsonRefSchema body with
+                | Some ref ->
+                    let (_ns, qualType) = Naming.refToQualifiedType currentNamespace ref
+                    Abbrev("Output", LongIdent(qualType))
+                | None -> ()
         | None -> ()
 
         if not query.Errors.IsEmpty then
@@ -400,7 +419,12 @@ let private generateProcedureModule
             match hasJsonObjectSchema body with
             | Some obj ->
                 generateRecordWidget currentNamespace "Input" body.Description obj
-            | None -> ()
+            | None ->
+                match hasJsonRefSchema body with
+                | Some ref ->
+                    let (_ns, qualType) = Naming.refToQualifiedType currentNamespace ref
+                    Abbrev("Input", LongIdent(qualType))
+                | None -> ()
         | None -> ()
 
         match proc.Output with
@@ -408,7 +432,12 @@ let private generateProcedureModule
             match hasJsonObjectSchema body with
             | Some obj ->
                 generateRecordWidget currentNamespace "Output" body.Description obj
-            | None -> ()
+            | None ->
+                match hasJsonRefSchema body with
+                | Some ref ->
+                    let (_ns, qualType) = Naming.refToQualifiedType currentNamespace ref
+                    Abbrev("Output", LongIdent(qualType))
+                | None -> ()
         | None -> ()
 
         if not proc.Errors.IsEmpty then
@@ -580,7 +609,7 @@ let private generateGroupModule (nsName: string) (docs: LexiconDoc list) =
 /// Determine whether a Query def should get a wrapper, and if so what kind.
 let private queryWrapperKind (query: LexQuery) : WrapperKind option =
     let hasOutput =
-        query.Output |> Option.bind hasJsonObjectSchema |> Option.isSome
+        query.Output |> Option.map hasJsonOutputSchema |> Option.defaultValue false
     let hasParams =
         match query.Parameters with
         | Some p when p.Properties.Count > 0 -> true
@@ -593,9 +622,9 @@ let private queryWrapperKind (query: LexQuery) : WrapperKind option =
 /// Determine whether a Procedure def should get a wrapper, and if so what kind.
 let private procedureWrapperKind (proc: LexProcedure) : WrapperKind option =
     let hasInput =
-        proc.Input |> Option.bind hasJsonObjectSchema |> Option.isSome
+        proc.Input |> Option.map hasJsonOutputSchema |> Option.defaultValue false
     let hasOutput =
-        proc.Output |> Option.bind hasJsonObjectSchema |> Option.isSome
+        proc.Output |> Option.map hasJsonOutputSchema |> Option.defaultValue false
     if not hasInput then
         None
     else

@@ -2054,14 +2054,16 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.createAppPassword"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("name")>]
               Name: string
               [<JsonPropertyName("privileged")>]
               Privileged: bool option }
+
+        type Output = CreateAppPassword.AppPassword
 
         module Errors =
             [<Literal>]
@@ -2595,9 +2597,14 @@ module ComAtprotoAdmin =
         [<Literal>]
         let TypeId = "com.atproto.admin.getAccountInfo"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("did")>]
               Did: string }
+
+        type Output = Defs.AccountView
 
     module GetAccountInfos =
         [<Literal>]
@@ -3736,9 +3743,14 @@ module AppBskyActor =
         [<Literal>]
         let TypeId = "app.bsky.actor.getProfile"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("actor")>]
               Actor: string }
+
+        type Output = Defs.ProfileViewDetailed
 
     module GetProfiles =
         [<Literal>]
@@ -3879,8 +3891,8 @@ module AppBskyAgeassurance =
         [<Literal>]
         let TypeId = "app.bsky.ageassurance.begin"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("countryCode")>]
@@ -3891,6 +3903,8 @@ module AppBskyAgeassurance =
               Language: string
               [<JsonPropertyName("regionCode")>]
               RegionCode: string option }
+
+        type Output = Defs.State
 
         module Errors =
             [<Literal>]
@@ -4015,6 +4029,11 @@ module AppBskyAgeassurance =
     module GetConfig =
         [<Literal>]
         let TypeId = "app.bsky.ageassurance.getConfig"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
+        type Output = Defs.Config
 
     module GetState =
         [<Literal>]
@@ -4555,6 +4574,11 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getAgeAssuranceState"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
+        type Output = Defs.AgeAssuranceState
+
     module GetConfig =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getConfig"
@@ -4932,8 +4956,8 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.initAgeAssurance"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("countryCode")>]
@@ -4942,6 +4966,8 @@ module AppBskyUnspecced =
               Email: string
               [<JsonPropertyName("language")>]
               Language: string }
+
+        type Output = Defs.AgeAssuranceState
 
         module Errors =
             [<Literal>]
@@ -5370,14 +5396,16 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.deleteMessageForSelf"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string
               [<JsonPropertyName("messageId")>]
               MessageId: string }
+
+        type Output = Defs.DeletedMessageView
 
     module GetConvo =
         [<Literal>]
@@ -5549,14 +5577,16 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.sendMessage"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string
               [<JsonPropertyName("message")>]
               Message: Defs.MessageInput }
+
+        type Output = Defs.MessageView
 
     module SendMessageBatch =
         [<Literal>]
@@ -5723,12 +5753,14 @@ module ComAtprotoIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.refreshIdentity"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("identifier")>]
               Identifier: string }
+
+        type Output = Defs.IdentityInfo
 
         module Errors =
             [<Literal>]
@@ -5789,9 +5821,14 @@ module ComAtprotoIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.resolveIdentity"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("identifier")>]
               Identifier: string }
+
+        type Output = Defs.IdentityInfo
 
         module Errors =
             [<Literal>]
@@ -6497,8 +6534,8 @@ module ToolsOzoneCommunication =
         [<Literal>]
         let TypeId = "tools.ozone.communication.createTemplate"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("contentMarkdown")>]
@@ -6511,6 +6548,8 @@ module ToolsOzoneCommunication =
               Name: string
               [<JsonPropertyName("subject")>]
               Subject: string }
+
+        type Output = Defs.TemplateView
 
         module Errors =
             [<Literal>]
@@ -6563,8 +6602,8 @@ module ToolsOzoneCommunication =
         [<Literal>]
         let TypeId = "tools.ozone.communication.updateTemplate"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("contentMarkdown")>]
@@ -6581,6 +6620,8 @@ module ToolsOzoneCommunication =
               Subject: string option
               [<JsonPropertyName("updatedBy")>]
               UpdatedBy: string option }
+
+        type Output = Defs.TemplateView
 
         module Errors =
             [<Literal>]
@@ -6641,14 +6682,16 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.cancelScheduledActions"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("subjects")>]
               Subjects: string list }
+
+        type Output = CancelScheduledActions.CancellationResults
 
         type CancellationResults =
             { [<JsonPropertyName("failed")>]
@@ -7280,8 +7323,8 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.emitEvent"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("createdBy")>]
@@ -7296,6 +7339,8 @@ module ToolsOzoneModeration =
               Subject: JsonElement
               [<JsonPropertyName("subjectBlobCids")>]
               SubjectBlobCids: string list option }
+
+        type Output = Defs.ModEventView
 
         module Errors =
             [<Literal>]
@@ -7341,19 +7386,29 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getEvent"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("id")>]
               Id: int64 }
 
+        type Output = Defs.ModEventViewDetail
+
     module GetRecord =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getRecord"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cid")>]
               Cid: string option
               [<JsonPropertyName("uri")>]
               Uri: string }
+
+        type Output = Defs.RecordViewDetail
 
         module Errors =
             [<Literal>]
@@ -7378,9 +7433,14 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getRepo"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("did")>]
               Did: string }
+
+        type Output = Defs.RepoViewDetail
 
         module Errors =
             [<Literal>]
@@ -7610,8 +7670,8 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.scheduleAction"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("action")>]
@@ -7624,6 +7684,8 @@ module ToolsOzoneModeration =
               Scheduling: ScheduleAction.SchedulingConfig
               [<JsonPropertyName("subjects")>]
               Subjects: string list }
+
+        type Output = ScheduleAction.ScheduledActionResults
 
         type FailedScheduling =
             { [<JsonPropertyName("error")>]
@@ -7827,8 +7889,8 @@ module ToolsOzoneSafelink =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.addRule"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("action")>]
@@ -7843,6 +7905,8 @@ module ToolsOzoneSafelink =
               Reason: Defs.ReasonType
               [<JsonPropertyName("url")>]
               Url: string }
+
+        type Output = Defs.Event
 
         module Errors =
             [<Literal>]
@@ -7958,8 +8022,8 @@ module ToolsOzoneSafelink =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.removeRule"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("comment")>]
@@ -7971,6 +8035,8 @@ module ToolsOzoneSafelink =
               [<JsonPropertyName("url")>]
               Url: string }
 
+        type Output = Defs.Event
+
         module Errors =
             [<Literal>]
             let RuleNotFound = "RuleNotFound"
@@ -7979,8 +8045,8 @@ module ToolsOzoneSafelink =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.updateRule"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("action")>]
@@ -7995,6 +8061,8 @@ module ToolsOzoneSafelink =
               Reason: Defs.ReasonType
               [<JsonPropertyName("url")>]
               Url: string }
+
+        type Output = Defs.Event
 
         module Errors =
             [<Literal>]
@@ -8150,6 +8218,12 @@ module ToolsOzoneSet =
     module UpsertSet =
         [<Literal>]
         let TypeId = "tools.ozone.set.upsertSet"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
+        type Input = Defs.Set
+        type Output = Defs.SetView
 
 module ToolsOzoneSetting =
     module Defs =
@@ -8312,14 +8386,16 @@ module ToolsOzoneTeam =
         [<Literal>]
         let TypeId = "tools.ozone.team.addMember"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
               Did: string
               [<JsonPropertyName("role")>]
               Role: string }
+
+        type Output = Defs.Member
 
         module Errors =
             [<Literal>]
@@ -8401,8 +8477,8 @@ module ToolsOzoneTeam =
         [<Literal>]
         let TypeId = "tools.ozone.team.updateMember"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
-            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
@@ -8411,6 +8487,8 @@ module ToolsOzoneTeam =
               Disabled: bool option
               [<JsonPropertyName("role")>]
               Role: string option }
+
+        type Output = Defs.Member
 
         module Errors =
             [<Literal>]
