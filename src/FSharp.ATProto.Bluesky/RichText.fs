@@ -72,3 +72,52 @@ module RichText =
             | DetectedMention (s, _, _) -> s
             | DetectedLink (s, _, _) -> s
             | DetectedTag (s, _, _) -> s)
+
+    open System.Globalization
+    open System.Text.Json
+    open System.Threading.Tasks
+    open FSharp.ATProto.Core
+
+    let private makeFacet (byteStart: int) (byteEnd: int) (feature: JsonElement) : AppBskyRichtext.Facet.Facet =
+        { Index = { ByteStart = int64 byteStart; ByteEnd = int64 byteEnd }
+          Features = [ feature ] }
+
+    let private serializeFeature (typeName: string) (fields: (string * obj) list) : JsonElement =
+        let dict = System.Collections.Generic.Dictionary<string, obj>()
+        dict.["$type"] <- typeName
+        for (k, v) in fields do dict.[k] <- v
+        JsonSerializer.SerializeToElement(dict)
+
+    let resolve (agent: AtpAgent) (detected: DetectedFacet list) : Task<AppBskyRichtext.Facet.Facet list> =
+        task {
+            let results = System.Collections.Generic.List<AppBskyRichtext.Facet.Facet>()
+            for facet in detected do
+                match facet with
+                | DetectedMention (s, e, handle) ->
+                    let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handle }
+                    match result with
+                    | Ok output ->
+                        let feature = serializeFeature "app.bsky.richtext.facet#mention" [ "did", output.Did ]
+                        results.Add(makeFacet s e feature)
+                    | Error _ -> ()
+                | DetectedLink (s, e, uri) ->
+                    let feature = serializeFeature "app.bsky.richtext.facet#link" [ "uri", uri ]
+                    results.Add(makeFacet s e feature)
+                | DetectedTag (s, e, tag) ->
+                    let feature = serializeFeature "app.bsky.richtext.facet#tag" [ "tag", tag ]
+                    results.Add(makeFacet s e feature)
+            return results |> Seq.toList
+        }
+
+    let parse (agent: AtpAgent) (text: string) : Task<AppBskyRichtext.Facet.Facet list> =
+        task {
+            let detected = detect text
+            return! resolve agent detected
+        }
+
+    let graphemeLength (text: string) : int =
+        let info = StringInfo(text)
+        info.LengthInTextElements
+
+    let byteLength (text: string) : int =
+        Encoding.UTF8.GetByteCount(text)

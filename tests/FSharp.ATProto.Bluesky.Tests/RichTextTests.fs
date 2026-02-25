@@ -105,7 +105,71 @@ let detectTests =
             | _ -> failtest "expected tag"
     ]
 
+open System.Net
 open System.Text
+open System.Text.Json
+open System.Threading.Tasks
+open FSharp.ATProto.Core
+open TestHelpers
+
+[<Tests>]
+let resolveTests =
+    testList "RichText.resolve" [
+        testCase "resolves mention handle to DID" <| fun _ ->
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.PathAndQuery.Contains("resolveHandle") then
+                    jsonResponse HttpStatusCode.OK {| did = "did:plc:abc123" |}
+                else
+                    emptyResponse HttpStatusCode.NotFound)
+            agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = "did:plc:me"; Handle = "me.bsky.social" }
+            let detected = [ RichText.DetectedMention(0, 18, "alice.bsky.social") ]
+            let facets = RichText.resolve agent detected |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.equal facets.Length 1 "one facet"
+            Expect.equal facets.[0].Index.ByteStart 0L "byteStart"
+            Expect.equal facets.[0].Index.ByteEnd 18L "byteEnd"
+
+        testCase "drops mention when handle resolution fails" <| fun _ ->
+            let agent = createMockAgent (fun _ ->
+                jsonResponse HttpStatusCode.BadRequest {| error = "HandleNotFound"; message = "not found" |})
+            agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = "did:plc:me"; Handle = "me.bsky.social" }
+            let detected = [ RichText.DetectedMention(0, 18, "alice.bsky.social") ]
+            let facets = RichText.resolve agent detected |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.equal facets.Length 0 "mention dropped on failure"
+
+        testCase "passes through links and tags without resolution" <| fun _ ->
+            let agent = createMockAgent (fun _ -> emptyResponse HttpStatusCode.NotFound)
+            let detected = [
+                RichText.DetectedLink(0, 20, "https://example.com")
+                RichText.DetectedTag(21, 29, "atproto")
+            ]
+            let facets = RichText.resolve agent detected |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.equal facets.Length 2 "both facets preserved"
+
+        testCase "parse detects and resolves in one step" <| fun _ ->
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.PathAndQuery.Contains("resolveHandle") then
+                    jsonResponse HttpStatusCode.OK {| did = "did:plc:abc123" |}
+                else
+                    emptyResponse HttpStatusCode.NotFound)
+            agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = "did:plc:me"; Handle = "me.bsky.social" }
+            let facets = RichText.parse agent "Hello @alice.bsky.social #atproto" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.equal facets.Length 2 "mention + hashtag"
+    ]
+
+[<Tests>]
+let utilityTests =
+    testList "RichText utilities" [
+        testCase "graphemeLength counts grapheme clusters" <| fun _ ->
+            Expect.equal (RichText.graphemeLength "Hello") 5 "ASCII"
+            Expect.equal (RichText.graphemeLength "\U0001F44B\U0001F3FD") 1 "emoji with skin tone = 1 grapheme"
+            Expect.equal (RichText.graphemeLength "caf\u00E9") 4 "accented"
+
+        testCase "byteLength counts UTF-8 bytes" <| fun _ ->
+            Expect.equal (RichText.byteLength "Hello") 5 "ASCII"
+            Expect.equal (RichText.byteLength "\U0001F44B") 4 "emoji"
+            Expect.equal (RichText.byteLength "caf\u00E9") 5 "e-acute is 2 bytes"
+    ]
+
 open FsCheck
 
 [<Tests>]
