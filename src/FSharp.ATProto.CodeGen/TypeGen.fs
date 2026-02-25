@@ -88,3 +88,76 @@ let generateKnownValues (fieldName: string) (values: string list) : string =
     Oak() { AnonymousModule() { moduleWidget } }
     |> Gen.mkOak
     |> Gen.run
+
+/// Extract a DU case name from a ref string.
+/// "app.bsky.embed.images" -> "Images" (last NSID segment, PascalCased)
+/// "app.bsky.embed.images#main" -> "Images" (main def -> use doc name)
+/// "app.bsky.feed.defs#feedViewPost" -> "FeedViewPost" (non-main -> PascalCase def name)
+let unionCaseName (ref: string) : string =
+    if ref.Contains('#') then
+        let parts = ref.Split('#')
+        let defName = parts.[1]
+        if defName = "main" then
+            Naming.nsidToModuleName parts.[0]
+        else
+            Naming.toPascalCase defName
+    else
+        Naming.nsidToModuleName ref
+
+/// Compute the $type tag value for a ref.
+/// Bare NSID "app.bsky.embed.images" -> "app.bsky.embed.images"
+/// With #main "app.bsky.embed.images#main" -> "app.bsky.embed.images" (strip #main)
+/// With non-main fragment "app.bsky.feed.defs#feedViewPost" -> "app.bsky.feed.defs#feedViewPost" (keep as-is)
+let private tagValue (ref: string) : string =
+    if ref.EndsWith("#main") then
+        ref.Substring(0, ref.Length - 5)
+    else
+        ref
+
+/// Deduplicate case names by appending a suffix when collisions occur.
+let private deduplicateCaseNames (cases: (string * string * string) list) : (string * string * string) list =
+    cases
+    |> List.fold (fun (acc, seen: Map<string, int>) (caseName, qualType, tag) ->
+        match Map.tryFind caseName seen with
+        | Some count ->
+            let newName = sprintf "%s%d" caseName (count + 1)
+            ((newName, qualType, tag) :: acc, Map.add caseName (count + 1) seen)
+        | None ->
+            ((caseName, qualType, tag) :: acc, Map.add caseName 1 seen)
+    ) ([], Map.empty)
+    |> fst
+    |> List.rev
+
+/// Generate F# DU source from a LexUnion.
+let generateUnion (currentNamespace: string) (typeName: string) (union: LexUnion) : string =
+    let cases =
+        union.Refs
+        |> List.map (fun ref ->
+            let caseName = unionCaseName ref
+            let (_targetNamespace, qualifiedType) = Naming.refToQualifiedType currentNamespace ref
+            let tag = tagValue ref
+            (caseName, qualifiedType, tag))
+        |> deduplicateCaseNames
+
+    let unionWidget =
+        let u =
+            (Union(typeName) {
+                for (caseName, qualType, tag) in cases do
+                    UnionCase(caseName, qualType)
+                        .attribute(
+                            Attribute(
+                                "JsonName",
+                                ParenExpr(ConstantExpr(Ast.String(tag)))))
+                if not union.Closed then
+                    UnionCase("Unknown", [ "string"; "System.Text.Json.JsonElement" ])
+            })
+                .attribute(
+                    Attribute(
+                        "JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = \"$type\")"))
+        match union.Description with
+        | Some desc -> u.xmlDocs([ desc ])
+        | None -> u
+
+    Oak() { AnonymousModule() { unionWidget } }
+    |> Gen.mkOak
+    |> Gen.run

@@ -275,3 +275,103 @@ let generateKnownValuesTests =
             Expect.stringContains source "SortNew" "should have second constant"
             Expect.stringContains source "SortOld" "should have third constant"
     ]
+
+[<Tests>]
+let unionCaseNameTests =
+    testList "unionCaseName" [
+        testCase "unionCaseName extracts correct names" <| fun () ->
+            Expect.equal (unionCaseName "app.bsky.embed.images") "Images" "bare NSID"
+            Expect.equal (unionCaseName "app.bsky.embed.images#main") "Images" "main ref"
+            Expect.equal (unionCaseName "app.bsky.feed.defs#feedViewPost") "FeedViewPost" "non-main ref"
+    ]
+
+[<Tests>]
+let generateUnionTests =
+    testList "generateUnion" [
+        testCase "open union generates DU with Unknown case" <| fun () ->
+            let union: LexUnion =
+                { Description = Some "Post embed"
+                  Refs = ["app.bsky.embed.images"; "app.bsky.embed.external"; "app.bsky.embed.record"]
+                  Closed = false }
+            let source = generateUnion "AppBskyFeed" "PostEmbed" union
+            Expect.stringContains source "type PostEmbed =" "type name"
+            Expect.stringContains source "Images" "Images case"
+            Expect.stringContains source "External" "External case"
+            Expect.stringContains source "Record" "Record case"
+            Expect.stringContains source "Unknown" "open union Unknown case"
+
+        testCase "closed union has no Unknown case" <| fun () ->
+            let union: LexUnion =
+                { Description = None
+                  Refs = ["app.bsky.embed.images"; "app.bsky.embed.external"]
+                  Closed = true }
+            let source = generateUnion "AppBskyFeed" "PostEmbed" union
+            Expect.isFalse (source.Contains("Unknown")) "closed union no Unknown"
+
+        testCase "union cases reference correct types" <| fun () ->
+            let union: LexUnion =
+                { Description = None
+                  Refs = ["app.bsky.embed.images"; "com.atproto.label.defs#label"]
+                  Closed = true }
+            let source = generateUnion "AppBskyFeed" "TestUnion" union
+            Expect.stringContains source "Images.Images" "same-ns ref type"
+            Expect.stringContains source "Defs.Label" "cross-ns ref type"
+
+        testCase "union has JsonName attributes with tag values" <| fun () ->
+            let union: LexUnion =
+                { Description = None
+                  Refs = ["app.bsky.embed.images"; "app.bsky.feed.defs#feedViewPost"]
+                  Closed = true }
+            let source = generateUnion "AppBskyFeed" "TestUnion" union
+            Expect.stringContains source "app.bsky.embed.images" "tag value for bare NSID"
+            Expect.stringContains source "app.bsky.feed.defs#feedViewPost" "tag value for ref with fragment"
+
+        testCase "union has JsonFSharpConverter attribute" <| fun () ->
+            let union: LexUnion =
+                { Description = None
+                  Refs = ["app.bsky.embed.images"]
+                  Closed = true }
+            let source = generateUnion "AppBskyFeed" "TestUnion" union
+            Expect.stringContains source "JsonFSharpConverter" "should have JsonFSharpConverter attribute"
+            Expect.stringContains source "InternalTag" "should use InternalTag encoding"
+            Expect.stringContains source "UnwrapSingleFieldCases" "should unwrap single field cases"
+            Expect.stringContains source "$type" "should use $type as tag name"
+
+        testCase "union with description generates XML doc" <| fun () ->
+            let union: LexUnion =
+                { Description = Some "Post embed types"
+                  Refs = ["app.bsky.embed.images"]
+                  Closed = true }
+            let source = generateUnion "AppBskyFeed" "PostEmbed" union
+            Expect.stringContains source "Post embed types" "should have description"
+
+        testCase "union without description has no XML doc" <| fun () ->
+            let union: LexUnion =
+                { Description = None
+                  Refs = ["app.bsky.embed.images"]
+                  Closed = true }
+            let source = generateUnion "AppBskyFeed" "PostEmbed" union
+            Expect.isFalse (source.Contains("///")) "should not have XML doc"
+
+        testCase "union #main ref strips #main from tag value" <| fun () ->
+            let union: LexUnion =
+                { Description = None
+                  Refs = ["app.bsky.embed.images#main"]
+                  Closed = true }
+            let source = generateUnion "AppBskyFeed" "TestUnion" union
+            // Tag should be "app.bsky.embed.images" (stripped #main)
+            Expect.stringContains source "\"app.bsky.embed.images\"" "tag should strip #main"
+            // Case name should be "Images" (doc name)
+            Expect.stringContains source "Images" "case name from doc name"
+
+        testCase "union deduplicates case names" <| fun () ->
+            // Two refs that would produce the same case name
+            let union: LexUnion =
+                { Description = None
+                  Refs = ["app.bsky.embed.images"; "com.other.embed.images"]
+                  Closed = true }
+            let source = generateUnion "AppBskyFeed" "TestUnion" union
+            // Should have Images and Images2 (or similar deduplication)
+            Expect.stringContains source "Images" "first case"
+            Expect.stringContains source "Images2" "deduplicated second case"
+    ]
