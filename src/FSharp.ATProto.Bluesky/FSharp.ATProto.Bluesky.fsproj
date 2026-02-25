@@ -5,6 +5,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Generated/Generated.fs" />
+    <Compile Include="RichText.fs" />
+    <Compile Include="Identity.fs" />
+    <Compile Include="Bluesky.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FSharp.ATProto.Syntax\FSharp.ATProto.Syntax.fsproj" />

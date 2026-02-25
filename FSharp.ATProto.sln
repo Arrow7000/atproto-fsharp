@@ -29,6 +29,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.ATProto.Core", "src\
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.ATProto.Core.Tests", "tests\FSharp.ATProto.Core.Tests\FSharp.ATProto.Core.Tests.fsproj", "{016232D7-34A0-4262-AA87-2B2B4BB07A7E}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.ATProto.Bluesky.Tests", "tests\FSharp.ATProto.Bluesky.Tests\FSharp.ATProto.Bluesky.Tests.fsproj", "{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -171,6 +173,18 @@ Global
 		{016232D7-34A0-4262-AA87-2B2B4BB07A7E}.Release|x64.Build.0 = Release|Any CPU
 		{016232D7-34A0-4262-AA87-2B2B4BB07A7E}.Release|x86.ActiveCfg = Release|Any CPU
 		{016232D7-34A0-4262-AA87-2B2B4BB07A7E}.Release|x86.Build.0 = Release|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Debug|x64.Build.0 = Debug|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Debug|x86.Build.0 = Debug|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Release|x64.ActiveCfg = Release|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Release|x64.Build.0 = Release|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Release|x86.ActiveCfg = Release|Any CPU
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -187,5 +201,6 @@ Global
 		{272E877B-62FF-43C4-8F57-BCD4D20BA37E} = {BF50B594-69D3-45F0-A75D-59D0D93D7693}
 		{9CF69F92-3990-4D67-ACC2-3895143A8F90} = {5E42FA5B-2FEC-4B85-B0A8-E9F1A1CB8D7B}
 		{016232D7-34A0-4262-AA87-2B2B4BB07A7E} = {BF50B594-69D3-45F0-A75D-59D0D93D7693}
+		{F400BE87-3E53-4AE2-92B0-5CFBB8C8DFE5} = {BF50B594-69D3-45F0-A75D-59D0D93D7693}
 	EndGlobalSection
 EndGlobal
