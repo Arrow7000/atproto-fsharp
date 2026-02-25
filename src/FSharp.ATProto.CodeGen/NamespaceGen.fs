@@ -115,6 +115,55 @@ let collectDependencies (nsName: string) (docs: LexiconDoc list) : Set<string> =
     |> List.fold Set.union Set.empty
 
 // ---------------------------------------------------------------------------
+// Wrapper function types and post-processing
+// ---------------------------------------------------------------------------
+
+/// Kind of XRPC wrapper function to generate.
+type WrapperKind =
+    | QueryWithParams      // has Params + Output → Xrpc.query<Params, Output>
+    | QueryNoParams        // no Params, has Output → Xrpc.query<{||}, Output>
+    | ProcedureWithIO      // has Input + Output → Xrpc.procedure<Input, Output>
+    | ProcedureInputOnly   // has Input, no Output → Xrpc.procedureVoid<Input>
+
+/// Metadata about a wrapper function to inject into generated code.
+type WrapperInfo =
+    { Nsid: string
+      Kind: WrapperKind }
+
+/// Generate the wrapper function text for a given module.
+/// The indent parameter is detected from the TypeId line.
+let private generateWrapper (indent: string) (info: WrapperInfo) : string =
+    match info.Kind with
+    | QueryWithParams ->
+        $"\n\n{indent}let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =\n{indent}    FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent"
+    | QueryNoParams ->
+        $"\n\n{indent}let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =\n{indent}    FSharp.ATProto.Core.Xrpc.query<{{||}}, Output> TypeId {{||}} agent"
+    | ProcedureWithIO ->
+        $"\n\n{indent}let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =\n{indent}    FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent"
+    | ProcedureInputOnly ->
+        $"\n\n{indent}let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =\n{indent}    FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent"
+
+/// Inject wrapper functions into the generated code by finding TypeId markers.
+let private injectWrappers (content: string) (wrappers: WrapperInfo list) : string =
+    let mutable result = content
+    for wrapper in wrappers do
+        let marker = sprintf "let TypeId = \"%s\"" wrapper.Nsid
+        let idx = result.IndexOf(marker)
+        if idx >= 0 then
+            // Detect indentation from the TypeId line
+            let lineStart =
+                let prev = result.LastIndexOf('\n', idx)
+                if prev >= 0 then prev + 1 else 0
+            let indent = result.Substring(lineStart, idx - lineStart)
+            let lineEnd = result.IndexOf('\n', idx)
+            let wrapperText = generateWrapper indent wrapper
+            if lineEnd >= 0 then
+                result <- result.Insert(lineEnd, wrapperText)
+            else
+                result <- result + wrapperText
+    result
+
+// ---------------------------------------------------------------------------
 // Code generation helpers
 // ---------------------------------------------------------------------------
 
@@ -525,6 +574,48 @@ let private generateGroupModule (nsName: string) (docs: LexiconDoc list) =
     }
 
 // ---------------------------------------------------------------------------
+// Wrapper metadata collection
+// ---------------------------------------------------------------------------
+
+/// Determine whether a Query def should get a wrapper, and if so what kind.
+let private queryWrapperKind (query: LexQuery) : WrapperKind option =
+    let hasOutput =
+        query.Output |> Option.bind hasJsonObjectSchema |> Option.isSome
+    let hasParams =
+        match query.Parameters with
+        | Some p when p.Properties.Count > 0 -> true
+        | _ -> false
+    match hasOutput, hasParams with
+    | true, true -> Some QueryWithParams
+    | true, false -> Some QueryNoParams
+    | false, _ -> None
+
+/// Determine whether a Procedure def should get a wrapper, and if so what kind.
+let private procedureWrapperKind (proc: LexProcedure) : WrapperKind option =
+    let hasInput =
+        proc.Input |> Option.bind hasJsonObjectSchema |> Option.isSome
+    let hasOutput =
+        proc.Output |> Option.bind hasJsonObjectSchema |> Option.isSome
+    if not hasInput then
+        None
+    else
+        if hasOutput then Some ProcedureWithIO
+        else Some ProcedureInputOnly
+
+/// Collect WrapperInfo for all docs that need XRPC wrapper functions.
+let private collectWrappers (docs: LexiconDoc list) : WrapperInfo list =
+    docs
+    |> List.choose (fun doc ->
+        let nsid = Nsid.value doc.Id
+        let mainDef = Map.tryFind "main" doc.Defs
+        match mainDef with
+        | Some (LexDef.Query q) ->
+            queryWrapperKind q |> Option.map (fun kind -> { Nsid = nsid; Kind = kind })
+        | Some (LexDef.Procedure p) ->
+            procedureWrapperKind p |> Option.map (fun kind -> { Nsid = nsid; Kind = kind })
+        | _ -> None)
+
+// ---------------------------------------------------------------------------
 // Complete pipeline
 // ---------------------------------------------------------------------------
 
@@ -542,11 +633,16 @@ let generateAll (docs: LexiconDoc list) : (string * string) list =
     // 3. Topological sort for module ordering within the file
     let order = topologicalSort deps
 
-    // 4. Generate a single file with all modules under one namespace rec
+    // 4. Collect wrapper metadata before code generation
+    let wrappers = collectWrappers docs
+
+    // 5. Generate a single file with all modules under one namespace rec
     let namespaceWidget =
         (Namespace("FSharp.ATProto.Bluesky") {
             Open("System.Text.Json")
             Open("System.Text.Json.Serialization")
+            Open("System.Threading.Tasks")
+            Open("FSharp.ATProto.Core")
 
             for nsName in order do
                 match Map.tryFind nsName groups with
@@ -561,4 +657,7 @@ let generateAll (docs: LexiconDoc list) : (string * string) list =
         |> Gen.mkOak
         |> Gen.run
 
-    [ ("Generated.fs", content) ]
+    // 6. Post-process: inject XRPC wrapper functions
+    let contentWithWrappers = injectWrappers content wrappers
+
+    [ ("Generated.fs", contentWithWrappers) ]
