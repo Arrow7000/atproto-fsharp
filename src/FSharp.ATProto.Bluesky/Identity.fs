@@ -11,8 +11,6 @@ open FSharp.ATProto.Syntax
 type IdentityError =
     /// <summary>An XRPC call failed (e.g., handle resolution).</summary>
     | XrpcError of XrpcError
-    /// <summary>Bidirectional verification failed (e.g., handle-DID mismatch).</summary>
-    | VerificationFailed of string
     /// <summary>A DID document could not be fetched or parsed.</summary>
     | DocumentParseError of string
 
@@ -186,31 +184,39 @@ module Identity =
         task {
             let isDid = identifier.StartsWith("did:")
             if isDid then
-                let did = Did.parse identifier |> Result.defaultWith (fun e -> failwith $"Invalid DID: {e}")
-                let! identity = resolveDid agent did
-                match identity with
-                | Error e -> return Error e
-                | Ok id ->
-                    match id.Handle with
-                    | None -> return Ok id
-                    | Some handle ->
-                        let handleTyped = Handle.parse handle |> Result.defaultWith (fun _ -> failwith $"Invalid handle in DID doc: {handle}")
-                        let! reverseResult = resolveHandle agent handleTyped
-                        match reverseResult with
-                        | Ok reverseDid when Did.value reverseDid = identifier -> return Ok id
-                        | _ -> return Ok { id with Handle = None }
-            else
-                // identifier is a handle
-                let handleTyped = Handle.parse identifier |> Result.defaultWith (fun _ -> failwith $"Invalid handle: {identifier}")
-                let! handleResult = resolveHandle agent handleTyped
-                match handleResult with
-                | Error e -> return Error e
+                match Did.parse identifier with
+                | Error e -> return Error (DocumentParseError $"Invalid DID: {e}")
                 | Ok did ->
                     let! identity = resolveDid agent did
                     match identity with
                     | Error e -> return Error e
                     | Ok id ->
-                        // Bidirectional: check DID doc's handle matches
-                        if id.Handle = Some identifier then return Ok id
-                        else return Ok { id with Handle = None }
+                        match id.Handle with
+                        | None -> return Ok id
+                        | Some handle ->
+                            match Handle.parse handle with
+                            | Error _ ->
+                                // DID doc contains an invalid handle; clear it
+                                return Ok { id with Handle = None }
+                            | Ok handleTyped ->
+                                let! reverseResult = resolveHandle agent handleTyped
+                                match reverseResult with
+                                | Ok reverseDid when Did.value reverseDid = identifier -> return Ok id
+                                | _ -> return Ok { id with Handle = None }
+            else
+                // identifier is a handle
+                match Handle.parse identifier with
+                | Error e -> return Error (DocumentParseError $"Invalid handle: {e}")
+                | Ok handleTyped ->
+                    let! handleResult = resolveHandle agent handleTyped
+                    match handleResult with
+                    | Error e -> return Error e
+                    | Ok did ->
+                        let! identity = resolveDid agent did
+                        match identity with
+                        | Error e -> return Error e
+                        | Ok id ->
+                            // Bidirectional: check DID doc's handle matches
+                            if id.Handle = Some identifier then return Ok id
+                            else return Ok { id with Handle = None }
         }
