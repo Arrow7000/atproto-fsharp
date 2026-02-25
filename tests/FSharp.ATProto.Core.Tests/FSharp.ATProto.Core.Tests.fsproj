@@ -6,6 +6,7 @@
   <ItemGroup>
     <Compile Include="TestHelpers.fs" />
     <Compile Include="QueryParamsTests.fs" />
+    <Compile Include="XrpcTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>
