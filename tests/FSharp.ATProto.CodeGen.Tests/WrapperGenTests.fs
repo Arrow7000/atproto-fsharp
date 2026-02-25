@@ -251,6 +251,114 @@ let private typedStringFormatsDoc =
           ] }
 
 // ---------------------------------------------------------------------------
+// Inline union test fixtures
+// ---------------------------------------------------------------------------
+
+/// A record with an open inline union field.
+let private recordWithInlineUnionDoc =
+    { Lexicon = 1
+      Id = mkNsid "com.example.inlineUnion"
+      Revision = None
+      Description = None
+      Defs =
+        Map.ofList [
+            "main", LexDef.Record
+                { Description = None
+                  Key = "tid"
+                  Record =
+                    { Description = None
+                      Properties = Map.ofList [
+                          "text", LexType.String emptyStringConstraints
+                          "embed", LexType.Union
+                              { Description = None
+                                Refs = [ "com.example.embedA#main"; "com.example.embedB#main" ]
+                                Closed = false }
+                      ]
+                      Required = [ "text" ]
+                      Nullable = [] } }
+        ] }
+
+/// A record with a closed inline union field.
+let private recordWithClosedUnionDoc =
+    { Lexicon = 1
+      Id = mkNsid "com.example.closedUnion"
+      Revision = None
+      Description = None
+      Defs =
+        Map.ofList [
+            "main", LexDef.Record
+                { Description = None
+                  Key = "tid"
+                  Record =
+                    { Description = None
+                      Properties = Map.ofList [
+                          "action", LexType.Union
+                              { Description = None
+                                Refs = [ "com.example.create#main"; "com.example.delete#main" ]
+                                Closed = true }
+                      ]
+                      Required = [ "action" ]
+                      Nullable = [] } }
+        ] }
+
+/// A record with an array of union items.
+let private recordWithArrayUnionDoc =
+    { Lexicon = 1
+      Id = mkNsid "com.example.arrayUnion"
+      Revision = None
+      Description = None
+      Defs =
+        Map.ofList [
+            "main", LexDef.Record
+                { Description = None
+                  Key = "tid"
+                  Record =
+                    { Description = None
+                      Properties = Map.ofList [
+                          "items", LexType.Array
+                              { Description = None
+                                Items = LexType.Union
+                                    { Description = None
+                                      Refs = [ "com.example.itemA#main"; "com.example.itemB#main" ]
+                                      Closed = false }
+                                MinLength = None
+                                MaxLength = None }
+                      ]
+                      Required = [ "items" ]
+                      Nullable = [] } }
+        ] }
+
+/// A query with an inline union in the output object.
+let private queryWithInlineUnionOutputDoc =
+    { Lexicon = 1
+      Id = mkNsid "com.example.queryUnion"
+      Revision = None
+      Description = None
+      Defs =
+        Map.ofList [
+            "main", LexDef.Query
+                { Description = None
+                  Parameters = None
+                  Output =
+                    Some
+                        { Description = None
+                          Encoding = "application/json"
+                          Schema =
+                            Some
+                                (LexType.Object
+                                    { Description = None
+                                      Properties = Map.ofList [
+                                          "result", LexType.Union
+                                              { Description = None
+                                                Refs = [ "com.example.success#main"; "com.example.failure#main" ]
+                                                Closed = false }
+                                      ]
+                                      Required = [ "result" ]
+                                      Nullable = [] }) }
+                  Errors = [] }
+        ] }
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -352,4 +460,43 @@ let wrapperTests =
             Expect.stringContains content "Actor: string" "at-identifier stays string"
             // Open statement for Syntax types
             Expect.stringContains content "open FSharp.ATProto.Syntax" "has Syntax open"
+
+        testCase "inline union generates DU type" <| fun () ->
+            let result = FSharp.ATProto.CodeGen.NamespaceGen.generateAll [ recordWithInlineUnionDoc ]
+            let (_, content) = result.[0]
+            // Should have JsonFSharpConverter attribute for the union
+            Expect.stringContains content "JsonFSharpConverter" "has union converter attribute"
+            // Should have union cases
+            Expect.stringContains content "EmbedA" "has first union case"
+            Expect.stringContains content "EmbedB" "has second union case"
+            // Open union should have Unknown fallback
+            Expect.stringContains content "Unknown" "has Unknown fallback"
+            // The embed field should NOT be JsonElement
+            Expect.isFalse (content.Contains "Embed: JsonElement") "embed is not JsonElement"
+            Expect.isFalse (content.Contains "Embed: System.Text.Json.JsonElement") "embed is not System.Text.Json.JsonElement"
+
+        testCase "closed inline union has no Unknown case" <| fun () ->
+            let result = FSharp.ATProto.CodeGen.NamespaceGen.generateAll [ recordWithClosedUnionDoc ]
+            let (_, content) = result.[0]
+            Expect.stringContains content "Create" "has first case"
+            Expect.stringContains content "Delete" "has second case"
+            Expect.isFalse (content.Contains "Unknown") "no Unknown case for closed union"
+
+        testCase "array of union generates DU with list type" <| fun () ->
+            let result = FSharp.ATProto.CodeGen.NamespaceGen.generateAll [ recordWithArrayUnionDoc ]
+            let (_, content) = result.[0]
+            // Should have DU cases
+            Expect.stringContains content "ItemA" "has first union case"
+            Expect.stringContains content "ItemB" "has second union case"
+            // The field should be a list of the DU type, not JsonElement list
+            Expect.isFalse (content.Contains "JsonElement list") "items is not JsonElement list"
+            Expect.stringContains content "list" "has list in the field type"
+
+        testCase "query output with inline union generates DU type" <| fun () ->
+            let result = FSharp.ATProto.CodeGen.NamespaceGen.generateAll [ queryWithInlineUnionOutputDoc ]
+            let (_, content) = result.[0]
+            Expect.stringContains content "Success" "has first union case"
+            Expect.stringContains content "Failure" "has second union case"
+            Expect.stringContains content "JsonFSharpConverter" "has union converter attribute"
+            Expect.isFalse (content.Contains "Result: JsonElement") "result is not JsonElement"
     ]

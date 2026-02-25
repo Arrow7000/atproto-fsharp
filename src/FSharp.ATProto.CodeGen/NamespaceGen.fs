@@ -173,12 +173,16 @@ let private generateRecordWidget
     (typeName: string)
     (description: string option)
     (lexObj: LexObject)
+    (unionOverrides: Map<string, string>)
     =
     let fields =
         lexObj.Properties
         |> Map.toList
         |> List.map (fun (propName, lexType) ->
-            let baseType = TypeMapping.lexTypeToFSharpType currentNamespace lexType
+            let baseType =
+                match Map.tryFind propName unionOverrides with
+                | Some overrideType -> overrideType
+                | None -> TypeMapping.lexTypeToFSharpType currentNamespace lexType
             let fieldName = Naming.toPascalCase propName |> Naming.escapeReservedWord
 
             let isOpt =
@@ -210,12 +214,16 @@ let private generateParamsWidget
     (currentNamespace: string)
     (typeName: string)
     (lexParams: LexParams)
+    (unionOverrides: Map<string, string>)
     =
     let fields =
         lexParams.Properties
         |> Map.toList
         |> List.map (fun (propName, lexType) ->
-            let baseType = TypeMapping.lexTypeToFSharpType currentNamespace lexType
+            let baseType =
+                match Map.tryFind propName unionOverrides with
+                | Some overrideType -> overrideType
+                | None -> TypeMapping.lexTypeToFSharpType currentNamespace lexType
             let fieldName = Naming.toPascalCase propName |> Naming.escapeReservedWord
 
             let isOpt = not (List.contains propName lexParams.Required)
@@ -284,6 +292,43 @@ let private generateUnionWidget
     | Some desc -> u.xmlDocs([ desc ])
     | None -> u
 
+/// Collect inline union DU info from an object's properties.
+/// Returns (widgets to emit, overrides map: property name -> F# type string).
+/// Deduplicates when multiple properties share the same sorted refs.
+let private collectInlineUnionsAndOverrides
+    (currentNamespace: string)
+    (properties: Map<string, LexType>)
+    =
+    let raw =
+        properties
+        |> Map.toList
+        |> List.choose (fun (propName, lexType) ->
+            match lexType with
+            | LexType.Union u -> Some (propName, u, false)
+            | LexType.Array { Items = LexType.Union u } -> Some (propName, u, true)
+            | _ -> None)
+
+    let groups =
+        raw
+        |> List.groupBy (fun (_, u, _) -> u.Refs |> List.sort)
+
+    let mutable widgets = []
+    let mutable overrides = Map.empty
+
+    for (_, group) in groups do
+        let (firstName, firstUnion, firstIsArray) = group |> List.head
+        let duName =
+            if firstIsArray then (Naming.toPascalCase firstName) + "Item"
+            else Naming.toPascalCase firstName
+        let widget = generateUnionWidget currentNamespace duName firstUnion
+        widgets <- widget :: widgets
+
+        for (propName, _, isArray) in group do
+            let typeName = if isArray then sprintf "%s list" duName else duName
+            overrides <- Map.add propName typeName overrides
+
+    (List.rev widgets, overrides)
+
 /// Check if a LexBody has JSON schema (application/json encoding with a non-empty object schema).
 let private hasJsonObjectSchema (body: LexBody) : LexObject option =
     if body.Encoding = "application/json" then
@@ -319,19 +364,28 @@ let private generateRecordModule
     (record: LexRecord)
     (otherDefs: (string * LexDef) list)
     =
+    let (mainDuWidgets, mainOverrides) =
+        collectInlineUnionsAndOverrides currentNamespace record.Record.Properties
+
     Module(moduleName) {
         Value("TypeId", ConstantExpr(Ast.String(nsid)))
             .attribute(Attribute("Literal"))
 
+        for w in mainDuWidgets do
+            w
+
         if not record.Record.Properties.IsEmpty then
-            generateRecordWidget currentNamespace moduleName record.Description record.Record
+            generateRecordWidget currentNamespace moduleName record.Description record.Record mainOverrides
 
         for (defName, def) in otherDefs do
             let typeName = Naming.defToTypeName moduleName defName
 
             match def with
             | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
-                generateRecordWidget currentNamespace typeName obj.Description obj
+                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace obj.Properties
+                for w in duWidgets do
+                    w
+                generateRecordWidget currentNamespace typeName obj.Description obj overrides
             | LexDef.DefType (LexType.Union u) ->
                 generateUnionWidget currentNamespace typeName u
             | LexDef.Token t ->
@@ -356,14 +410,20 @@ let private generateQueryModule
 
         match query.Parameters with
         | Some p when p.Properties.Count > 0 ->
-            generateParamsWidget currentNamespace "Params" p
+            let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace p.Properties
+            for w in duWidgets do
+                w
+            generateParamsWidget currentNamespace "Params" p overrides
         | _ -> ()
 
         match query.Output with
         | Some body ->
             match hasJsonObjectSchema body with
             | Some obj ->
-                generateRecordWidget currentNamespace "Output" body.Description obj
+                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace obj.Properties
+                for w in duWidgets do
+                    w
+                generateRecordWidget currentNamespace "Output" body.Description obj overrides
             | None ->
                 match hasJsonRefSchema body with
                 | Some ref ->
@@ -386,7 +446,10 @@ let private generateQueryModule
 
             match def with
             | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
-                generateRecordWidget currentNamespace typeName obj.Description obj
+                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace obj.Properties
+                for w in duWidgets do
+                    w
+                generateRecordWidget currentNamespace typeName obj.Description obj overrides
             | LexDef.DefType (LexType.Union u) ->
                 generateUnionWidget currentNamespace typeName u
             | LexDef.Token t ->
@@ -411,14 +474,20 @@ let private generateProcedureModule
 
         match proc.Parameters with
         | Some p when p.Properties.Count > 0 ->
-            generateParamsWidget currentNamespace "Params" p
+            let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace p.Properties
+            for w in duWidgets do
+                w
+            generateParamsWidget currentNamespace "Params" p overrides
         | _ -> ()
 
         match proc.Input with
         | Some body ->
             match hasJsonObjectSchema body with
             | Some obj ->
-                generateRecordWidget currentNamespace "Input" body.Description obj
+                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace obj.Properties
+                for w in duWidgets do
+                    w
+                generateRecordWidget currentNamespace "Input" body.Description obj overrides
             | None ->
                 match hasJsonRefSchema body with
                 | Some ref ->
@@ -431,7 +500,10 @@ let private generateProcedureModule
         | Some body ->
             match hasJsonObjectSchema body with
             | Some obj ->
-                generateRecordWidget currentNamespace "Output" body.Description obj
+                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace obj.Properties
+                for w in duWidgets do
+                    w
+                generateRecordWidget currentNamespace "Output" body.Description obj overrides
             | None ->
                 match hasJsonRefSchema body with
                 | Some ref ->
@@ -454,7 +526,10 @@ let private generateProcedureModule
 
             match def with
             | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
-                generateRecordWidget currentNamespace typeName obj.Description obj
+                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace obj.Properties
+                for w in duWidgets do
+                    w
+                generateRecordWidget currentNamespace typeName obj.Description obj overrides
             | LexDef.DefType (LexType.Union u) ->
                 generateUnionWidget currentNamespace typeName u
             | LexDef.Token t ->
@@ -479,7 +554,10 @@ let private generateSubscriptionModule
 
         match sub.Parameters with
         | Some p when p.Properties.Count > 0 ->
-            generateParamsWidget currentNamespace "Params" p
+            let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace p.Properties
+            for w in duWidgets do
+                w
+            generateParamsWidget currentNamespace "Params" p overrides
         | _ -> ()
 
         match sub.Message with
@@ -501,7 +579,10 @@ let private generateSubscriptionModule
 
             match def with
             | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
-                generateRecordWidget currentNamespace typeName obj.Description obj
+                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace obj.Properties
+                for w in duWidgets do
+                    w
+                generateRecordWidget currentNamespace typeName obj.Description obj overrides
             | LexDef.DefType (LexType.Union u) ->
                 generateUnionWidget currentNamespace typeName u
             | LexDef.Token t ->
@@ -525,7 +606,10 @@ let private generateDefsOnlyModule
 
             match def with
             | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
-                generateRecordWidget currentNamespace typeName obj.Description obj
+                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace obj.Properties
+                for w in duWidgets do
+                    w
+                generateRecordWidget currentNamespace typeName obj.Description obj overrides
             | LexDef.DefType (LexType.Union u) ->
                 generateUnionWidget currentNamespace typeName u
             | LexDef.Token t ->
