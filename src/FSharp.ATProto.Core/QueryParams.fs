@@ -4,7 +4,11 @@ open System
 open System.Reflection
 open Microsoft.FSharp.Reflection
 
-/// Serializes F# records to URL query strings for XRPC queries.
+/// <summary>
+/// Serializes F# records to URL query strings for XRPC query parameters.
+/// Used internally by <see cref="Xrpc.query"/> to convert typed parameter records
+/// into query-string form.
+/// </summary>
 module QueryParams =
 
     let private isOptionType (t: Type) =
@@ -25,9 +29,31 @@ module QueryParams =
         if String.IsNullOrEmpty(name) then name
         else string (Char.ToLowerInvariant(name.[0])) + name.[1..]
 
-    /// Convert an F# record to a URL query string.
-    /// Option fields are omitted when None.
-    /// List fields are emitted as repeated parameters.
+    /// <summary>
+    /// Converts an F# record to a URL query string (including the leading <c>?</c>).
+    /// </summary>
+    /// <param name="record">An F# record whose fields map to query-string parameters.</param>
+    /// <typeparam name="T">The record type. Must be an F# record.</typeparam>
+    /// <returns>
+    /// A query string such as <c>"?actor=alice.bsky.social&amp;limit=50"</c>,
+    /// or an empty string if the record produces no parameters.
+    /// </returns>
+    /// <remarks>
+    /// Field names are converted to camelCase. The following field types are supported:
+    /// <list type="bullet">
+    ///   <item><description><c>option</c> fields: omitted when <c>None</c>; the inner value is emitted when <c>Some</c>.</description></item>
+    ///   <item><description><c>list</c> fields: emitted as repeated query parameters (e.g. <c>uris=a&amp;uris=b</c>).</description></item>
+    ///   <item><description>Scalar fields (<c>string</c>, <c>int</c>, <c>int64</c>, <c>bool</c>): emitted directly. Booleans serialize as <c>"true"</c>/<c>"false"</c>.</description></item>
+    /// </list>
+    /// All values are URI-escaped via <see cref="Uri.EscapeDataString"/>.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// type Params = { Actor: string; Limit: int option }
+    /// QueryParams.toQueryString { Actor = "alice.bsky.social"; Limit = Some 25 }
+    /// // returns "?actor=alice.bsky.social&amp;limit=25"
+    /// </code>
+    /// </example>
     let toQueryString<'T> (record: 'T) : string =
         let fields = FSharpType.GetRecordFields(typeof<'T>)
         let pairs =

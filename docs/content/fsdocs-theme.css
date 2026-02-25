@@ -1,0 +1,245 @@
+/* FSharp.ATProto -- Custom fsdocs theme
+   Bluesky-inspired color palette with clean typography and dark mode support */
+
+/* ===== Light Theme ===== */
+:root {
+    /* Primary brand -- Bluesky blue */
+    --primary: #0085ff;
+
+    /* Typography */
+    --system-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    --monospace-font: "JetBrains Mono", "Fira Code", "Cascadia Code",
+        "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+    --heading-font-family: var(--system-font);
+    --line-height: 1.6;
+    --heading-line-height: 1.3;
+
+    /* Backgrounds */
+    --background: #f8f9fb;
+    --code-background: #ffffff;
+    --header-background: #ffffff;
+    --header-border: #e2e8f0;
+    --menu-item-hover-background: #eef3ff;
+    --doc-tip-background: #f0f4ff;
+    --aside-background: #ffffff;
+    --blockquote-bacground-color: #f0f4ff;
+    --page-menu-background-color: #ffffff;
+    --page-menu-background-border-color: #e2e8f0;
+    --search-background: #eef2f7;
+
+    /* Text */
+    --text-color: #1a202c;
+    --text-hover: #2d3748;
+    --heading-color: #0f172a;
+    --code-color: #1a202c;
+    --menu-color: #334155;
+    --blockquote-color: #475569;
+    --nav-category: #64748b;
+    --on-this-page-color: #475569;
+
+    /* Links -- deeper blue for readability */
+    --link-color: #0066cc;
+    --link-hover: #0052a3;
+
+    /* Accent */
+    --dialog-link-color: #0066cc;
+    --dialog-link-hover-color: #ffffff;
+    --dialog-link-hover-background-color: #0066cc;
+    --dialog-background-color: #ffffff;
+    --dialog-empty-color: #94a3b8;
+    --dialog-icon-color: #334155;
+
+    /* Navigation */
+    --nav-item-border-color: #e2e8f0;
+    --nav-item-active-border-color: #0085ff;
+    --page-menu-background-hover-border-color: #0085ff;
+
+    /* Code blocks */
+    --code-fence-border-color: #e2e8f0;
+
+    /* Shadows */
+    --shadow-color: hsla(215, 25%, 27%, 0.08);
+    --main-shadow-color: hsla(215, 25%, 27%, 0.03);
+
+    /* Layout */
+    --radius: 8px;
+    --header-height: 64px;
+    --header-brand-text-transform: none;
+
+    /* Syntax highlighting -- cool-toned palette */
+    --code-strings-color: #0e7490;
+    --code-printf-color: #7c3aed;
+    --code-escaped-color: #dc2626;
+    --code-identifiers-color: #6d28d9;
+    --code-module-color: #0891b2;
+    --code-reference-color: #2563eb;
+    --code-value-color: #15803d;
+    --code-interface-color: #0891b2;
+    --code-typearg-color: #0891b2;
+    --code-disposable-color: #0891b2;
+    --code-property-color: #0891b2;
+    --code-punctuation-color: #64748b;
+    --code-punctuation2-color: #334155;
+    --code-function-color: #7c3aed;
+    --code-function2-color: #6d28d9;
+    --code-activepattern-color: #059669;
+    --code-unioncase-color: #059669;
+    --code-enumeration-color: #b45309;
+    --code-keywords-color: #2563eb;
+    --code-comment-color: #64748b;
+    --code-operators-color: #2563eb;
+    --code-numbers-color: #0e7490;
+    --code-linenumbers-color: #94a3b8;
+    --code-mutable-color: #15803d;
+    --code-inactive-color: #94a3b8;
+    --code-preprocessor-color: #a855f7;
+    --code-fsioutput-color: #64748b;
+    --code-tooltip-color: #e2e8f0;
+}
+
+/* ===== Dark Theme ===== */
+[data-theme="dark"] {
+    /* Primary brand -- lighter blue for dark backgrounds */
+    --primary: #60a5fa;
+
+    /* Backgrounds */
+    --background: #0f172a;
+    --code-background: #1e293b;
+    --header-background: #0b1120;
+    --header-border: #1e293b;
+    --menu-item-hover-background: #1e293b;
+    --doc-tip-background: #1e293b;
+    --aside-background: #0b1120;
+    --blockquote-bacground-color: #1e293b;
+    --page-menu-background-color: #0b1120;
+    --page-menu-background-border-color: #1e293b;
+    --search-background: #1e293b;
+    --mobile-menu-background: #0b1120;
+
+    /* Text */
+    --text-color: #e2e8f0;
+    --text-hover: #f8fafc;
+    --heading-color: #f1f5f9;
+    --code-color: #e2e8f0;
+    --menu-color: #cbd5e1;
+    --blockquote-color: #94a3b8;
+    --nav-category: #94a3b8;
+    --on-this-page-color: #94a3b8;
+
+    /* Links */
+    --link-color: #93c5fd;
+    --link-hover: #bfdbfe;
+
+    /* Accent */
+    --dialog-link-color: #93c5fd;
+    --dialog-link-hover-color: #0f172a;
+    --dialog-link-hover-background-color: #93c5fd;
+    --dialog-background-color: #1e293b;
+    --dialog-empty-color: #64748b;
+    --dialog-icon-color: #cbd5e1;
+
+    /* Navigation */
+    --nav-item-border-color: #1e293b;
+    --nav-item-active-border-color: #60a5fa;
+    --page-menu-background-hover-border-color: #60a5fa;
+
+    /* Code blocks */
+    --code-fence-border-color: #334155;
+
+    /* Shadows */
+    --shadow-color: hsla(215, 50%, 10%, 0.4);
+    --main-shadow-color: hsla(215, 50%, 10%, 0.2);
+
+    /* Syntax highlighting -- warm on dark */
+    --code-strings-color: #67e8f9;
+    --code-printf-color: #c4b5fd;
+    --code-escaped-color: #fca5a5;
+    --code-identifiers-color: #c4b5fd;
+    --code-module-color: #22d3ee;
+    --code-reference-color: #93c5fd;
+    --code-value-color: #86efac;
+    --code-interface-color: #67e8f9;
+    --code-typearg-color: #67e8f9;
+    --code-disposable-color: #67e8f9;
+    --code-property-color: #67e8f9;
+    --code-punctuation-color: #94a3b8;
+    --code-punctuation2-color: #cbd5e1;
+    --code-function-color: #c4b5fd;
+    --code-function2-color: #a78bfa;
+    --code-activepattern-color: #34d399;
+    --code-unioncase-color: #34d399;
+    --code-enumeration-color: #fbbf24;
+    --code-keywords-color: #93c5fd;
+    --code-comment-color: #6ee7b7;
+    --code-operators-color: #93c5fd;
+    --code-numbers-color: #22d3ee;
+    --code-linenumbers-color: #475569;
+    --code-mutable-color: #86efac;
+    --code-inactive-color: #475569;
+    --code-preprocessor-color: #d8b4fe;
+    --code-fsioutput-color: #64748b;
+    --code-tooltip-color: #334155;
+}
+
+/* ===== Custom Structural Styles ===== */
+
+/* Tighter code block styling */
+pre > code {
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+code {
+    font-size: 0.9em;
+}
+
+/* Inline code */
+:not(pre) > code {
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    background: var(--code-background);
+    border: 1px solid var(--code-fence-border-color);
+}
+
+/* Blockquotes */
+blockquote {
+    border-left: 3px solid var(--primary);
+    padding: 0.5em 1em;
+    margin: 1em 0;
+}
+
+/* Tables */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.5em 0;
+}
+
+th {
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--header-border);
+    padding: 0.6em 1em;
+}
+
+td {
+    border-bottom: 1px solid var(--header-border);
+    padding: 0.6em 1em;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+/* Smooth transitions for theme switching */
+body,
+header,
+main,
+aside,
+nav,
+code,
+pre {
+    transition: background-color 0.2s ease, color 0.2s ease,
+        border-color 0.2s ease;
+}

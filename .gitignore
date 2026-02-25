@@ -6,3 +6,5 @@ obj/
 *.suo
 .ionide/
 .worktrees/
+output/
+.fsdocs/

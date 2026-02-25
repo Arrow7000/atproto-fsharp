@@ -3,11 +3,24 @@ namespace FSharp.ATProto.Bluesky
 open System.Text
 open System.Text.RegularExpressions
 
+/// <summary>
+/// Rich text processing for Bluesky posts.
+/// Detects mentions, links, and hashtags in text and resolves them to facets
+/// with correct UTF-8 byte offsets as required by the AT Protocol.
+/// </summary>
 module RichText =
 
+    /// <summary>
+    /// A facet detected in rich text, with UTF-8 byte offsets and extracted content.
+    /// Byte offsets are used rather than character indices because the AT Protocol
+    /// specifies facet positions in UTF-8 byte coordinates.
+    /// </summary>
     type DetectedFacet =
+        /// <summary>A mention (@handle) detected in text.</summary>
         | DetectedMention of byteStart: int * byteEnd: int * handle: string
+        /// <summary>A link (http:// or https://) detected in text.</summary>
         | DetectedLink of byteStart: int * byteEnd: int * uri: string
+        /// <summary>A hashtag (#tag) detected in text.</summary>
         | DetectedTag of byteStart: int * byteEnd: int * tag: string
 
     let private charIndexToByteIndex (text: string) (charIndex: int) =
@@ -62,6 +75,28 @@ module RichText =
                 let byteEnd = charIndexToByteIndex text charEnd
                 DetectedTag(byteStart, byteEnd, tag) ]
 
+    /// <summary>
+    /// Detect mentions, links, and hashtags in text.
+    /// Returns facets with UTF-8 byte offsets, sorted by start position.
+    /// </summary>
+    /// <param name="text">The text to scan for rich text entities.</param>
+    /// <returns>
+    /// A list of <see cref="DetectedFacet"/> values sorted by byte start position.
+    /// Mentions match <c>@handle.domain</c>, links match <c>http(s)://...</c>,
+    /// and hashtags match <c>#tag</c> patterns.
+    /// </returns>
+    /// <remarks>
+    /// This performs detection only. To resolve mentions to DIDs and produce
+    /// <see cref="AppBskyRichtext.Facet.Facet"/> records suitable for the API,
+    /// pass the result to <see cref="resolve"/> or use <see cref="parse"/> for a
+    /// combined detect-and-resolve step.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// let facets = RichText.detect "Hello @alice.bsky.social! #atproto"
+    /// // Returns [DetectedMention(6, 27, "alice.bsky.social"); DetectedTag(29, 37, "atproto")]
+    /// </code>
+    /// </example>
     let detect (text: string) : DetectedFacet list =
         let mentions = detectMentions text
         let links = detectLinks text
@@ -88,6 +123,17 @@ module RichText =
         for (k, v) in fields do dict.[k] <- v
         JsonSerializer.SerializeToElement(dict)
 
+    /// <summary>
+    /// Resolve detected facets into API-ready facet records.
+    /// Mentions are resolved to DIDs via <c>com.atproto.identity.resolveHandle</c>;
+    /// unresolvable mentions are silently dropped.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="detected">The list of <see cref="DetectedFacet"/> values to resolve (typically from <see cref="detect"/>).</param>
+    /// <returns>
+    /// A list of <see cref="AppBskyRichtext.Facet.Facet"/> records with resolved features.
+    /// Mentions whose handles cannot be resolved are omitted from the result.
+    /// </returns>
     let resolve (agent: AtpAgent) (detected: DetectedFacet list) : Task<AppBskyRichtext.Facet.Facet list> =
         task {
             let results = System.Collections.Generic.List<AppBskyRichtext.Facet.Facet>()
@@ -109,15 +155,44 @@ module RichText =
             return results |> Seq.toList
         }
 
+    /// <summary>
+    /// Detect and resolve all rich text facets in a single step.
+    /// Combines <see cref="detect"/> and <see cref="resolve"/>: scans the text for
+    /// mentions, links, and hashtags, then resolves mentions to DIDs.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="text">The text to scan and resolve.</param>
+    /// <returns>A list of resolved <see cref="AppBskyRichtext.Facet.Facet"/> records.</returns>
+    /// <example>
+    /// <code>
+    /// let! facets = RichText.parse agent "Hello @alice.bsky.social! Check https://example.com #atproto"
+    /// </code>
+    /// </example>
     let parse (agent: AtpAgent) (text: string) : Task<AppBskyRichtext.Facet.Facet list> =
         task {
             let detected = detect text
             return! resolve agent detected
         }
 
+    /// <summary>
+    /// Count the number of grapheme clusters (user-perceived characters) in a string.
+    /// Bluesky uses grapheme length for the 300-character post limit.
+    /// </summary>
+    /// <param name="text">The text to measure.</param>
+    /// <returns>The number of extended grapheme clusters in the text.</returns>
+    /// <remarks>
+    /// Grapheme length differs from <see cref="System.String.Length"/> for multi-codepoint
+    /// characters such as emoji (e.g., family emoji, flag emoji) and combining character sequences.
+    /// </remarks>
     let graphemeLength (text: string) : int =
         let info = StringInfo(text)
         info.LengthInTextElements
 
+    /// <summary>
+    /// Count the UTF-8 byte length of a string.
+    /// The AT Protocol specifies facet positions and text limits in UTF-8 bytes.
+    /// </summary>
+    /// <param name="text">The text to measure.</param>
+    /// <returns>The number of bytes when the text is encoded as UTF-8.</returns>
     let byteLength (text: string) : int =
         Encoding.UTF8.GetByteCount(text)
