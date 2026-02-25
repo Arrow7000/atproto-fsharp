@@ -8,6 +8,8 @@
     <Compile Include="QueryParamsTests.fs" />
     <Compile Include="XrpcTests.fs" />
     <Compile Include="AtpAgentTests.fs" />
+    <Compile Include="RateLimitTests.fs" />
+    <Compile Include="PaginationTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>

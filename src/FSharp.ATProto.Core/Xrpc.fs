@@ -60,6 +60,23 @@ module Xrpc =
                     return Error error
         }
 
+    let private waitForRateLimit (response: HttpResponseMessage) : Task<bool> =
+        task {
+            if int response.StatusCode = 429 then
+                let retryAfter =
+                    match response.Headers.RetryAfter with
+                    | null -> 1.0
+                    | ra when ra.Delta.HasValue -> ra.Delta.Value.TotalSeconds
+                    | ra when ra.Date.HasValue ->
+                        let diff = ra.Date.Value - DateTimeOffset.UtcNow
+                        max 0.0 diff.TotalSeconds
+                    | _ -> 1.0
+                do! Task.Delay(int (retryAfter * 1000.0))
+                return true
+            else
+                return false
+        }
+
     /// Execute an XRPC query (HTTP GET).
     let query<'P, 'O> (nsid: string) (parameters: 'P) (agent: AtpAgent) : Task<Result<'O, XrpcError>> =
         task {
@@ -76,8 +93,20 @@ module Xrpc =
                 return Ok output
             else
                 let! error = tryDeserializeError response
+                // Rate limit retry
+                if error.StatusCode = 429 then
+                    let! _ = waitForRateLimit response
+                    let retryRequest = new HttpRequestMessage(HttpMethod.Get, url)
+                    addAuth agent retryRequest
+                    let! retryResponse = agent.HttpClient.SendAsync(retryRequest)
+                    if retryResponse.IsSuccessStatusCode then
+                        let! retryBody = retryResponse.Content.ReadAsStringAsync()
+                        return Ok(JsonSerializer.Deserialize<'O>(retryBody, Json.options))
+                    else
+                        let! retryError = tryDeserializeError retryResponse
+                        return Error retryError
                 // Auto-refresh on ExpiredToken
-                if error.StatusCode = 401 && error.Error = Some "ExpiredToken" && agent.Session.IsSome then
+                elif error.StatusCode = 401 && error.Error = Some "ExpiredToken" && agent.Session.IsSome then
                     let! refreshResult = refreshSession agent
                     match refreshResult with
                     | Ok _ ->
@@ -114,8 +143,21 @@ module Xrpc =
                 return Ok output
             else
                 let! error = tryDeserializeError response
+                // Rate limit retry
+                if error.StatusCode = 429 then
+                    let! _ = waitForRateLimit response
+                    let retryRequest = new HttpRequestMessage(HttpMethod.Post, url)
+                    retryRequest.Content <- new StringContent(json, Encoding.UTF8, "application/json")
+                    addAuth agent retryRequest
+                    let! retryResponse = agent.HttpClient.SendAsync(retryRequest)
+                    if retryResponse.IsSuccessStatusCode then
+                        let! retryBody = retryResponse.Content.ReadAsStringAsync()
+                        return Ok(JsonSerializer.Deserialize<'O>(retryBody, Json.options))
+                    else
+                        let! retryError = tryDeserializeError retryResponse
+                        return Error retryError
                 // Auto-refresh on ExpiredToken
-                if error.StatusCode = 401 && error.Error = Some "ExpiredToken" && agent.Session.IsSome then
+                elif error.StatusCode = 401 && error.Error = Some "ExpiredToken" && agent.Session.IsSome then
                     let! refreshResult = refreshSession agent
                     match refreshResult with
                     | Ok _ ->
@@ -151,8 +193,20 @@ module Xrpc =
                 return Ok()
             else
                 let! error = tryDeserializeError response
+                // Rate limit retry
+                if error.StatusCode = 429 then
+                    let! _ = waitForRateLimit response
+                    let retryRequest = new HttpRequestMessage(HttpMethod.Post, url)
+                    retryRequest.Content <- new StringContent(json, Encoding.UTF8, "application/json")
+                    addAuth agent retryRequest
+                    let! retryResponse = agent.HttpClient.SendAsync(retryRequest)
+                    if retryResponse.IsSuccessStatusCode then
+                        return Ok()
+                    else
+                        let! retryError = tryDeserializeError retryResponse
+                        return Error retryError
                 // Auto-refresh on ExpiredToken
-                if error.StatusCode = 401 && error.Error = Some "ExpiredToken" && agent.Session.IsSome then
+                elif error.StatusCode = 401 && error.Error = Some "ExpiredToken" && agent.Session.IsSome then
                     let! refreshResult = refreshSession agent
                     match refreshResult with
                     | Ok _ ->
@@ -170,4 +224,41 @@ module Xrpc =
                         return Error refreshError
                 else
                     return Error error
+        }
+
+    /// Paginate through a cursor-based XRPC query.
+    let paginate<'P, 'O>
+        (nsid: string)
+        (initialParams: 'P)
+        (getCursor: 'O -> string option)
+        (setCursor: string option -> 'P -> 'P)
+        (agent: AtpAgent)
+        : Collections.Generic.IAsyncEnumerable<Result<'O, XrpcError>> =
+        { new Collections.Generic.IAsyncEnumerable<Result<'O, XrpcError>> with
+            member _.GetAsyncEnumerator(_ct) =
+                let mutable currentParams = initialParams
+                let mutable finished = false
+                let mutable current = Unchecked.defaultof<Result<'O, XrpcError>>
+                { new Collections.Generic.IAsyncEnumerator<Result<'O, XrpcError>> with
+                    member _.Current = current
+                    member _.MoveNextAsync() =
+                        if finished then
+                            ValueTask<bool>(false)
+                        else
+                            ValueTask<bool>(task {
+                                let! result = query<'P, 'O> nsid currentParams agent
+                                current <- result
+                                match result with
+                                | Ok output ->
+                                    match getCursor output with
+                                    | Some cursor ->
+                                        currentParams <- setCursor (Some cursor) currentParams
+                                    | None ->
+                                        finished <- true
+                                | Error _ ->
+                                    finished <- true
+                                return true
+                            })
+                    member _.DisposeAsync() = ValueTask()
+                }
         }
