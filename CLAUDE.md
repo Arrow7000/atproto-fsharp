@@ -36,10 +36,15 @@ src/
   FSharp.ATProto.DRISL/        # DRISL/CBOR encoding + CID
   FSharp.ATProto.Lexicon/      # Lexicon schema parser + validator
   FSharp.ATProto.CodeGen/      # CLI: Lexicon -> F# source (Phase 4)
+  FSharp.ATProto.Core/         # XRPC client, session auth, rate limiting, pagination
+  FSharp.ATProto.Bluesky/      # Generated types + rich text, identity, convenience methods
 tests/
-  FSharp.ATProto.Syntax.Tests/ # 726 tests
-  FSharp.ATProto.DRISL.Tests/  # 112 tests
+  FSharp.ATProto.Syntax.Tests/  # 726 tests
+  FSharp.ATProto.DRISL.Tests/   # 112 tests
   FSharp.ATProto.Lexicon.Tests/ # 387 tests
+  FSharp.ATProto.CodeGen.Tests/ # 167 tests
+  FSharp.ATProto.Core.Tests/    # 22 tests
+  FSharp.ATProto.Bluesky.Tests/ # 48 tests
 extern/
   atproto/                     # Git submodule: lexicon schemas (324 files)
   atproto-interop-tests/       # Git submodule: test vectors
