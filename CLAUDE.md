@@ -21,12 +21,11 @@ If context is <35% full, go with the subagent driven approach in this session. O
 
 ## Build & Test
 
-- .NET 9 SDK is at `~/.dotnet/` (user-local install)
-- All dotnet commands must be prefixed: `export PATH="$HOME/.dotnet:$PATH" &&`
+- .NET 10 SDK at `/usr/local/share/dotnet/` (system install)
 - Test framework: Expecto 10.2.3 + FsCheck 2.16.6
 - `[<Tests>]` attribute required on Expecto test values for discovery
-- Run all tests: `export PATH="$HOME/.dotnet:$PATH" && dotnet test`
-- Run specific project: `export PATH="$HOME/.dotnet:$PATH" && dotnet test tests/FSharp.ATProto.Syntax.Tests`
+- Run all tests: `dotnet test`
+- Run specific project: `dotnet test tests/FSharp.ATProto.Syntax.Tests`
 
 ## Project Structure
 
@@ -42,8 +41,8 @@ tests/
   FSharp.ATProto.Syntax.Tests/  # 726 tests
   FSharp.ATProto.DRISL.Tests/   # 112 tests
   FSharp.ATProto.Lexicon.Tests/ # 387 tests
-  FSharp.ATProto.CodeGen.Tests/ # 167 tests
-  FSharp.ATProto.Core.Tests/    # 22 tests
+  FSharp.ATProto.CodeGen.Tests/ # 169 tests
+  FSharp.ATProto.Core.Tests/    # 30 tests
   FSharp.ATProto.Bluesky.Tests/ # 48 tests
 extern/
   atproto/                     # Git submodule: lexicon schemas (324 files)
