@@ -112,16 +112,11 @@ module RichText =
     open System.Text.Json
     open System.Threading.Tasks
     open FSharp.ATProto.Core
+    open FSharp.ATProto.Syntax
 
-    let private makeFacet (byteStart: int) (byteEnd: int) (feature: JsonElement) : AppBskyRichtext.Facet.Facet =
+    let private makeFacet (byteStart: int) (byteEnd: int) (feature: AppBskyRichtext.Facet.FacetFeaturesItem) : AppBskyRichtext.Facet.Facet =
         { Index = { ByteStart = int64 byteStart; ByteEnd = int64 byteEnd }
           Features = [ feature ] }
-
-    let private serializeFeature (typeName: string) (fields: (string * obj) list) : JsonElement =
-        let dict = System.Collections.Generic.Dictionary<string, obj>()
-        dict.["$type"] <- typeName
-        for (k, v) in fields do dict.[k] <- v
-        JsonSerializer.SerializeToElement(dict)
 
     /// <summary>
     /// Resolve detected facets into API-ready facet records.
@@ -140,17 +135,19 @@ module RichText =
             for facet in detected do
                 match facet with
                 | DetectedMention (s, e, handle) ->
-                    let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handle }
+                    let handleTyped = Handle.parse handle |> Result.defaultWith failwith
+                    let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handleTyped }
                     match result with
                     | Ok output ->
-                        let feature = serializeFeature "app.bsky.richtext.facet#mention" [ "did", output.Did ]
+                        let feature = AppBskyRichtext.Facet.FacetFeaturesItem.Mention { Did = output.Did }
                         results.Add(makeFacet s e feature)
                     | Error _ -> ()
                 | DetectedLink (s, e, uri) ->
-                    let feature = serializeFeature "app.bsky.richtext.facet#link" [ "uri", uri ]
+                    let uriTyped = FSharp.ATProto.Syntax.Uri.parse uri |> Result.defaultWith failwith
+                    let feature = AppBskyRichtext.Facet.FacetFeaturesItem.Link { Uri = uriTyped }
                     results.Add(makeFacet s e feature)
                 | DetectedTag (s, e, tag) ->
-                    let feature = serializeFeature "app.bsky.richtext.facet#tag" [ "tag", tag ]
+                    let feature = AppBskyRichtext.Facet.FacetFeaturesItem.Tag { Tag = tag }
                     results.Add(makeFacet s e feature)
             return results |> Seq.toList
         }

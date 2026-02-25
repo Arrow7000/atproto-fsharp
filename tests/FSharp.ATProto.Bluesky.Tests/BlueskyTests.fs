@@ -44,7 +44,7 @@ let postTests =
             let agent = createRecordAgent (fun req -> captured <- Some req)
             let facets : AppBskyRichtext.Facet.Facet list = [
                 { Index = { ByteStart = 0L; ByteEnd = 5L }
-                  Features = [ JsonSerializer.SerializeToElement({| ``$type`` = "app.bsky.richtext.facet#tag"; tag = "hello" |}) ] }
+                  Features = [ AppBskyRichtext.Facet.FacetFeaturesItem.Tag { Tag = "hello" } ] }
             ]
             let result = Bluesky.postWith agent "#hello world" facets |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"

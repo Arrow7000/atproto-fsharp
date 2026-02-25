@@ -4,16 +4,24 @@ open System.Text.Json
 open System.Text.Json.Serialization
 open System.Threading.Tasks
 open FSharp.ATProto.Core
+open FSharp.ATProto.Syntax
 
 module AppBsky =
     begin end
 
 module AppBskyRichtext =
     module Facet =
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type FacetFeaturesItem =
+            | [<JsonName("app.bsky.richtext.facet#mention")>] Mention of Facet.Mention
+            | [<JsonName("app.bsky.richtext.facet#link")>] Link of Facet.Link
+            | [<JsonName("app.bsky.richtext.facet#tag")>] Tag of Facet.Tag
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// Annotation of a sub-string within rich text.
         type Facet =
             { [<JsonPropertyName("features")>]
-              Features: JsonElement list
+              Features: FacetFeaturesItem list
               [<JsonPropertyName("index")>]
               Index: Facet.ByteSlice }
 
@@ -27,12 +35,12 @@ module AppBskyRichtext =
         /// Facet feature for a URL. The text URL may have been simplified or truncated, but the facet reference should be a complete URL.
         type Link =
             { [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: Uri }
 
         /// Facet feature for mention of another account. The text is usually a handle, including a '@' prefix, but the facet reference is a DID.
         type Mention =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         /// Facet feature for a hashtag. The text usually includes a '#' prefix, but the facet reference should not (except in the case of 'double hash tags').
         type Tag =
@@ -44,19 +52,19 @@ module ComAtprotoLabel =
         /// Metadata tag on an atproto resource (eg, repo or record).
         type Label =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("cts")>]
-              Cts: string
+              Cts: AtDateTime
               [<JsonPropertyName("exp")>]
-              Exp: string option
+              Exp: AtDateTime option
               [<JsonPropertyName("neg")>]
               Neg: bool option
               [<JsonPropertyName("sig")>]
               Sig: byte[] option
               [<JsonPropertyName("src")>]
-              Src: string
+              Src: Did
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: Uri
               [<JsonPropertyName("val")>]
               Val: string
               [<JsonPropertyName("ver")>]
@@ -84,7 +92,7 @@ module ComAtprotoLabel =
             { [<JsonPropertyName("description")>]
               Description: string
               [<JsonPropertyName("lang")>]
-              Lang: string
+              Lang: Language
               [<JsonPropertyName("name")>]
               Name: string }
 
@@ -111,7 +119,7 @@ module ComAtprotoLabel =
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("sources")>]
-              Sources: string list option
+              Sources: Did list option
               [<JsonPropertyName("uriPatterns")>]
               UriPatterns: string list }
 
@@ -159,21 +167,33 @@ module ComAtprotoRepo =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type InputWritesItem =
+            | [<JsonName("com.atproto.repo.applyWrites#create")>] Create of ApplyWrites.Create
+            | [<JsonName("com.atproto.repo.applyWrites#update")>] Update of ApplyWrites.Update
+            | [<JsonName("com.atproto.repo.applyWrites#delete")>] Delete of ApplyWrites.Delete
+
         type Input =
             { [<JsonPropertyName("repo")>]
               Repo: string
               [<JsonPropertyName("swapCommit")>]
-              SwapCommit: string option
+              SwapCommit: Cid option
               [<JsonPropertyName("validate")>]
               Validate: bool option
               [<JsonPropertyName("writes")>]
-              Writes: JsonElement list }
+              Writes: InputWritesItem list }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputResultsItem =
+            | [<JsonName("com.atproto.repo.applyWrites#createResult")>] CreateResult of ApplyWrites.CreateResult
+            | [<JsonName("com.atproto.repo.applyWrites#updateResult")>] UpdateResult of ApplyWrites.UpdateResult
+            | [<JsonName("com.atproto.repo.applyWrites#deleteResult")>] DeleteResult of ApplyWrites.DeleteResult
 
         type Output =
             { [<JsonPropertyName("commit")>]
               Commit: Defs.CommitMeta option
               [<JsonPropertyName("results")>]
-              Results: JsonElement list option }
+              Results: OutputResultsItem list option }
 
         module Errors =
             [<Literal>]
@@ -182,41 +202,43 @@ module ComAtprotoRepo =
         /// Operation which creates a new record.
         type Create =
             { [<JsonPropertyName("collection")>]
-              Collection: string
+              Collection: Nsid
               [<JsonPropertyName("rkey")>]
-              Rkey: string option
+              Rkey: RecordKey option
               [<JsonPropertyName("value")>]
               Value: JsonElement }
 
         type CreateResult =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("validationStatus")>]
               ValidationStatus: string option }
 
         /// Operation which deletes an existing record.
         type Delete =
             { [<JsonPropertyName("collection")>]
-              Collection: string
+              Collection: Nsid
               [<JsonPropertyName("rkey")>]
-              Rkey: string }
+              Rkey: RecordKey }
+
+        type DeleteResult = JsonElement
 
         /// Operation which updates an existing record.
         type Update =
             { [<JsonPropertyName("collection")>]
-              Collection: string
+              Collection: Nsid
               [<JsonPropertyName("rkey")>]
-              Rkey: string
+              Rkey: RecordKey
               [<JsonPropertyName("value")>]
               Value: JsonElement }
 
         type UpdateResult =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("validationStatus")>]
               ValidationStatus: string option }
 
@@ -229,25 +251,25 @@ module ComAtprotoRepo =
 
         type Input =
             { [<JsonPropertyName("collection")>]
-              Collection: string
+              Collection: Nsid
               [<JsonPropertyName("record")>]
               Record: JsonElement
               [<JsonPropertyName("repo")>]
               Repo: string
               [<JsonPropertyName("rkey")>]
-              Rkey: string option
+              Rkey: RecordKey option
               [<JsonPropertyName("swapCommit")>]
-              SwapCommit: string option
+              SwapCommit: Cid option
               [<JsonPropertyName("validate")>]
               Validate: bool option }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("commit")>]
               Commit: Defs.CommitMeta option
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("validationStatus")>]
               ValidationStatus: string option }
 
@@ -258,9 +280,9 @@ module ComAtprotoRepo =
     module Defs =
         type CommitMeta =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev: Tid }
 
     module DeleteRecord =
         [<Literal>]
@@ -271,15 +293,15 @@ module ComAtprotoRepo =
 
         type Input =
             { [<JsonPropertyName("collection")>]
-              Collection: string
+              Collection: Nsid
               [<JsonPropertyName("repo")>]
               Repo: string
               [<JsonPropertyName("rkey")>]
-              Rkey: string
+              Rkey: RecordKey
               [<JsonPropertyName("swapCommit")>]
-              SwapCommit: string option
+              SwapCommit: Cid option
               [<JsonPropertyName("swapRecord")>]
-              SwapRecord: string option }
+              SwapRecord: Cid option }
 
         type Output =
             { [<JsonPropertyName("commit")>]
@@ -302,13 +324,13 @@ module ComAtprotoRepo =
 
         type Output =
             { [<JsonPropertyName("collections")>]
-              Collections: string list
+              Collections: Nsid list
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("didDoc")>]
               DidDoc: JsonElement
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("handleIsCorrect")>]
               HandleIsCorrect: bool }
 
@@ -321,19 +343,19 @@ module ComAtprotoRepo =
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("collection")>]
-              Collection: string
+              Collection: Nsid
               [<JsonPropertyName("repo")>]
               Repo: string
               [<JsonPropertyName("rkey")>]
-              Rkey: string }
+              Rkey: RecordKey }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("value")>]
               Value: JsonElement }
 
@@ -366,9 +388,9 @@ module ComAtprotoRepo =
 
         type RecordBlob =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("recordUri")>]
-              RecordUri: string }
+              RecordUri: AtUri }
 
     module ListRecords =
         [<Literal>]
@@ -379,7 +401,7 @@ module ComAtprotoRepo =
 
         type Params =
             { [<JsonPropertyName("collection")>]
-              Collection: string
+              Collection: Nsid
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("limit")>]
@@ -397,9 +419,9 @@ module ComAtprotoRepo =
 
         type Record =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("value")>]
               Value: JsonElement }
 
@@ -412,27 +434,27 @@ module ComAtprotoRepo =
 
         type Input =
             { [<JsonPropertyName("collection")>]
-              Collection: string
+              Collection: Nsid
               [<JsonPropertyName("record")>]
               Record: JsonElement
               [<JsonPropertyName("repo")>]
               Repo: string
               [<JsonPropertyName("rkey")>]
-              Rkey: string
+              Rkey: RecordKey
               [<JsonPropertyName("swapCommit")>]
-              SwapCommit: string option
+              SwapCommit: Cid option
               [<JsonPropertyName("swapRecord")>]
-              SwapRecord: string option
+              SwapRecord: Cid option
               [<JsonPropertyName("validate")>]
               Validate: bool option }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("commit")>]
               Commit: Defs.CommitMeta option
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("validationStatus")>]
               ValidationStatus: string option }
 
@@ -443,9 +465,9 @@ module ComAtprotoRepo =
     module StrongRef =
         type StrongRef =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
     module UploadBlob =
         [<Literal>]
@@ -463,9 +485,9 @@ module AppBskyGraph =
         /// Record declaring a 'block' relationship against another account. NOTE: blocks are public in Bluesky; see blog posts for details.
         type Block =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject: Did }
 
     module Defs =
         [<Literal>]
@@ -475,15 +497,15 @@ module AppBskyGraph =
             { [<JsonPropertyName("subject")>]
               Subject: AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type ListPurpose = string
 
         type ListView =
             { [<JsonPropertyName("avatar")>]
-              Avatar: string option
+              Avatar: Uri option
               [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("creator")>]
               Creator: AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("description")>]
@@ -491,7 +513,7 @@ module AppBskyGraph =
               [<JsonPropertyName("descriptionFacets")>]
               DescriptionFacets: AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("listItemCount")>]
@@ -501,17 +523,17 @@ module AppBskyGraph =
               [<JsonPropertyName("purpose")>]
               Purpose: Defs.ListPurpose
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("viewer")>]
               Viewer: Defs.ListViewerState option }
 
         type ListViewBasic =
             { [<JsonPropertyName("avatar")>]
-              Avatar: string option
+              Avatar: Uri option
               [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string option
+              IndexedAt: AtDateTime option
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("listItemCount")>]
@@ -521,13 +543,13 @@ module AppBskyGraph =
               [<JsonPropertyName("purpose")>]
               Purpose: Defs.ListPurpose
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("viewer")>]
               Viewer: Defs.ListViewerState option }
 
         type ListViewerState =
             { [<JsonPropertyName("blocked")>]
-              Blocked: string option
+              Blocked: AtUri option
               [<JsonPropertyName("muted")>]
               Muted: bool option }
 
@@ -547,29 +569,29 @@ module AppBskyGraph =
         /// lists the bi-directional graph relationships between one actor (not indicated in the object), and the target actors (the DID included in the object)
         type Relationship =
             { [<JsonPropertyName("blockedBy")>]
-              BlockedBy: string option
+              BlockedBy: AtUri option
               [<JsonPropertyName("blockedByList")>]
-              BlockedByList: string option
+              BlockedByList: AtUri option
               [<JsonPropertyName("blocking")>]
-              Blocking: string option
+              Blocking: AtUri option
               [<JsonPropertyName("blockingByList")>]
-              BlockingByList: string option
+              BlockingByList: AtUri option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("followedBy")>]
-              FollowedBy: string option
+              FollowedBy: AtUri option
               [<JsonPropertyName("following")>]
-              Following: string option }
+              Following: AtUri option }
 
         type StarterPackView =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("creator")>]
               Creator: AppBskyActor.Defs.ProfileViewBasic
               [<JsonPropertyName("feeds")>]
               Feeds: AppBskyFeed.Defs.GeneratorView list option
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("joinedAllTimeCount")>]
               JoinedAllTimeCount: int64 option
               [<JsonPropertyName("joinedWeekCount")>]
@@ -583,15 +605,15 @@ module AppBskyGraph =
               [<JsonPropertyName("record")>]
               Record: JsonElement
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type StarterPackViewBasic =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("creator")>]
               Creator: AppBskyActor.Defs.ProfileViewBasic
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("joinedAllTimeCount")>]
               JoinedAllTimeCount: int64 option
               [<JsonPropertyName("joinedWeekCount")>]
@@ -603,7 +625,7 @@ module AppBskyGraph =
               [<JsonPropertyName("record")>]
               Record: JsonElement
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
     module Follow =
         [<Literal>]
@@ -612,9 +634,9 @@ module AppBskyGraph =
         /// Record declaring a social 'follow' relationship of another account. Duplicate follows will be ignored by the AppView.
         type Follow =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("subject")>]
-              Subject: string
+              Subject: Did
               [<JsonPropertyName("via")>]
               Via: ComAtprotoRepo.StrongRef.StrongRef option }
 
@@ -740,7 +762,7 @@ module AppBskyGraph =
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("list")>]
-              List: string }
+              List: AtUri }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
@@ -873,11 +895,17 @@ module AppBskyGraph =
               [<JsonPropertyName("others")>]
               Others: string list option }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputRelationshipsItem =
+            | [<JsonName("app.bsky.graph.defs#relationship")>] Relationship of Defs.Relationship
+            | [<JsonName("app.bsky.graph.defs#notFoundActor")>] NotFoundActor of Defs.NotFoundActor
+            | Unknown of string * System.Text.Json.JsonElement
+
         type Output =
             { [<JsonPropertyName("actor")>]
-              Actor: string option
+              Actor: Did option
               [<JsonPropertyName("relationships")>]
-              Relationships: JsonElement list }
+              Relationships: OutputRelationshipsItem list }
 
         module Errors =
             [<Literal>]
@@ -892,7 +920,7 @@ module AppBskyGraph =
 
         type Params =
             { [<JsonPropertyName("starterPack")>]
-              StarterPack: string }
+              StarterPack: AtUri }
 
         type Output =
             { [<JsonPropertyName("starterPack")>]
@@ -907,7 +935,7 @@ module AppBskyGraph =
 
         type Params =
             { [<JsonPropertyName("uris")>]
-              Uris: string list }
+              Uris: AtUri list }
 
         type Output =
             { [<JsonPropertyName("starterPacks")>]
@@ -966,18 +994,23 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.list"
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ListLabelsUnion =
+            | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// Record representing a list of accounts (actors). Scope includes both moderation-oriented lists and curration-oriented lists.
         type List =
             { [<JsonPropertyName("avatar")>]
               Avatar: JsonElement option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("description")>]
               Description: string option
               [<JsonPropertyName("descriptionFacets")>]
               DescriptionFacets: AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("labels")>]
-              Labels: JsonElement option
+              Labels: ListLabelsUnion option
               [<JsonPropertyName("name")>]
               Name: string
               [<JsonPropertyName("purpose")>]
@@ -990,9 +1023,9 @@ module AppBskyGraph =
         /// Record representing a block relationship against an entire an entire list of accounts (actors).
         type Listblock =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject: AtUri }
 
     module Listitem =
         [<Literal>]
@@ -1001,11 +1034,11 @@ module AppBskyGraph =
         /// Record representing an account's inclusion on a specific list. The AppView will ignore duplicate listitem records.
         type Listitem =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("list")>]
-              List: string
+              List: AtUri
               [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject: Did }
 
     module MuteActor =
         [<Literal>]
@@ -1027,7 +1060,7 @@ module AppBskyGraph =
 
         type Input =
             { [<JsonPropertyName("list")>]
-              List: string }
+              List: AtUri }
 
     module MuteThread =
         [<Literal>]
@@ -1038,7 +1071,7 @@ module AppBskyGraph =
 
         type Input =
             { [<JsonPropertyName("root")>]
-              Root: string }
+              Root: AtUri }
 
     module SearchStarterPacks =
         [<Literal>]
@@ -1068,7 +1101,7 @@ module AppBskyGraph =
         /// Record defining a starter pack of actors and feeds for new users.
         type Starterpack =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("description")>]
               Description: string option
               [<JsonPropertyName("descriptionFacets")>]
@@ -1076,13 +1109,13 @@ module AppBskyGraph =
               [<JsonPropertyName("feeds")>]
               Feeds: Starterpack.FeedItem list option
               [<JsonPropertyName("list")>]
-              List: string
+              List: AtUri
               [<JsonPropertyName("name")>]
               Name: string }
 
         type FeedItem =
             { [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
     module UnmuteActor =
         [<Literal>]
@@ -1104,7 +1137,7 @@ module AppBskyGraph =
 
         type Input =
             { [<JsonPropertyName("list")>]
-              List: string }
+              List: AtUri }
 
     module UnmuteThread =
         [<Literal>]
@@ -1115,7 +1148,7 @@ module AppBskyGraph =
 
         type Input =
             { [<JsonPropertyName("root")>]
-              Root: string }
+              Root: AtUri }
 
     module Verification =
         [<Literal>]
@@ -1124,19 +1157,19 @@ module AppBskyGraph =
         /// Record declaring a verification relationship between two accounts. Verifications are only considered valid by an app if issued by an account the app considers trusted.
         type Verification =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("displayName")>]
               DisplayName: string
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject: Did }
 
 module AppBskyFeed =
     module Defs =
         type BlockedAuthor =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("viewer")>]
               Viewer: AppBskyActor.Defs.ViewerState option }
 
@@ -1146,7 +1179,7 @@ module AppBskyFeed =
               [<JsonPropertyName("blocked")>]
               Blocked: bool
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         [<Literal>]
         let ClickthroughAuthor = "app.bsky.feed.defs#clickthroughAuthor"
@@ -1166,13 +1199,19 @@ module AppBskyFeed =
         [<Literal>]
         let ContentModeVideo = "app.bsky.feed.defs#contentModeVideo"
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type FeedViewPostReasonUnion =
+            | [<JsonName("app.bsky.feed.defs#reasonRepost")>] ReasonRepost of Defs.ReasonRepost
+            | [<JsonName("app.bsky.feed.defs#reasonPin")>] ReasonPin of Defs.ReasonPin
+            | Unknown of string * System.Text.Json.JsonElement
+
         type FeedViewPost =
             { [<JsonPropertyName("feedContext")>]
               FeedContext: string option
               [<JsonPropertyName("post")>]
               Post: Defs.PostView
               [<JsonPropertyName("reason")>]
-              Reason: JsonElement option
+              Reason: FeedViewPostReasonUnion option
               [<JsonPropertyName("reply")>]
               Reply: Defs.ReplyRef option
               [<JsonPropertyName("reqId")>]
@@ -1182,9 +1221,9 @@ module AppBskyFeed =
             { [<JsonPropertyName("acceptsInteractions")>]
               AcceptsInteractions: bool option
               [<JsonPropertyName("avatar")>]
-              Avatar: string option
+              Avatar: Uri option
               [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("contentMode")>]
               ContentMode: string option
               [<JsonPropertyName("creator")>]
@@ -1194,23 +1233,23 @@ module AppBskyFeed =
               [<JsonPropertyName("descriptionFacets")>]
               DescriptionFacets: AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("displayName")>]
               DisplayName: string
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("likeCount")>]
               LikeCount: int64 option
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("viewer")>]
               Viewer: Defs.GeneratorViewerState option }
 
         type GeneratorViewerState =
             { [<JsonPropertyName("like")>]
-              Like: string option }
+              Like: AtUri option }
 
         type Interaction =
             { [<JsonPropertyName("event")>]
@@ -1218,7 +1257,7 @@ module AppBskyFeed =
               [<JsonPropertyName("feedContext")>]
               FeedContext: string option
               [<JsonPropertyName("item")>]
-              Item: string option
+              Item: AtUri option
               [<JsonPropertyName("reqId")>]
               ReqId: string option }
 
@@ -1244,7 +1283,16 @@ module AppBskyFeed =
             { [<JsonPropertyName("notFound")>]
               NotFound: bool
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type PostViewEmbedUnion =
+            | [<JsonName("app.bsky.embed.images#view")>] View of AppBskyEmbed.Images.View
+            | [<JsonName("app.bsky.embed.video#view")>] View2 of AppBskyEmbed.Video.View
+            | [<JsonName("app.bsky.embed.external#view")>] View3 of AppBskyEmbed.External.View
+            | [<JsonName("app.bsky.embed.record#view")>] View4 of AppBskyEmbed.Record.View
+            | [<JsonName("app.bsky.embed.recordWithMedia#view")>] View5 of AppBskyEmbed.RecordWithMedia.View
+            | Unknown of string * System.Text.Json.JsonElement
 
         type PostView =
             { [<JsonPropertyName("author")>]
@@ -1252,13 +1300,13 @@ module AppBskyFeed =
               [<JsonPropertyName("bookmarkCount")>]
               BookmarkCount: int64 option
               [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("debug")>]
               Debug: JsonElement option
               [<JsonPropertyName("embed")>]
-              Embed: JsonElement option
+              Embed: PostViewEmbedUnion option
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("likeCount")>]
@@ -1274,27 +1322,36 @@ module AppBskyFeed =
               [<JsonPropertyName("threadgate")>]
               Threadgate: Defs.ThreadgateView option
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("viewer")>]
               Viewer: Defs.ViewerState option }
+
+        type ReasonPin = JsonElement
 
         type ReasonRepost =
             { [<JsonPropertyName("by")>]
               By: AppBskyActor.Defs.ProfileViewBasic
               [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("uri")>]
-              Uri: string option }
+              Uri: AtUri option }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ReplyRefParentUnion =
+            | [<JsonName("app.bsky.feed.defs#postView")>] PostView of Defs.PostView
+            | [<JsonName("app.bsky.feed.defs#notFoundPost")>] NotFoundPost of Defs.NotFoundPost
+            | [<JsonName("app.bsky.feed.defs#blockedPost")>] BlockedPost of Defs.BlockedPost
+            | Unknown of string * System.Text.Json.JsonElement
 
         type ReplyRef =
             { [<JsonPropertyName("grandparentAuthor")>]
               GrandparentAuthor: AppBskyActor.Defs.ProfileViewBasic option
               [<JsonPropertyName("parent")>]
-              Parent: JsonElement
+              Parent: ReplyRefParentUnion
               [<JsonPropertyName("root")>]
-              Root: JsonElement }
+              Root: ReplyRefParentUnion }
 
         [<Literal>]
         let RequestLess = "app.bsky.feed.defs#requestLess"
@@ -1302,42 +1359,57 @@ module AppBskyFeed =
         [<Literal>]
         let RequestMore = "app.bsky.feed.defs#requestMore"
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type SkeletonFeedPostReasonUnion =
+            | [<JsonName("app.bsky.feed.defs#skeletonReasonRepost")>] SkeletonReasonRepost of Defs.SkeletonReasonRepost
+            | [<JsonName("app.bsky.feed.defs#skeletonReasonPin")>] SkeletonReasonPin of Defs.SkeletonReasonPin
+            | Unknown of string * System.Text.Json.JsonElement
+
         type SkeletonFeedPost =
             { [<JsonPropertyName("feedContext")>]
               FeedContext: string option
               [<JsonPropertyName("post")>]
-              Post: string
+              Post: AtUri
               [<JsonPropertyName("reason")>]
-              Reason: JsonElement option }
+              Reason: SkeletonFeedPostReasonUnion option }
+
+        type SkeletonReasonPin = JsonElement
 
         type SkeletonReasonRepost =
             { [<JsonPropertyName("repost")>]
-              Repost: string }
+              Repost: AtUri }
 
         /// Metadata about this post within the context of the thread it is in.
         type ThreadContext =
             { [<JsonPropertyName("rootAuthorLike")>]
-              RootAuthorLike: string option }
+              RootAuthorLike: AtUri option }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ThreadViewPostParentUnion =
+            | [<JsonName("app.bsky.feed.defs#threadViewPost")>] ThreadViewPost of Defs.ThreadViewPost
+            | [<JsonName("app.bsky.feed.defs#notFoundPost")>] NotFoundPost of Defs.NotFoundPost
+            | [<JsonName("app.bsky.feed.defs#blockedPost")>] BlockedPost of Defs.BlockedPost
+            | Unknown of string * System.Text.Json.JsonElement
 
         type ThreadViewPost =
             { [<JsonPropertyName("parent")>]
-              Parent: JsonElement option
+              Parent: ThreadViewPostParentUnion option
               [<JsonPropertyName("post")>]
               Post: Defs.PostView
               [<JsonPropertyName("replies")>]
-              Replies: JsonElement list option
+              Replies: ThreadViewPostParentUnion list option
               [<JsonPropertyName("threadContext")>]
               ThreadContext: Defs.ThreadContext option }
 
         type ThreadgateView =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("lists")>]
               Lists: AppBskyGraph.Defs.ListViewBasic list option
               [<JsonPropertyName("record")>]
               Record: JsonElement option
               [<JsonPropertyName("uri")>]
-              Uri: string option }
+              Uri: AtUri option }
 
         /// Metadata about the requesting account's relationship with the subject content. Only has meaningful content for authed requests.
         type ViewerState =
@@ -1346,13 +1418,13 @@ module AppBskyFeed =
               [<JsonPropertyName("embeddingDisabled")>]
               EmbeddingDisabled: bool option
               [<JsonPropertyName("like")>]
-              Like: string option
+              Like: AtUri option
               [<JsonPropertyName("pinned")>]
               Pinned: bool option
               [<JsonPropertyName("replyDisabled")>]
               ReplyDisabled: bool option
               [<JsonPropertyName("repost")>]
-              Repost: string option
+              Repost: AtUri option
               [<JsonPropertyName("threadMuted")>]
               ThreadMuted: bool option }
 
@@ -1365,7 +1437,7 @@ module AppBskyFeed =
 
         type Output =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("feeds")>]
               Feeds: DescribeFeedGenerator.Feed list
               [<JsonPropertyName("links")>]
@@ -1373,7 +1445,7 @@ module AppBskyFeed =
 
         type Feed =
             { [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type Links =
             { [<JsonPropertyName("privacyPolicy")>]
@@ -1385,6 +1457,12 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.generator"
 
+        /// Self-label values
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type GeneratorLabelsUnion =
+            | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// Record declaring of the existence of a feed generator, and containing metadata about it. The record can exist in any repository.
         type Generator =
             { [<JsonPropertyName("acceptsInteractions")>]
@@ -1394,17 +1472,17 @@ module AppBskyFeed =
               [<JsonPropertyName("contentMode")>]
               ContentMode: string option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("description")>]
               Description: string option
               [<JsonPropertyName("descriptionFacets")>]
               DescriptionFacets: AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("displayName")>]
               DisplayName: string
               [<JsonPropertyName("labels")>]
-              Labels: JsonElement option }
+              Labels: GeneratorLabelsUnion option }
 
     module GetActorFeeds =
         [<Literal>]
@@ -1498,7 +1576,7 @@ module AppBskyFeed =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("feed")>]
-              Feed: string
+              Feed: AtUri
               [<JsonPropertyName("limit")>]
               Limit: int64 option }
 
@@ -1521,7 +1599,7 @@ module AppBskyFeed =
 
         type Params =
             { [<JsonPropertyName("feed")>]
-              Feed: string }
+              Feed: AtUri }
 
         type Output =
             { [<JsonPropertyName("isOnline")>]
@@ -1540,7 +1618,7 @@ module AppBskyFeed =
 
         type Params =
             { [<JsonPropertyName("feeds")>]
-              Feeds: string list }
+              Feeds: AtUri list }
 
         type Output =
             { [<JsonPropertyName("feeds")>]
@@ -1557,7 +1635,7 @@ module AppBskyFeed =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("feed")>]
-              Feed: string
+              Feed: AtUri
               [<JsonPropertyName("limit")>]
               Limit: int64 option }
 
@@ -1582,31 +1660,31 @@ module AppBskyFeed =
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("likes")>]
               Likes: GetLikes.Like list
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type Like =
             { [<JsonPropertyName("actor")>]
               Actor: AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string }
+              IndexedAt: AtDateTime }
 
     module GetListFeed =
         [<Literal>]
@@ -1621,7 +1699,7 @@ module AppBskyFeed =
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("list")>]
-              List: string }
+              List: AtUri }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
@@ -1646,11 +1724,18 @@ module AppBskyFeed =
               [<JsonPropertyName("parentHeight")>]
               ParentHeight: int64 option
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputThreadUnion =
+            | [<JsonName("app.bsky.feed.defs#threadViewPost")>] ThreadViewPost of Defs.ThreadViewPost
+            | [<JsonName("app.bsky.feed.defs#notFoundPost")>] NotFoundPost of Defs.NotFoundPost
+            | [<JsonName("app.bsky.feed.defs#blockedPost")>] BlockedPost of Defs.BlockedPost
+            | Unknown of string * System.Text.Json.JsonElement
 
         type Output =
             { [<JsonPropertyName("thread")>]
-              Thread: JsonElement
+              Thread: OutputThreadUnion
               [<JsonPropertyName("threadgate")>]
               Threadgate: Defs.ThreadgateView option }
 
@@ -1667,7 +1752,7 @@ module AppBskyFeed =
 
         type Params =
             { [<JsonPropertyName("uris")>]
-              Uris: string list }
+              Uris: AtUri list }
 
         type Output =
             { [<JsonPropertyName("posts")>]
@@ -1682,23 +1767,23 @@ module AppBskyFeed =
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("posts")>]
               Posts: Defs.PostView list
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
     module GetRepostedBy =
         [<Literal>]
@@ -1709,23 +1794,23 @@ module AppBskyFeed =
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("repostedBy")>]
               RepostedBy: AppBskyActor.Defs.ProfileView list
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
     module GetSuggestedFeeds =
         [<Literal>]
@@ -1774,7 +1859,7 @@ module AppBskyFeed =
         /// Record declaring a 'like' of a piece of subject content.
         type Like =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("subject")>]
               Subject: ComAtprotoRepo.StrongRef.StrongRef
               [<JsonPropertyName("via")>]
@@ -1784,20 +1869,36 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.post"
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type PostEmbedUnion =
+            | [<JsonName("app.bsky.embed.images")>] Images of AppBskyEmbed.Images.Images
+            | [<JsonName("app.bsky.embed.video")>] Video of AppBskyEmbed.Video.Video
+            | [<JsonName("app.bsky.embed.external")>] External of AppBskyEmbed.External.External
+            | [<JsonName("app.bsky.embed.record")>] Record of AppBskyEmbed.Record.Record
+            | [<JsonName("app.bsky.embed.recordWithMedia")>] RecordWithMedia of
+                AppBskyEmbed.RecordWithMedia.RecordWithMedia
+            | Unknown of string * System.Text.Json.JsonElement
+
+        /// Self-label values for this post. Effectively content warnings.
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type PostLabelsUnion =
+            | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// Record containing a Bluesky post.
         type Post =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("embed")>]
-              Embed: JsonElement option
+              Embed: PostEmbedUnion option
               [<JsonPropertyName("entities")>]
               Entities: Post.Entity list option
               [<JsonPropertyName("facets")>]
               Facets: AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("labels")>]
-              Labels: JsonElement option
+              Labels: PostLabelsUnion option
               [<JsonPropertyName("langs")>]
-              Langs: string list option
+              Langs: Language list option
               [<JsonPropertyName("reply")>]
               Reply: Post.ReplyRef option
               [<JsonPropertyName("tags")>]
@@ -1831,16 +1932,23 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.postgate"
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type PostgateEmbeddingRulesItem =
+            | [<JsonName("app.bsky.feed.postgate#disableRule")>] DisableRule of Postgate.DisableRule
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// Record defining interaction rules for a post. The record key (rkey) of the postgate record must match the record key of the post, and that record must be in the same repository.
         type Postgate =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("detachedEmbeddingUris")>]
-              DetachedEmbeddingUris: string list option
+              DetachedEmbeddingUris: AtUri list option
               [<JsonPropertyName("embeddingRules")>]
-              EmbeddingRules: JsonElement list option
+              EmbeddingRules: PostgateEmbeddingRulesItem list option
               [<JsonPropertyName("post")>]
-              Post: string }
+              Post: AtUri }
+
+        type DisableRule = JsonElement
 
     module Repost =
         [<Literal>]
@@ -1849,7 +1957,7 @@ module AppBskyFeed =
         /// Record representing a 'repost' of an existing Bluesky post.
         type Repost =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("subject")>]
               Subject: ComAtprotoRepo.StrongRef.StrongRef
               [<JsonPropertyName("via")>]
@@ -1870,7 +1978,7 @@ module AppBskyFeed =
               [<JsonPropertyName("domain")>]
               Domain: string option
               [<JsonPropertyName("lang")>]
-              Lang: string option
+              Lang: Language option
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("mentions")>]
@@ -1886,7 +1994,7 @@ module AppBskyFeed =
               [<JsonPropertyName("until")>]
               Until: string option
               [<JsonPropertyName("url")>]
-              Url: string option }
+              Url: Uri option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
@@ -1915,21 +2023,34 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.threadgate"
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ThreadgateAllowItem =
+            | [<JsonName("app.bsky.feed.threadgate#mentionRule")>] MentionRule of Threadgate.MentionRule
+            | [<JsonName("app.bsky.feed.threadgate#followerRule")>] FollowerRule of Threadgate.FollowerRule
+            | [<JsonName("app.bsky.feed.threadgate#followingRule")>] FollowingRule of Threadgate.FollowingRule
+            | [<JsonName("app.bsky.feed.threadgate#listRule")>] ListRule of Threadgate.ListRule
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// Record defining interaction gating rules for a thread (aka, reply controls). The record key (rkey) of the threadgate record must match the record key of the thread's root post, and that record must be in the same repository.
         type Threadgate =
             { [<JsonPropertyName("allow")>]
-              Allow: JsonElement list option
+              Allow: ThreadgateAllowItem list option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("hiddenReplies")>]
-              HiddenReplies: string list option
+              HiddenReplies: AtUri list option
               [<JsonPropertyName("post")>]
-              Post: string }
+              Post: AtUri }
+
+        type FollowerRule = JsonElement
+        type FollowingRule = JsonElement
 
         /// Allow replies from actors on a list.
         type ListRule =
             { [<JsonPropertyName("list")>]
-              List: string }
+              List: AtUri }
+
+        type MentionRule = JsonElement
 
 module ComAtprotoServer =
     module ActivateAccount =
@@ -1957,7 +2078,7 @@ module ComAtprotoServer =
               [<JsonPropertyName("repoBlocks")>]
               RepoBlocks: int64
               [<JsonPropertyName("repoCommit")>]
-              RepoCommit: string
+              RepoCommit: Cid
               [<JsonPropertyName("repoRev")>]
               RepoRev: string
               [<JsonPropertyName("validDid")>]
@@ -1998,11 +2119,11 @@ module ComAtprotoServer =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: string option
+              Did: Did option
               [<JsonPropertyName("email")>]
               Email: string option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("inviteCode")>]
               InviteCode: string option
               [<JsonPropertyName("password")>]
@@ -2020,11 +2141,11 @@ module ComAtprotoServer =
             { [<JsonPropertyName("accessJwt")>]
               AccessJwt: string
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("didDoc")>]
               DidDoc: JsonElement option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("refreshJwt")>]
               RefreshJwt: string }
 
@@ -2071,7 +2192,7 @@ module ComAtprotoServer =
 
         type AppPassword =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("name")>]
               Name: string
               [<JsonPropertyName("password")>]
@@ -2088,7 +2209,7 @@ module ComAtprotoServer =
 
         type Input =
             { [<JsonPropertyName("forAccount")>]
-              ForAccount: string option
+              ForAccount: Did option
               [<JsonPropertyName("useCount")>]
               UseCount: int64 }
 
@@ -2107,7 +2228,7 @@ module ComAtprotoServer =
             { [<JsonPropertyName("codeCount")>]
               CodeCount: int64
               [<JsonPropertyName("forAccounts")>]
-              ForAccounts: string list option
+              ForAccounts: Did list option
               [<JsonPropertyName("useCount")>]
               UseCount: int64 }
 
@@ -2144,7 +2265,7 @@ module ComAtprotoServer =
               [<JsonPropertyName("active")>]
               Active: bool option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("didDoc")>]
               DidDoc: JsonElement option
               [<JsonPropertyName("email")>]
@@ -2154,7 +2275,7 @@ module ComAtprotoServer =
               [<JsonPropertyName("emailConfirmed")>]
               EmailConfirmed: bool option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("refreshJwt")>]
               RefreshJwt: string
               [<JsonPropertyName("status")>]
@@ -2176,7 +2297,7 @@ module ComAtprotoServer =
 
         type Input =
             { [<JsonPropertyName("deleteAfter")>]
-              DeleteAfter: string option }
+              DeleteAfter: AtDateTime option }
 
     module Defs =
         type InviteCode =
@@ -2185,7 +2306,7 @@ module ComAtprotoServer =
               [<JsonPropertyName("code")>]
               Code: string
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("createdBy")>]
               CreatedBy: string
               [<JsonPropertyName("disabled")>]
@@ -2197,9 +2318,9 @@ module ComAtprotoServer =
 
         type InviteCodeUse =
             { [<JsonPropertyName("usedAt")>]
-              UsedAt: string
+              UsedAt: AtDateTime
               [<JsonPropertyName("usedBy")>]
-              UsedBy: string }
+              UsedBy: Did }
 
     module DeleteAccount =
         [<Literal>]
@@ -2210,7 +2331,7 @@ module ComAtprotoServer =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("password")>]
               Password: string
               [<JsonPropertyName("token")>]
@@ -2247,7 +2368,7 @@ module ComAtprotoServer =
               [<JsonPropertyName("contact")>]
               Contact: DescribeServer.Contact option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("inviteCodeRequired")>]
               InviteCodeRequired: bool option
               [<JsonPropertyName("links")>]
@@ -2261,9 +2382,9 @@ module ComAtprotoServer =
 
         type Links =
             { [<JsonPropertyName("privacyPolicy")>]
-              PrivacyPolicy: string option
+              PrivacyPolicy: Uri option
               [<JsonPropertyName("termsOfService")>]
-              TermsOfService: string option }
+              TermsOfService: Uri option }
 
     module GetAccountInviteCodes =
         [<Literal>]
@@ -2295,11 +2416,11 @@ module ComAtprotoServer =
 
         type Params =
             { [<JsonPropertyName("aud")>]
-              Aud: string
+              Aud: Did
               [<JsonPropertyName("exp")>]
               Exp: int64 option
               [<JsonPropertyName("lxm")>]
-              Lxm: string option }
+              Lxm: Nsid option }
 
         type Output =
             { [<JsonPropertyName("token")>]
@@ -2320,7 +2441,7 @@ module ComAtprotoServer =
             { [<JsonPropertyName("active")>]
               Active: bool option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("didDoc")>]
               DidDoc: JsonElement option
               [<JsonPropertyName("email")>]
@@ -2330,7 +2451,7 @@ module ComAtprotoServer =
               [<JsonPropertyName("emailConfirmed")>]
               EmailConfirmed: bool option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("status")>]
               Status: string option }
 
@@ -2351,7 +2472,7 @@ module ComAtprotoServer =
 
         type AppPassword =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("name")>]
               Name: string
               [<JsonPropertyName("privileged")>]
@@ -2367,7 +2488,7 @@ module ComAtprotoServer =
               [<JsonPropertyName("active")>]
               Active: bool option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("didDoc")>]
               DidDoc: JsonElement option
               [<JsonPropertyName("email")>]
@@ -2377,7 +2498,7 @@ module ComAtprotoServer =
               [<JsonPropertyName("emailConfirmed")>]
               EmailConfirmed: bool option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("refreshJwt")>]
               RefreshJwt: string
               [<JsonPropertyName("status")>]
@@ -2429,7 +2550,7 @@ module ComAtprotoServer =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: string option }
+              Did: Did option }
 
         type Output =
             { [<JsonPropertyName("signingKey")>]
@@ -2495,17 +2616,17 @@ module ComAtprotoAdmin =
     module Defs =
         type AccountView =
             { [<JsonPropertyName("deactivatedAt")>]
-              DeactivatedAt: string option
+              DeactivatedAt: AtDateTime option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("email")>]
               Email: string option
               [<JsonPropertyName("emailConfirmedAt")>]
-              EmailConfirmedAt: string option
+              EmailConfirmedAt: AtDateTime option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("inviteNote")>]
               InviteNote: string option
               [<JsonPropertyName("invitedBy")>]
@@ -2521,15 +2642,15 @@ module ComAtprotoAdmin =
 
         type RepoBlobRef =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("recordUri")>]
-              RecordUri: string option }
+              RecordUri: AtUri option }
 
         type RepoRef =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type StatusAttr =
             { [<JsonPropertyName("applied")>]
@@ -2552,7 +2673,7 @@ module ComAtprotoAdmin =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
     module DisableAccountInvites =
         [<Literal>]
@@ -2563,7 +2684,7 @@ module ComAtprotoAdmin =
 
         type Input =
             { [<JsonPropertyName("account")>]
-              Account: string
+              Account: Did
               [<JsonPropertyName("note")>]
               Note: string option }
 
@@ -2589,7 +2710,7 @@ module ComAtprotoAdmin =
 
         type Input =
             { [<JsonPropertyName("account")>]
-              Account: string
+              Account: Did
               [<JsonPropertyName("note")>]
               Note: string option }
 
@@ -2602,7 +2723,7 @@ module ComAtprotoAdmin =
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type Output = Defs.AccountView
 
@@ -2615,7 +2736,7 @@ module ComAtprotoAdmin =
 
         type Params =
             { [<JsonPropertyName("dids")>]
-              Dids: string list }
+              Dids: Did list }
 
         type Output =
             { [<JsonPropertyName("infos")>]
@@ -2651,17 +2772,24 @@ module ComAtprotoAdmin =
 
         type Params =
             { [<JsonPropertyName("blob")>]
-              Blob: string option
+              Blob: Cid option
               [<JsonPropertyName("did")>]
-              Did: string option
+              Did: Did option
               [<JsonPropertyName("uri")>]
-              Uri: string option }
+              Uri: AtUri option }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputSubjectUnion =
+            | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of Defs.RepoRef
+            | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
+            | [<JsonName("com.atproto.admin.defs#repoBlobRef")>] RepoBlobRef of Defs.RepoBlobRef
+            | Unknown of string * System.Text.Json.JsonElement
 
         type Output =
             { [<JsonPropertyName("deactivated")>]
               Deactivated: Defs.StatusAttr option
               [<JsonPropertyName("subject")>]
-              Subject: JsonElement
+              Subject: OutputSubjectUnion
               [<JsonPropertyName("takedown")>]
               Takedown: Defs.StatusAttr option }
 
@@ -2699,9 +2827,9 @@ module ComAtprotoAdmin =
               [<JsonPropertyName("content")>]
               Content: string
               [<JsonPropertyName("recipientDid")>]
-              RecipientDid: string
+              RecipientDid: Did
               [<JsonPropertyName("senderDid")>]
-              SenderDid: string
+              SenderDid: Did
               [<JsonPropertyName("subject")>]
               Subject: string option }
 
@@ -2731,9 +2859,9 @@ module ComAtprotoAdmin =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("handle")>]
-              Handle: string }
+              Handle: Handle }
 
     module UpdateAccountPassword =
         [<Literal>]
@@ -2744,7 +2872,7 @@ module ComAtprotoAdmin =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("password")>]
               Password: string }
 
@@ -2757,9 +2885,9 @@ module ComAtprotoAdmin =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("signingKey")>]
-              SigningKey: string }
+              SigningKey: Did }
 
     module UpdateSubjectStatus =
         [<Literal>]
@@ -2768,17 +2896,31 @@ module ComAtprotoAdmin =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type InputSubjectUnion =
+            | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of Defs.RepoRef
+            | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
+            | [<JsonName("com.atproto.admin.defs#repoBlobRef")>] RepoBlobRef of Defs.RepoBlobRef
+            | Unknown of string * System.Text.Json.JsonElement
+
         type Input =
             { [<JsonPropertyName("deactivated")>]
               Deactivated: Defs.StatusAttr option
               [<JsonPropertyName("subject")>]
-              Subject: JsonElement
+              Subject: InputSubjectUnion
               [<JsonPropertyName("takedown")>]
               Takedown: Defs.StatusAttr option }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputSubjectUnion =
+            | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of Defs.RepoRef
+            | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
+            | [<JsonName("com.atproto.admin.defs#repoBlobRef")>] RepoBlobRef of Defs.RepoBlobRef
+            | Unknown of string * System.Text.Json.JsonElement
+
         type Output =
             { [<JsonPropertyName("subject")>]
-              Subject: JsonElement
+              Subject: OutputSubjectUnion
               [<JsonPropertyName("takedown")>]
               Takedown: Defs.StatusAttr option }
 
@@ -2790,6 +2932,12 @@ module ComAtprotoModeration =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type InputSubjectUnion =
+            | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of ComAtprotoAdmin.Defs.RepoRef
+            | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
+            | Unknown of string * System.Text.Json.JsonElement
+
         type Input =
             { [<JsonPropertyName("modTool")>]
               ModTool: CreateReport.ModTool option
@@ -2798,11 +2946,17 @@ module ComAtprotoModeration =
               [<JsonPropertyName("reasonType")>]
               ReasonType: Defs.ReasonType
               [<JsonPropertyName("subject")>]
-              Subject: JsonElement }
+              Subject: InputSubjectUnion }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputSubjectUnion =
+            | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of ComAtprotoAdmin.Defs.RepoRef
+            | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
+            | Unknown of string * System.Text.Json.JsonElement
 
         type Output =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("id")>]
               Id: int64
               [<JsonPropertyName("reason")>]
@@ -2810,9 +2964,9 @@ module ComAtprotoModeration =
               [<JsonPropertyName("reasonType")>]
               ReasonType: Defs.ReasonType
               [<JsonPropertyName("reportedBy")>]
-              ReportedBy: string
+              ReportedBy: Did
               [<JsonPropertyName("subject")>]
-              Subject: JsonElement }
+              Subject: OutputSubjectUnion }
 
         /// Moderation tool information for tracing the source of the action
         type ModTool =
@@ -2857,27 +3011,27 @@ module AppBskyLabeler =
 
         type LabelerView =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("creator")>]
               Creator: AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("likeCount")>]
               LikeCount: int64 option
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("viewer")>]
               Viewer: Defs.LabelerViewerState option }
 
         type LabelerViewDetailed =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("creator")>]
               Creator: AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("likeCount")>]
@@ -2887,17 +3041,17 @@ module AppBskyLabeler =
               [<JsonPropertyName("reasonTypes")>]
               ReasonTypes: ComAtprotoModeration.Defs.ReasonType list option
               [<JsonPropertyName("subjectCollections")>]
-              SubjectCollections: string list option
+              SubjectCollections: Nsid list option
               [<JsonPropertyName("subjectTypes")>]
               SubjectTypes: ComAtprotoModeration.Defs.SubjectType list option
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("viewer")>]
               Viewer: Defs.LabelerViewerState option }
 
         type LabelerViewerState =
             { [<JsonPropertyName("like")>]
-              Like: string option }
+              Like: AtUri option }
 
     module GetServices =
         [<Literal>]
@@ -2910,28 +3064,39 @@ module AppBskyLabeler =
             { [<JsonPropertyName("detailed")>]
               Detailed: bool option
               [<JsonPropertyName("dids")>]
-              Dids: string list }
+              Dids: Did list }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputViewsItem =
+            | [<JsonName("app.bsky.labeler.defs#labelerView")>] LabelerView of Defs.LabelerView
+            | [<JsonName("app.bsky.labeler.defs#labelerViewDetailed")>] LabelerViewDetailed of Defs.LabelerViewDetailed
+            | Unknown of string * System.Text.Json.JsonElement
 
         type Output =
             { [<JsonPropertyName("views")>]
-              Views: JsonElement list }
+              Views: OutputViewsItem list }
 
     module Service =
         [<Literal>]
         let TypeId = "app.bsky.labeler.service"
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ServiceLabelsUnion =
+            | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// A declaration of the existence of labeler service.
         type Service =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("labels")>]
-              Labels: JsonElement option
+              Labels: ServiceLabelsUnion option
               [<JsonPropertyName("policies")>]
               Policies: Defs.LabelerPolicies
               [<JsonPropertyName("reasonTypes")>]
               ReasonTypes: ComAtprotoModeration.Defs.ReasonType list option
               [<JsonPropertyName("subjectCollections")>]
-              SubjectCollections: string list option
+              SubjectCollections: Nsid list option
               [<JsonPropertyName("subjectTypes")>]
               SubjectTypes: ComAtprotoModeration.Defs.SubjectType list option }
 
@@ -2958,7 +3123,7 @@ module AppBskyEmbed =
               [<JsonPropertyName("title")>]
               Title: string
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: Uri }
 
         type View =
             { [<JsonPropertyName("external")>]
@@ -2968,11 +3133,11 @@ module AppBskyEmbed =
             { [<JsonPropertyName("description")>]
               Description: string
               [<JsonPropertyName("thumb")>]
-              Thumb: string option
+              Thumb: Uri option
               [<JsonPropertyName("title")>]
               Title: string
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: Uri }
 
     module Images =
         type Images =
@@ -2997,18 +3162,31 @@ module AppBskyEmbed =
               [<JsonPropertyName("aspectRatio")>]
               AspectRatio: Defs.AspectRatio option
               [<JsonPropertyName("fullsize")>]
-              Fullsize: string
+              Fullsize: Uri
               [<JsonPropertyName("thumb")>]
-              Thumb: string }
+              Thumb: Uri }
 
     module Record =
         type Record =
             { [<JsonPropertyName("record")>]
               Record: ComAtprotoRepo.StrongRef.StrongRef }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ViewRecordUnion =
+            | [<JsonName("app.bsky.embed.record#viewRecord")>] ViewRecord of Record.ViewRecord
+            | [<JsonName("app.bsky.embed.record#viewNotFound")>] ViewNotFound of Record.ViewNotFound
+            | [<JsonName("app.bsky.embed.record#viewBlocked")>] ViewBlocked of Record.ViewBlocked
+            | [<JsonName("app.bsky.embed.record#viewDetached")>] ViewDetached of Record.ViewDetached
+            | [<JsonName("app.bsky.feed.defs#generatorView")>] GeneratorView of AppBskyFeed.Defs.GeneratorView
+            | [<JsonName("app.bsky.graph.defs#listView")>] ListView of AppBskyGraph.Defs.ListView
+            | [<JsonName("app.bsky.labeler.defs#labelerView")>] LabelerView of AppBskyLabeler.Defs.LabelerView
+            | [<JsonName("app.bsky.graph.defs#starterPackViewBasic")>] StarterPackViewBasic of
+                AppBskyGraph.Defs.StarterPackViewBasic
+            | Unknown of string * System.Text.Json.JsonElement
+
         type View =
             { [<JsonPropertyName("record")>]
-              Record: JsonElement }
+              Record: ViewRecordUnion }
 
         type ViewBlocked =
             { [<JsonPropertyName("author")>]
@@ -3016,29 +3194,38 @@ module AppBskyEmbed =
               [<JsonPropertyName("blocked")>]
               Blocked: bool
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type ViewDetached =
             { [<JsonPropertyName("detached")>]
               Detached: bool
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type ViewNotFound =
             { [<JsonPropertyName("notFound")>]
               NotFound: bool
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ViewRecordEmbedsItem =
+            | [<JsonName("app.bsky.embed.images#view")>] View of Images.View
+            | [<JsonName("app.bsky.embed.video#view")>] View2 of Video.View
+            | [<JsonName("app.bsky.embed.external#view")>] View3 of External.View
+            | [<JsonName("app.bsky.embed.record#view")>] View4 of Record.View
+            | [<JsonName("app.bsky.embed.recordWithMedia#view")>] View5 of RecordWithMedia.View
+            | Unknown of string * System.Text.Json.JsonElement
 
         type ViewRecord =
             { [<JsonPropertyName("author")>]
               Author: AppBskyActor.Defs.ProfileViewBasic
               [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("embeds")>]
-              Embeds: JsonElement list option
+              Embeds: ViewRecordEmbedsItem list option
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("likeCount")>]
@@ -3050,20 +3237,34 @@ module AppBskyEmbed =
               [<JsonPropertyName("repostCount")>]
               RepostCount: int64 option
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("value")>]
               Value: JsonElement }
 
     module RecordWithMedia =
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type RecordWithMediaMediaUnion =
+            | [<JsonName("app.bsky.embed.images")>] Images of Images.Images
+            | [<JsonName("app.bsky.embed.video")>] Video of Video.Video
+            | [<JsonName("app.bsky.embed.external")>] External of External.External
+            | Unknown of string * System.Text.Json.JsonElement
+
         type RecordWithMedia =
             { [<JsonPropertyName("media")>]
-              Media: JsonElement
+              Media: RecordWithMediaMediaUnion
               [<JsonPropertyName("record")>]
               Record: Record.Record }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ViewMediaUnion =
+            | [<JsonName("app.bsky.embed.images#view")>] View of Images.View
+            | [<JsonName("app.bsky.embed.video#view")>] View2 of Video.View
+            | [<JsonName("app.bsky.embed.external#view")>] View3 of External.View
+            | Unknown of string * System.Text.Json.JsonElement
+
         type View =
             { [<JsonPropertyName("media")>]
-              Media: JsonElement
+              Media: ViewMediaUnion
               [<JsonPropertyName("record")>]
               Record: Record.View }
 
@@ -3084,7 +3285,7 @@ module AppBskyEmbed =
             { [<JsonPropertyName("file")>]
               File: JsonElement
               [<JsonPropertyName("lang")>]
-              Lang: string }
+              Lang: Language }
 
         type View =
             { [<JsonPropertyName("alt")>]
@@ -3092,13 +3293,13 @@ module AppBskyEmbed =
               [<JsonPropertyName("aspectRatio")>]
               AspectRatio: Defs.AspectRatio option
               [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("playlist")>]
-              Playlist: string
+              Playlist: Uri
               [<JsonPropertyName("presentation")>]
               Presentation: string option
               [<JsonPropertyName("thumbnail")>]
-              Thumbnail: string option }
+              Thumbnail: Uri option }
 
 module AppBskyNotification =
     module Declaration =
@@ -3165,12 +3366,14 @@ module AppBskyNotification =
               [<JsonPropertyName("verified")>]
               Verified: Defs.Preference }
 
+        type RecordDeleted = JsonElement
+
         /// Object used to store activity subscription data in stash.
         type SubjectActivitySubscription =
             { [<JsonPropertyName("activitySubscription")>]
               ActivitySubscription: Defs.ActivitySubscription
               [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject: Did }
 
     module GetPreferences =
         [<Literal>]
@@ -3194,7 +3397,7 @@ module AppBskyNotification =
             { [<JsonPropertyName("priority")>]
               Priority: bool option
               [<JsonPropertyName("seenAt")>]
-              SeenAt: string option }
+              SeenAt: AtDateTime option }
 
         type Output =
             { [<JsonPropertyName("count")>]
@@ -3236,7 +3439,7 @@ module AppBskyNotification =
               [<JsonPropertyName("reasons")>]
               Reasons: string list option
               [<JsonPropertyName("seenAt")>]
-              SeenAt: string option }
+              SeenAt: AtDateTime option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
@@ -3246,15 +3449,15 @@ module AppBskyNotification =
               [<JsonPropertyName("priority")>]
               Priority: bool option
               [<JsonPropertyName("seenAt")>]
-              SeenAt: string option }
+              SeenAt: AtDateTime option }
 
         type Notification =
             { [<JsonPropertyName("author")>]
               Author: AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("isRead")>]
               IsRead: bool
               [<JsonPropertyName("labels")>]
@@ -3262,11 +3465,11 @@ module AppBskyNotification =
               [<JsonPropertyName("reason")>]
               Reason: string
               [<JsonPropertyName("reasonSubject")>]
-              ReasonSubject: string option
+              ReasonSubject: AtUri option
               [<JsonPropertyName("record")>]
               Record: JsonElement
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
     module PutActivitySubscription =
         [<Literal>]
@@ -3279,13 +3482,13 @@ module AppBskyNotification =
             { [<JsonPropertyName("activitySubscription")>]
               ActivitySubscription: Defs.ActivitySubscription
               [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject: Did }
 
         type Output =
             { [<JsonPropertyName("activitySubscription")>]
               ActivitySubscription: Defs.ActivitySubscription option
               [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject: Did }
 
     module PutPreferences =
         [<Literal>]
@@ -3352,7 +3555,7 @@ module AppBskyNotification =
               [<JsonPropertyName("platform")>]
               Platform: string
               [<JsonPropertyName("serviceDid")>]
-              ServiceDid: string
+              ServiceDid: Did
               [<JsonPropertyName("token")>]
               Token: string }
 
@@ -3369,7 +3572,7 @@ module AppBskyNotification =
               [<JsonPropertyName("platform")>]
               Platform: string
               [<JsonPropertyName("serviceDid")>]
-              ServiceDid: string
+              ServiceDid: Did
               [<JsonPropertyName("token")>]
               Token: string }
 
@@ -3382,7 +3585,7 @@ module AppBskyNotification =
 
         type Input =
             { [<JsonPropertyName("seenAt")>]
-              SeenAt: string }
+              SeenAt: AtDateTime }
 
 module AppBskyActor =
     module Defs =
@@ -3408,7 +3611,7 @@ module AppBskyActor =
             { [<JsonPropertyName("label")>]
               Label: string
               [<JsonPropertyName("labelerDid")>]
-              LabelerDid: string option
+              LabelerDid: Did option
               [<JsonPropertyName("visibility")>]
               Visibility: string }
 
@@ -3437,7 +3640,7 @@ module AppBskyActor =
 
         type HiddenPostsPref =
             { [<JsonPropertyName("items")>]
-              Items: string list }
+              Items: AtUri list }
 
         type InterestsPref =
             { [<JsonPropertyName("tags")>]
@@ -3452,7 +3655,7 @@ module AppBskyActor =
 
         type LabelerPrefItem =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type LabelersPref =
             { [<JsonPropertyName("labelers")>]
@@ -3470,7 +3673,7 @@ module AppBskyActor =
             { [<JsonPropertyName("actorTarget")>]
               ActorTarget: string option
               [<JsonPropertyName("expiresAt")>]
-              ExpiresAt: string option
+              ExpiresAt: AtDateTime option
               [<JsonPropertyName("id")>]
               Id: string option
               [<JsonPropertyName("targets")>]
@@ -3491,20 +3694,34 @@ module AppBskyActor =
               [<JsonPropertyName("data")>]
               Data: string option
               [<JsonPropertyName("expiresAt")>]
-              ExpiresAt: string option
+              ExpiresAt: AtDateTime option
               [<JsonPropertyName("id")>]
               Id: string }
 
         type PersonalDetailsPref =
             { [<JsonPropertyName("birthDate")>]
-              BirthDate: string option }
+              BirthDate: AtDateTime option }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type PostInteractionSettingsPrefPostgateEmbeddingRulesItem =
+            | [<JsonName("app.bsky.feed.postgate#disableRule")>] DisableRule of AppBskyFeed.Postgate.DisableRule
+            | Unknown of string * System.Text.Json.JsonElement
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type PostInteractionSettingsPrefThreadgateAllowRulesItem =
+            | [<JsonName("app.bsky.feed.threadgate#mentionRule")>] MentionRule of AppBskyFeed.Threadgate.MentionRule
+            | [<JsonName("app.bsky.feed.threadgate#followerRule")>] FollowerRule of AppBskyFeed.Threadgate.FollowerRule
+            | [<JsonName("app.bsky.feed.threadgate#followingRule")>] FollowingRule of
+                AppBskyFeed.Threadgate.FollowingRule
+            | [<JsonName("app.bsky.feed.threadgate#listRule")>] ListRule of AppBskyFeed.Threadgate.ListRule
+            | Unknown of string * System.Text.Json.JsonElement
 
         /// Default post interaction settings for the account. These values should be applied as default values when creating new posts. These refs should mirror the threadgate and postgate records exactly.
         type PostInteractionSettingsPref =
             { [<JsonPropertyName("postgateEmbeddingRules")>]
-              PostgateEmbeddingRules: JsonElement list option
+              PostgateEmbeddingRules: PostInteractionSettingsPrefPostgateEmbeddingRulesItem list option
               [<JsonPropertyName("threadgateAllowRules")>]
-              ThreadgateAllowRules: JsonElement list option }
+              ThreadgateAllowRules: PostInteractionSettingsPrefThreadgateAllowRulesItem list option }
 
         type Preferences = JsonElement list
 
@@ -3534,7 +3751,7 @@ module AppBskyActor =
 
         type ProfileAssociatedGerm =
             { [<JsonPropertyName("messageMeUrl")>]
-              MessageMeUrl: string
+              MessageMeUrl: Uri
               [<JsonPropertyName("showButtonTo")>]
               ShowButtonTo: string }
 
@@ -3542,21 +3759,21 @@ module AppBskyActor =
             { [<JsonPropertyName("associated")>]
               Associated: Defs.ProfileAssociated option
               [<JsonPropertyName("avatar")>]
-              Avatar: string option
+              Avatar: Uri option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string option
+              CreatedAt: AtDateTime option
               [<JsonPropertyName("debug")>]
               Debug: JsonElement option
               [<JsonPropertyName("description")>]
               Description: string option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("displayName")>]
               DisplayName: string option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string option
+              IndexedAt: AtDateTime option
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("pronouns")>]
@@ -3572,17 +3789,17 @@ module AppBskyActor =
             { [<JsonPropertyName("associated")>]
               Associated: Defs.ProfileAssociated option
               [<JsonPropertyName("avatar")>]
-              Avatar: string option
+              Avatar: Uri option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string option
+              CreatedAt: AtDateTime option
               [<JsonPropertyName("debug")>]
               Debug: JsonElement option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("displayName")>]
               DisplayName: string option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("pronouns")>]
@@ -3598,17 +3815,17 @@ module AppBskyActor =
             { [<JsonPropertyName("associated")>]
               Associated: Defs.ProfileAssociated option
               [<JsonPropertyName("avatar")>]
-              Avatar: string option
+              Avatar: Uri option
               [<JsonPropertyName("banner")>]
-              Banner: string option
+              Banner: Uri option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string option
+              CreatedAt: AtDateTime option
               [<JsonPropertyName("debug")>]
               Debug: JsonElement option
               [<JsonPropertyName("description")>]
               Description: string option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("displayName")>]
               DisplayName: string option
               [<JsonPropertyName("followersCount")>]
@@ -3616,9 +3833,9 @@ module AppBskyActor =
               [<JsonPropertyName("followsCount")>]
               FollowsCount: int64 option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string option
+              IndexedAt: AtDateTime option
               [<JsonPropertyName("joinedViaStarterPack")>]
               JoinedViaStarterPack: AppBskyGraph.Defs.StarterPackViewBasic option
               [<JsonPropertyName("labels")>]
@@ -3636,7 +3853,7 @@ module AppBskyActor =
               [<JsonPropertyName("viewer")>]
               Viewer: Defs.ViewerState option
               [<JsonPropertyName("website")>]
-              Website: string option }
+              Website: Uri option }
 
         type SavedFeed =
             { [<JsonPropertyName("id")>]
@@ -3650,9 +3867,9 @@ module AppBskyActor =
 
         type SavedFeedsPref =
             { [<JsonPropertyName("pinned")>]
-              Pinned: string list
+              Pinned: AtUri list
               [<JsonPropertyName("saved")>]
-              Saved: string list
+              Saved: AtUri list
               [<JsonPropertyName("timelineIndex")>]
               TimelineIndex: int64 option }
 
@@ -3660,13 +3877,19 @@ module AppBskyActor =
             { [<JsonPropertyName("items")>]
               Items: Defs.SavedFeed list }
 
+        /// An optional embed associated with the status.
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type StatusViewEmbedUnion =
+            | [<JsonName("app.bsky.embed.external#view")>] View of AppBskyEmbed.External.View
+            | Unknown of string * System.Text.Json.JsonElement
+
         type StatusView =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("embed")>]
-              Embed: JsonElement option
+              Embed: StatusViewEmbedUnion option
               [<JsonPropertyName("expiresAt")>]
-              ExpiresAt: string option
+              ExpiresAt: AtDateTime option
               [<JsonPropertyName("isActive")>]
               IsActive: bool option
               [<JsonPropertyName("isDisabled")>]
@@ -3676,7 +3899,7 @@ module AppBskyActor =
               [<JsonPropertyName("status")>]
               Status: string
               [<JsonPropertyName("uri")>]
-              Uri: string option }
+              Uri: AtUri option }
 
         type ThreadViewPref =
             { [<JsonPropertyName("sort")>]
@@ -3699,13 +3922,13 @@ module AppBskyActor =
         /// An individual verification for an associated subject.
         type VerificationView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("isValid")>]
               IsValid: bool
               [<JsonPropertyName("issuer")>]
-              Issuer: string
+              Issuer: Did
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         /// Metadata about the requesting account's relationship with the subject account. Only has meaningful content for authed requests.
         type ViewerState =
@@ -3714,13 +3937,13 @@ module AppBskyActor =
               [<JsonPropertyName("blockedBy")>]
               BlockedBy: bool option
               [<JsonPropertyName("blocking")>]
-              Blocking: string option
+              Blocking: AtUri option
               [<JsonPropertyName("blockingByList")>]
               BlockingByList: AppBskyGraph.Defs.ListViewBasic option
               [<JsonPropertyName("followedBy")>]
-              FollowedBy: string option
+              FollowedBy: AtUri option
               [<JsonPropertyName("following")>]
-              Following: string option
+              Following: AtUri option
               [<JsonPropertyName("knownFollowers")>]
               KnownFollowers: Defs.KnownFollowers option
               [<JsonPropertyName("muted")>]
@@ -3792,6 +4015,12 @@ module AppBskyActor =
         [<Literal>]
         let TypeId = "app.bsky.actor.profile"
 
+        /// Self-label values, specific to the Bluesky application, on the overall account.
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ProfileLabelsUnion =
+            | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// A declaration of a Bluesky account profile.
         type Profile =
             { [<JsonPropertyName("avatar")>]
@@ -3799,7 +4028,7 @@ module AppBskyActor =
               [<JsonPropertyName("banner")>]
               Banner: JsonElement option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string option
+              CreatedAt: AtDateTime option
               [<JsonPropertyName("description")>]
               Description: string option
               [<JsonPropertyName("displayName")>]
@@ -3807,13 +4036,13 @@ module AppBskyActor =
               [<JsonPropertyName("joinedViaStarterPack")>]
               JoinedViaStarterPack: ComAtprotoRepo.StrongRef.StrongRef option
               [<JsonPropertyName("labels")>]
-              Labels: JsonElement option
+              Labels: ProfileLabelsUnion option
               [<JsonPropertyName("pinnedPost")>]
               PinnedPost: ComAtprotoRepo.StrongRef.StrongRef option
               [<JsonPropertyName("pronouns")>]
               Pronouns: string option
               [<JsonPropertyName("website")>]
-              Website: string option }
+              Website: Uri option }
 
     module PutPreferences =
         [<Literal>]
@@ -3872,14 +4101,20 @@ module AppBskyActor =
         [<Literal>]
         let TypeId = "app.bsky.actor.status"
 
+        /// An optional embed associated with the status.
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type StatusEmbedUnion =
+            | [<JsonName("app.bsky.embed.external")>] External of AppBskyEmbed.External.External
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// A declaration of a Bluesky account status.
         type Status =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("durationMinutes")>]
               DurationMinutes: int64 option
               [<JsonPropertyName("embed")>]
-              Embed: JsonElement option
+              Embed: StatusEmbedUnion option
               [<JsonPropertyName("status")>]
               Status: string }
 
@@ -3927,6 +4162,24 @@ module AppBskyAgeassurance =
             { [<JsonPropertyName("regions")>]
               Regions: Defs.ConfigRegion list }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ConfigRegionRulesItem =
+            | [<JsonName("app.bsky.ageassurance.defs#configRegionRuleDefault")>] ConfigRegionRuleDefault of
+                Defs.ConfigRegionRuleDefault
+            | [<JsonName("app.bsky.ageassurance.defs#configRegionRuleIfDeclaredOverAge")>] ConfigRegionRuleIfDeclaredOverAge of
+                Defs.ConfigRegionRuleIfDeclaredOverAge
+            | [<JsonName("app.bsky.ageassurance.defs#configRegionRuleIfDeclaredUnderAge")>] ConfigRegionRuleIfDeclaredUnderAge of
+                Defs.ConfigRegionRuleIfDeclaredUnderAge
+            | [<JsonName("app.bsky.ageassurance.defs#configRegionRuleIfAssuredOverAge")>] ConfigRegionRuleIfAssuredOverAge of
+                Defs.ConfigRegionRuleIfAssuredOverAge
+            | [<JsonName("app.bsky.ageassurance.defs#configRegionRuleIfAssuredUnderAge")>] ConfigRegionRuleIfAssuredUnderAge of
+                Defs.ConfigRegionRuleIfAssuredUnderAge
+            | [<JsonName("app.bsky.ageassurance.defs#configRegionRuleIfAccountNewerThan")>] ConfigRegionRuleIfAccountNewerThan of
+                Defs.ConfigRegionRuleIfAccountNewerThan
+            | [<JsonName("app.bsky.ageassurance.defs#configRegionRuleIfAccountOlderThan")>] ConfigRegionRuleIfAccountOlderThan of
+                Defs.ConfigRegionRuleIfAccountOlderThan
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// The Age Assurance configuration for a specific region.
         type ConfigRegion =
             { [<JsonPropertyName("countryCode")>]
@@ -3936,7 +4189,7 @@ module AppBskyAgeassurance =
               [<JsonPropertyName("regionCode")>]
               RegionCode: string option
               [<JsonPropertyName("rules")>]
-              Rules: JsonElement list }
+              Rules: ConfigRegionRulesItem list }
 
         /// Age Assurance rule that applies by default.
         type ConfigRegionRuleDefault =
@@ -3948,14 +4201,14 @@ module AppBskyAgeassurance =
             { [<JsonPropertyName("access")>]
               Access: Defs.Access
               [<JsonPropertyName("date")>]
-              Date: string }
+              Date: AtDateTime }
 
         /// Age Assurance rule that applies if the account is older than a certain date.
         type ConfigRegionRuleIfAccountOlderThan =
             { [<JsonPropertyName("access")>]
               Access: Defs.Access
               [<JsonPropertyName("date")>]
-              Date: string }
+              Date: AtDateTime }
 
         /// Age Assurance rule that applies if the user has been assured to be equal-to or over a certain age.
         type ConfigRegionRuleIfAssuredOverAge =
@@ -3998,7 +4251,7 @@ module AppBskyAgeassurance =
               [<JsonPropertyName("countryCode")>]
               CountryCode: string
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("email")>]
               Email: string option
               [<JsonPropertyName("initIp")>]
@@ -4015,14 +4268,14 @@ module AppBskyAgeassurance =
             { [<JsonPropertyName("access")>]
               Access: Defs.Access
               [<JsonPropertyName("lastInitiatedAt")>]
-              LastInitiatedAt: string option
+              LastInitiatedAt: AtDateTime option
               [<JsonPropertyName("status")>]
               Status: Defs.Status }
 
         /// Additional metadata needed to compute Age Assurance state client-side.
         type StateMetadata =
             { [<JsonPropertyName("accountCreatedAt")>]
-              AccountCreatedAt: string option }
+              AccountCreatedAt: AtDateTime option }
 
         type Status = string
 
@@ -4064,9 +4317,9 @@ module AppBskyBookmark =
 
         type Input =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         module Errors =
             [<Literal>]
@@ -4078,11 +4331,18 @@ module AppBskyBookmark =
             { [<JsonPropertyName("subject")>]
               Subject: ComAtprotoRepo.StrongRef.StrongRef }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type BookmarkViewItemUnion =
+            | [<JsonName("app.bsky.feed.defs#blockedPost")>] BlockedPost of AppBskyFeed.Defs.BlockedPost
+            | [<JsonName("app.bsky.feed.defs#notFoundPost")>] NotFoundPost of AppBskyFeed.Defs.NotFoundPost
+            | [<JsonName("app.bsky.feed.defs#postView")>] PostView of AppBskyFeed.Defs.PostView
+            | Unknown of string * System.Text.Json.JsonElement
+
         type BookmarkView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string option
+              CreatedAt: AtDateTime option
               [<JsonPropertyName("item")>]
-              Item: JsonElement
+              Item: BookmarkViewItemUnion
               [<JsonPropertyName("subject")>]
               Subject: ComAtprotoRepo.StrongRef.StrongRef }
 
@@ -4095,7 +4355,7 @@ module AppBskyBookmark =
 
         type Input =
             { [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         module Errors =
             [<Literal>]
@@ -4132,15 +4392,15 @@ module AppBskyContact =
         /// A stash object to be sent via bsync representing a notification to be created.
         type Notification =
             { [<JsonPropertyName("from")>]
-              From: string
+              From: Did
               [<JsonPropertyName("to")>]
-              To: string }
+              To: Did }
 
         type SyncStatus =
             { [<JsonPropertyName("matchesCount")>]
               MatchesCount: int64
               [<JsonPropertyName("syncedAt")>]
-              SyncedAt: string }
+              SyncedAt: AtDateTime }
 
     module DismissMatch =
         [<Literal>]
@@ -4151,7 +4411,7 @@ module AppBskyContact =
 
         type Input =
             { [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject: Did }
 
         module Errors =
             [<Literal>]
@@ -4263,9 +4523,9 @@ module AppBskyContact =
 
         type Input =
             { [<JsonPropertyName("from")>]
-              From: string
+              From: Did
               [<JsonPropertyName("to")>]
-              To: string }
+              To: Did }
 
     module StartPhoneVerification =
         [<Literal>]
@@ -4345,6 +4605,20 @@ module AppBskyDraft =
             let DraftLimitReached = "DraftLimitReached"
 
     module Defs =
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type DraftPostgateEmbeddingRulesItem =
+            | [<JsonName("app.bsky.feed.postgate#disableRule")>] DisableRule of AppBskyFeed.Postgate.DisableRule
+            | Unknown of string * System.Text.Json.JsonElement
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type DraftThreadgateAllowItem =
+            | [<JsonName("app.bsky.feed.threadgate#mentionRule")>] MentionRule of AppBskyFeed.Threadgate.MentionRule
+            | [<JsonName("app.bsky.feed.threadgate#followerRule")>] FollowerRule of AppBskyFeed.Threadgate.FollowerRule
+            | [<JsonName("app.bsky.feed.threadgate#followingRule")>] FollowingRule of
+                AppBskyFeed.Threadgate.FollowingRule
+            | [<JsonName("app.bsky.feed.threadgate#listRule")>] ListRule of AppBskyFeed.Threadgate.ListRule
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// A draft containing an array of draft posts.
         type Draft =
             { [<JsonPropertyName("deviceId")>]
@@ -4352,23 +4626,23 @@ module AppBskyDraft =
               [<JsonPropertyName("deviceName")>]
               DeviceName: string option
               [<JsonPropertyName("langs")>]
-              Langs: string list option
+              Langs: Language list option
               [<JsonPropertyName("postgateEmbeddingRules")>]
-              PostgateEmbeddingRules: JsonElement list option
+              PostgateEmbeddingRules: DraftPostgateEmbeddingRulesItem list option
               [<JsonPropertyName("posts")>]
               Posts: Defs.DraftPost list
               [<JsonPropertyName("threadgateAllow")>]
-              ThreadgateAllow: JsonElement list option }
+              ThreadgateAllow: DraftThreadgateAllowItem list option }
 
         type DraftEmbedCaption =
             { [<JsonPropertyName("content")>]
               Content: string
               [<JsonPropertyName("lang")>]
-              Lang: string }
+              Lang: Language }
 
         type DraftEmbedExternal =
             { [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: Uri }
 
         type DraftEmbedImage =
             { [<JsonPropertyName("alt")>]
@@ -4392,6 +4666,12 @@ module AppBskyDraft =
               [<JsonPropertyName("localRef")>]
               LocalRef: Defs.DraftEmbedLocalRef }
 
+        /// Self-label values for this post. Effectively content warnings.
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type DraftPostLabelsUnion =
+            | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// One of the posts that compose a draft.
         type DraftPost =
             { [<JsonPropertyName("embedExternals")>]
@@ -4403,27 +4683,27 @@ module AppBskyDraft =
               [<JsonPropertyName("embedVideos")>]
               EmbedVideos: Defs.DraftEmbedVideo list option
               [<JsonPropertyName("labels")>]
-              Labels: JsonElement option
+              Labels: DraftPostLabelsUnion option
               [<JsonPropertyName("text")>]
               Text: string }
 
         /// View to present drafts data to users.
         type DraftView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("draft")>]
               Draft: Defs.Draft
               [<JsonPropertyName("id")>]
-              Id: string
+              Id: Tid
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: string }
+              UpdatedAt: AtDateTime }
 
         /// A draft with an identifier, used to store drafts in private storage (stash).
         type DraftWithId =
             { [<JsonPropertyName("draft")>]
               Draft: Defs.Draft
               [<JsonPropertyName("id")>]
-              Id: string }
+              Id: Tid }
 
     module DeleteDraft =
         [<Literal>]
@@ -4434,7 +4714,7 @@ module AppBskyDraft =
 
         type Input =
             { [<JsonPropertyName("id")>]
-              Id: string }
+              Id: Tid }
 
     module GetDrafts =
         [<Literal>]
@@ -4477,7 +4757,7 @@ module AppBskyUnspecced =
               [<JsonPropertyName("completeUa")>]
               CompleteUa: string option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("email")>]
               Email: string option
               [<JsonPropertyName("initIp")>]
@@ -4490,27 +4770,27 @@ module AppBskyUnspecced =
         /// The computed state of the age assurance process, returned to the user in question on certain authenticated requests.
         type AgeAssuranceState =
             { [<JsonPropertyName("lastInitiatedAt")>]
-              LastInitiatedAt: string option
+              LastInitiatedAt: AtDateTime option
               [<JsonPropertyName("status")>]
               Status: string }
 
         type SkeletonSearchActor =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type SkeletonSearchPost =
             { [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type SkeletonSearchStarterPack =
             { [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type SkeletonTrend =
             { [<JsonPropertyName("category")>]
               Category: string option
               [<JsonPropertyName("dids")>]
-              Dids: string list
+              Dids: Did list
               [<JsonPropertyName("displayName")>]
               DisplayName: string
               [<JsonPropertyName("link")>]
@@ -4518,7 +4798,7 @@ module AppBskyUnspecced =
               [<JsonPropertyName("postCount")>]
               PostCount: int64
               [<JsonPropertyName("startedAt")>]
-              StartedAt: string
+              StartedAt: AtDateTime
               [<JsonPropertyName("status")>]
               Status: string option
               [<JsonPropertyName("topic")>]
@@ -4527,6 +4807,9 @@ module AppBskyUnspecced =
         type ThreadItemBlocked =
             { [<JsonPropertyName("author")>]
               Author: AppBskyFeed.Defs.BlockedAuthor }
+
+        type ThreadItemNoUnauthenticated = JsonElement
+        type ThreadItemNotFound = JsonElement
 
         type ThreadItemPost =
             { [<JsonPropertyName("hiddenByThreadgate")>]
@@ -4554,7 +4837,7 @@ module AppBskyUnspecced =
               [<JsonPropertyName("postCount")>]
               PostCount: int64
               [<JsonPropertyName("startedAt")>]
-              StartedAt: string
+              StartedAt: AtDateTime
               [<JsonPropertyName("status")>]
               Status: string option
               [<JsonPropertyName("topic")>]
@@ -4594,7 +4877,7 @@ module AppBskyUnspecced =
 
         type LiveNowConfig =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("domains")>]
               Domains: string list }
 
@@ -4624,11 +4907,11 @@ module AppBskyUnspecced =
             { [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: string option }
+              Viewer: Did option }
 
         type Output =
             { [<JsonPropertyName("starterPacks")>]
-              StarterPacks: string list }
+              StarterPacks: AtUri list }
 
     module GetOnboardingSuggestedUsersSkeleton =
         [<Literal>]
@@ -4643,11 +4926,11 @@ module AppBskyUnspecced =
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: string option }
+              Viewer: Did option }
 
         type Output =
             { [<JsonPropertyName("dids")>]
-              Dids: string list
+              Dids: Did list
               [<JsonPropertyName("recId")>]
               RecId: string option }
 
@@ -4681,19 +4964,24 @@ module AppBskyUnspecced =
 
         type Params =
             { [<JsonPropertyName("anchor")>]
-              Anchor: string }
+              Anchor: AtUri }
 
         type Output =
             { [<JsonPropertyName("thread")>]
               Thread: GetPostThreadOtherV2.ThreadItem list }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ThreadItemValueUnion =
+            | [<JsonName("app.bsky.unspecced.defs#threadItemPost")>] ThreadItemPost of Defs.ThreadItemPost
+            | Unknown of string * System.Text.Json.JsonElement
+
         type ThreadItem =
             { [<JsonPropertyName("depth")>]
               Depth: int64
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("value")>]
-              Value: JsonElement }
+              Value: ThreadItemValueUnion }
 
     module GetPostThreadV2 =
         [<Literal>]
@@ -4706,7 +4994,7 @@ module AppBskyUnspecced =
             { [<JsonPropertyName("above")>]
               Above: bool option
               [<JsonPropertyName("anchor")>]
-              Anchor: string
+              Anchor: AtUri
               [<JsonPropertyName("below")>]
               Below: int64 option
               [<JsonPropertyName("branchingFactor")>]
@@ -4722,13 +5010,22 @@ module AppBskyUnspecced =
               [<JsonPropertyName("threadgate")>]
               Threadgate: AppBskyFeed.Defs.ThreadgateView option }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ThreadItemValueUnion =
+            | [<JsonName("app.bsky.unspecced.defs#threadItemPost")>] ThreadItemPost of Defs.ThreadItemPost
+            | [<JsonName("app.bsky.unspecced.defs#threadItemNoUnauthenticated")>] ThreadItemNoUnauthenticated of
+                Defs.ThreadItemNoUnauthenticated
+            | [<JsonName("app.bsky.unspecced.defs#threadItemNotFound")>] ThreadItemNotFound of Defs.ThreadItemNotFound
+            | [<JsonName("app.bsky.unspecced.defs#threadItemBlocked")>] ThreadItemBlocked of Defs.ThreadItemBlocked
+            | Unknown of string * System.Text.Json.JsonElement
+
         type ThreadItem =
             { [<JsonPropertyName("depth")>]
               Depth: int64
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("value")>]
-              Value: JsonElement }
+              Value: ThreadItemValueUnion }
 
     module GetSuggestedFeeds =
         [<Literal>]
@@ -4756,11 +5053,11 @@ module AppBskyUnspecced =
             { [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: string option }
+              Viewer: Did option }
 
         type Output =
             { [<JsonPropertyName("feeds")>]
-              Feeds: string list }
+              Feeds: AtUri list }
 
     module GetSuggestedOnboardingUsers =
         [<Literal>]
@@ -4807,11 +5104,11 @@ module AppBskyUnspecced =
             { [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: string option }
+              Viewer: Did option }
 
         type Output =
             { [<JsonPropertyName("starterPacks")>]
-              StarterPacks: string list }
+              StarterPacks: AtUri list }
 
     module GetSuggestedUsers =
         [<Literal>]
@@ -4845,11 +5142,11 @@ module AppBskyUnspecced =
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: string option }
+              Viewer: Did option }
 
         type Output =
             { [<JsonPropertyName("dids")>]
-              Dids: string list
+              Dids: Did list
               [<JsonPropertyName("recId")>]
               RecId: string option }
 
@@ -4866,9 +5163,9 @@ module AppBskyUnspecced =
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("relativeToDid")>]
-              RelativeToDid: string option
+              RelativeToDid: Did option
               [<JsonPropertyName("viewer")>]
-              Viewer: string option }
+              Viewer: Did option }
 
         type Output =
             { [<JsonPropertyName("actors")>]
@@ -4880,7 +5177,7 @@ module AppBskyUnspecced =
               [<JsonPropertyName("recIdStr")>]
               RecIdStr: string option
               [<JsonPropertyName("relativeToDid")>]
-              RelativeToDid: string option }
+              RelativeToDid: Did option }
 
     module GetTaggedSuggestions =
         [<Literal>]
@@ -4895,7 +5192,7 @@ module AppBskyUnspecced =
 
         type Suggestion =
             { [<JsonPropertyName("subject")>]
-              Subject: string
+              Subject: Uri
               [<JsonPropertyName("subjectType")>]
               SubjectType: string
               [<JsonPropertyName("tag")>]
@@ -4912,7 +5209,7 @@ module AppBskyUnspecced =
             { [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: string option }
+              Viewer: Did option }
 
         type Output =
             { [<JsonPropertyName("suggested")>]
@@ -4946,7 +5243,7 @@ module AppBskyUnspecced =
             { [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: string option }
+              Viewer: Did option }
 
         type Output =
             { [<JsonPropertyName("trends")>]
@@ -4996,7 +5293,7 @@ module AppBskyUnspecced =
               [<JsonPropertyName("typeahead")>]
               Typeahead: bool option
               [<JsonPropertyName("viewer")>]
-              Viewer: string option }
+              Viewer: Did option }
 
         type Output =
             { [<JsonPropertyName("actors")>]
@@ -5025,7 +5322,7 @@ module AppBskyUnspecced =
               [<JsonPropertyName("domain")>]
               Domain: string option
               [<JsonPropertyName("lang")>]
-              Lang: string option
+              Lang: Language option
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("mentions")>]
@@ -5041,9 +5338,9 @@ module AppBskyUnspecced =
               [<JsonPropertyName("until")>]
               Until: string option
               [<JsonPropertyName("url")>]
-              Url: string option
+              Url: Uri option
               [<JsonPropertyName("viewer")>]
-              Viewer: string option }
+              Viewer: Did option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
@@ -5072,7 +5369,7 @@ module AppBskyUnspecced =
               [<JsonPropertyName("q")>]
               Q: string
               [<JsonPropertyName("viewer")>]
-              Viewer: string option }
+              Viewer: Did option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
@@ -5092,7 +5389,7 @@ module AppBskyVideo =
             { [<JsonPropertyName("blob")>]
               Blob: JsonElement option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("error")>]
               Error: string option
               [<JsonPropertyName("jobId")>]
@@ -5164,15 +5461,15 @@ module ChatBskyActor =
             { [<JsonPropertyName("associated")>]
               Associated: AppBskyActor.Defs.ProfileAssociated option
               [<JsonPropertyName("avatar")>]
-              Avatar: string option
+              Avatar: Uri option
               [<JsonPropertyName("chatDisabled")>]
               ChatDisabled: bool option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("displayName")>]
               DisplayName: string option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("verification")>]
@@ -5234,13 +5531,25 @@ module ChatBskyConvo =
             let ReactionInvalidValue = "ReactionInvalidValue"
 
     module Defs =
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ConvoViewLastMessageUnion =
+            | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
+            | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
+            | Unknown of string * System.Text.Json.JsonElement
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ConvoViewLastReactionUnion =
+            | [<JsonName("chat.bsky.convo.defs#messageAndReactionView")>] MessageAndReactionView of
+                Defs.MessageAndReactionView
+            | Unknown of string * System.Text.Json.JsonElement
+
         type ConvoView =
             { [<JsonPropertyName("id")>]
               Id: string
               [<JsonPropertyName("lastMessage")>]
-              LastMessage: JsonElement option
+              LastMessage: ConvoViewLastMessageUnion option
               [<JsonPropertyName("lastReaction")>]
-              LastReaction: JsonElement option
+              LastReaction: ConvoViewLastReactionUnion option
               [<JsonPropertyName("members")>]
               Members: ChatBskyActor.Defs.ProfileViewBasic list
               [<JsonPropertyName("muted")>]
@@ -5260,7 +5569,7 @@ module ChatBskyConvo =
               [<JsonPropertyName("sender")>]
               Sender: Defs.MessageViewSender
               [<JsonPropertyName("sentAt")>]
-              SentAt: string }
+              SentAt: AtDateTime }
 
         type LogAcceptConvo =
             { [<JsonPropertyName("convoId")>]
@@ -5268,11 +5577,17 @@ module ChatBskyConvo =
               [<JsonPropertyName("rev")>]
               Rev: string }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type LogAddReactionMessageUnion =
+            | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
+            | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
+            | Unknown of string * System.Text.Json.JsonElement
+
         type LogAddReaction =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string
               [<JsonPropertyName("message")>]
-              Message: JsonElement
+              Message: LogAddReactionMessageUnion
               [<JsonPropertyName("reaction")>]
               Reaction: Defs.ReactionView
               [<JsonPropertyName("rev")>]
@@ -5284,19 +5599,31 @@ module ChatBskyConvo =
               [<JsonPropertyName("rev")>]
               Rev: string }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type LogCreateMessageMessageUnion =
+            | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
+            | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
+            | Unknown of string * System.Text.Json.JsonElement
+
         type LogCreateMessage =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string
               [<JsonPropertyName("message")>]
-              Message: JsonElement
+              Message: LogCreateMessageMessageUnion
               [<JsonPropertyName("rev")>]
               Rev: string }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type LogDeleteMessageMessageUnion =
+            | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
+            | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
+            | Unknown of string * System.Text.Json.JsonElement
 
         type LogDeleteMessage =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string
               [<JsonPropertyName("message")>]
-              Message: JsonElement
+              Message: LogDeleteMessageMessageUnion
               [<JsonPropertyName("rev")>]
               Rev: string }
 
@@ -5312,19 +5639,31 @@ module ChatBskyConvo =
               [<JsonPropertyName("rev")>]
               Rev: string }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type LogReadMessageMessageUnion =
+            | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
+            | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
+            | Unknown of string * System.Text.Json.JsonElement
+
         type LogReadMessage =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string
               [<JsonPropertyName("message")>]
-              Message: JsonElement
+              Message: LogReadMessageMessageUnion
               [<JsonPropertyName("rev")>]
               Rev: string }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type LogRemoveReactionMessageUnion =
+            | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
+            | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
+            | Unknown of string * System.Text.Json.JsonElement
 
         type LogRemoveReaction =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string
               [<JsonPropertyName("message")>]
-              Message: JsonElement
+              Message: LogRemoveReactionMessageUnion
               [<JsonPropertyName("reaction")>]
               Reaction: Defs.ReactionView
               [<JsonPropertyName("rev")>]
@@ -5342,9 +5681,14 @@ module ChatBskyConvo =
               [<JsonPropertyName("reaction")>]
               Reaction: Defs.ReactionView }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type MessageInputEmbedUnion =
+            | [<JsonName("app.bsky.embed.record")>] Record of AppBskyEmbed.Record.Record
+            | Unknown of string * System.Text.Json.JsonElement
+
         type MessageInput =
             { [<JsonPropertyName("embed")>]
-              Embed: JsonElement option
+              Embed: MessageInputEmbedUnion option
               [<JsonPropertyName("facets")>]
               Facets: AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("text")>]
@@ -5354,13 +5698,18 @@ module ChatBskyConvo =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("messageId")>]
               MessageId: string }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type MessageViewEmbedUnion =
+            | [<JsonName("app.bsky.embed.record#view")>] View of AppBskyEmbed.Record.View
+            | Unknown of string * System.Text.Json.JsonElement
+
         type MessageView =
             { [<JsonPropertyName("embed")>]
-              Embed: JsonElement option
+              Embed: MessageViewEmbedUnion option
               [<JsonPropertyName("facets")>]
               Facets: AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("id")>]
@@ -5372,17 +5721,17 @@ module ChatBskyConvo =
               [<JsonPropertyName("sender")>]
               Sender: Defs.MessageViewSender
               [<JsonPropertyName("sentAt")>]
-              SentAt: string
+              SentAt: AtDateTime
               [<JsonPropertyName("text")>]
               Text: string }
 
         type MessageViewSender =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type ReactionView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("sender")>]
               Sender: Defs.ReactionViewSender
               [<JsonPropertyName("value")>]
@@ -5390,7 +5739,7 @@ module ChatBskyConvo =
 
         type ReactionViewSender =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
     module DeleteMessageForSelf =
         [<Literal>]
@@ -5431,7 +5780,7 @@ module ChatBskyConvo =
 
         type Params =
             { [<JsonPropertyName("members")>]
-              Members: string list }
+              Members: Did list }
 
         type Output =
             { [<JsonPropertyName("canChat")>]
@@ -5448,7 +5797,7 @@ module ChatBskyConvo =
 
         type Params =
             { [<JsonPropertyName("members")>]
-              Members: string list }
+              Members: Did list }
 
         type Output =
             { [<JsonPropertyName("convo")>]
@@ -5465,11 +5814,25 @@ module ChatBskyConvo =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputLogsItem =
+            | [<JsonName("chat.bsky.convo.defs#logBeginConvo")>] LogBeginConvo of Defs.LogBeginConvo
+            | [<JsonName("chat.bsky.convo.defs#logAcceptConvo")>] LogAcceptConvo of Defs.LogAcceptConvo
+            | [<JsonName("chat.bsky.convo.defs#logLeaveConvo")>] LogLeaveConvo of Defs.LogLeaveConvo
+            | [<JsonName("chat.bsky.convo.defs#logMuteConvo")>] LogMuteConvo of Defs.LogMuteConvo
+            | [<JsonName("chat.bsky.convo.defs#logUnmuteConvo")>] LogUnmuteConvo of Defs.LogUnmuteConvo
+            | [<JsonName("chat.bsky.convo.defs#logCreateMessage")>] LogCreateMessage of Defs.LogCreateMessage
+            | [<JsonName("chat.bsky.convo.defs#logDeleteMessage")>] LogDeleteMessage of Defs.LogDeleteMessage
+            | [<JsonName("chat.bsky.convo.defs#logReadMessage")>] LogReadMessage of Defs.LogReadMessage
+            | [<JsonName("chat.bsky.convo.defs#logAddReaction")>] LogAddReaction of Defs.LogAddReaction
+            | [<JsonName("chat.bsky.convo.defs#logRemoveReaction")>] LogRemoveReaction of Defs.LogRemoveReaction
+            | Unknown of string * System.Text.Json.JsonElement
+
         type Output =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("logs")>]
-              Logs: JsonElement list }
+              Logs: OutputLogsItem list }
 
     module GetMessages =
         [<Literal>]
@@ -5486,11 +5849,17 @@ module ChatBskyConvo =
               [<JsonPropertyName("limit")>]
               Limit: int64 option }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputMessagesItem =
+            | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
+            | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
+            | Unknown of string * System.Text.Json.JsonElement
+
         type Output =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("messages")>]
-              Messages: JsonElement list }
+              Messages: OutputMessagesItem list }
 
     module LeaveConvo =
         [<Literal>]
@@ -5666,7 +6035,7 @@ module ChatBskyModeration =
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string }
+              Actor: Did }
 
         type Output =
             { [<JsonPropertyName("all")>]
@@ -5703,9 +6072,16 @@ module ChatBskyModeration =
               [<JsonPropertyName("messageId")>]
               MessageId: string }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputMessagesItem =
+            | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of ChatBskyConvo.Defs.MessageView
+            | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of
+                ChatBskyConvo.Defs.DeletedMessageView
+            | Unknown of string * System.Text.Json.JsonElement
+
         type Output =
             { [<JsonPropertyName("messages")>]
-              Messages: JsonElement list }
+              Messages: OutputMessagesItem list }
 
     module UpdateActorAccess =
         [<Literal>]
@@ -5716,7 +6092,7 @@ module ChatBskyModeration =
 
         type Input =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor: Did
               [<JsonPropertyName("allowAccess")>]
               AllowAccess: bool
               [<JsonPropertyName("ref")>]
@@ -5726,11 +6102,11 @@ module ComAtprotoIdentity =
     module Defs =
         type IdentityInfo =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("didDoc")>]
               DidDoc: JsonElement
               [<JsonPropertyName("handle")>]
-              Handle: string }
+              Handle: Handle }
 
     module GetRecommendedDidCredentials =
         [<Literal>]
@@ -5785,7 +6161,7 @@ module ComAtprotoIdentity =
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type Output =
             { [<JsonPropertyName("didDoc")>]
@@ -5807,11 +6183,11 @@ module ComAtprotoIdentity =
 
         type Params =
             { [<JsonPropertyName("handle")>]
-              Handle: string }
+              Handle: Handle }
 
         type Output =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         module Errors =
             [<Literal>]
@@ -5883,7 +6259,7 @@ module ComAtprotoIdentity =
 
         type Input =
             { [<JsonPropertyName("handle")>]
-              Handle: string }
+              Handle: Handle }
 
 module ComAtprotoLexicon =
     module ResolveLexicon =
@@ -5895,15 +6271,15 @@ module ComAtprotoLexicon =
 
         type Params =
             { [<JsonPropertyName("nsid")>]
-              Nsid: string }
+              Nsid: Nsid }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("schema")>]
               Schema: Schema.Schema
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         module Errors =
             [<Literal>]
@@ -5928,9 +6304,9 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         module Errors =
             [<Literal>]
@@ -5954,9 +6330,9 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("cids")>]
-              Cids: string list
+              Cids: Cid list
               [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         module Errors =
             [<Literal>]
@@ -5980,7 +6356,7 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
     module GetHead =
         [<Literal>]
@@ -5991,11 +6367,11 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type Output =
             { [<JsonPropertyName("root")>]
-              Root: string }
+              Root: Cid }
 
         module Errors =
             [<Literal>]
@@ -6035,13 +6411,13 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev: Tid }
 
         module Errors =
             [<Literal>]
@@ -6062,11 +6438,11 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("collection")>]
-              Collection: string
+              Collection: Nsid
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("rkey")>]
-              Rkey: string }
+              Rkey: RecordKey }
 
         module Errors =
             [<Literal>]
@@ -6090,9 +6466,9 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("since")>]
-              Since: string option }
+              Since: Tid option }
 
         module Errors =
             [<Literal>]
@@ -6116,15 +6492,15 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type Output =
             { [<JsonPropertyName("active")>]
               Active: bool
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("rev")>]
-              Rev: string option
+              Rev: Tid option
               [<JsonPropertyName("status")>]
               Status: string option }
 
@@ -6143,15 +6519,15 @@ module ComAtprotoSync =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("since")>]
-              Since: string option }
+              Since: Tid option }
 
         type Output =
             { [<JsonPropertyName("cids")>]
-              Cids: string list
+              Cids: Cid list
               [<JsonPropertyName("cursor")>]
               Cursor: string option }
 
@@ -6220,11 +6596,11 @@ module ComAtprotoSync =
             { [<JsonPropertyName("active")>]
               Active: bool option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("head")>]
-              Head: string
+              Head: Cid
               [<JsonPropertyName("rev")>]
-              Rev: string
+              Rev: Tid
               [<JsonPropertyName("status")>]
               Status: string option }
 
@@ -6237,7 +6613,7 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("collection")>]
-              Collection: string
+              Collection: Nsid
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("limit")>]
@@ -6251,7 +6627,7 @@ module ComAtprotoSync =
 
         type Repo =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
     module NotifyOfUpdate =
         [<Literal>]
@@ -6308,51 +6684,51 @@ module ComAtprotoSync =
             { [<JsonPropertyName("active")>]
               Active: bool
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("seq")>]
               Seq: int64
               [<JsonPropertyName("status")>]
               Status: string option
               [<JsonPropertyName("time")>]
-              Time: string }
+              Time: AtDateTime }
 
         /// Represents an update of repository state. Note that empty commits are allowed, which include no repo data changes, but an update to rev and signature.
         type Commit =
             { [<JsonPropertyName("blobs")>]
-              Blobs: string list
+              Blobs: Cid list
               [<JsonPropertyName("blocks")>]
               Blocks: byte[]
               [<JsonPropertyName("commit")>]
-              Commit: string
+              Commit: Cid
               [<JsonPropertyName("ops")>]
               Ops: SubscribeRepos.RepoOp list
               [<JsonPropertyName("prevData")>]
-              PrevData: string option
+              PrevData: Cid option
               [<JsonPropertyName("rebase")>]
               Rebase: bool
               [<JsonPropertyName("repo")>]
-              Repo: string
+              Repo: Did
               [<JsonPropertyName("rev")>]
-              Rev: string
+              Rev: Tid
               [<JsonPropertyName("seq")>]
               Seq: int64
               [<JsonPropertyName("since")>]
-              Since: string option
+              Since: Tid option
               [<JsonPropertyName("time")>]
-              Time: string
+              Time: AtDateTime
               [<JsonPropertyName("tooBig")>]
               TooBig: bool }
 
         /// Represents a change to an account's identity. Could be an updated handle, signing key, or pds hosting endpoint. Serves as a prod to all downstream services to refresh their identity cache.
         type Identity =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("handle")>]
-              Handle: string option
+              Handle: Handle option
               [<JsonPropertyName("seq")>]
               Seq: int64
               [<JsonPropertyName("time")>]
-              Time: string }
+              Time: AtDateTime }
 
         type Info =
             { [<JsonPropertyName("message")>]
@@ -6365,24 +6741,24 @@ module ComAtprotoSync =
             { [<JsonPropertyName("action")>]
               Action: string
               [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("path")>]
               Path: string
               [<JsonPropertyName("prev")>]
-              Prev: string option }
+              Prev: Cid option }
 
         /// Updates the repo to a new state, without necessarily including that state on the firehose. Used to recover from broken commit streams, data loss incidents, or in situations where upstream host does not know recent state of the repository.
         type Sync =
             { [<JsonPropertyName("blocks")>]
               Blocks: byte[]
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("rev")>]
               Rev: string
               [<JsonPropertyName("seq")>]
               Seq: int64
               [<JsonPropertyName("time")>]
-              Time: string }
+              Time: AtDateTime }
 
 module ComAtprotoTemp =
     module AddReservedHandle =
@@ -6405,21 +6781,31 @@ module ComAtprotoTemp =
 
         type Params =
             { [<JsonPropertyName("birthDate")>]
-              BirthDate: string option
+              BirthDate: AtDateTime option
               [<JsonPropertyName("email")>]
               Email: string option
               [<JsonPropertyName("handle")>]
-              Handle: string }
+              Handle: Handle }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputResultUnion =
+            | [<JsonName("com.atproto.temp.checkHandleAvailability#resultAvailable")>] ResultAvailable of
+                CheckHandleAvailability.ResultAvailable
+            | [<JsonName("com.atproto.temp.checkHandleAvailability#resultUnavailable")>] ResultUnavailable of
+                CheckHandleAvailability.ResultUnavailable
+            | Unknown of string * System.Text.Json.JsonElement
 
         type Output =
             { [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("result")>]
-              Result: JsonElement }
+              Result: OutputResultUnion }
 
         module Errors =
             [<Literal>]
             let InvalidEmail = "InvalidEmail"
+
+        type ResultAvailable = JsonElement
 
         /// Indicates the provided handle is unavailable and gives suggestions of available handles.
         type ResultUnavailable =
@@ -6428,7 +6814,7 @@ module ComAtprotoTemp =
 
         type Suggestion =
             { [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("method")>]
               Method: string }
 
@@ -6525,7 +6911,7 @@ module ComGermnetwork =
 
         type MessageMe =
             { [<JsonPropertyName("messageMeUrl")>]
-              MessageMeUrl: string
+              MessageMeUrl: Uri
               [<JsonPropertyName("showButtonTo")>]
               ShowButtonTo: string }
 
@@ -6541,9 +6927,9 @@ module ToolsOzoneCommunication =
             { [<JsonPropertyName("contentMarkdown")>]
               ContentMarkdown: string
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string option
+              CreatedBy: Did option
               [<JsonPropertyName("lang")>]
-              Lang: string option
+              Lang: Language option
               [<JsonPropertyName("name")>]
               Name: string
               [<JsonPropertyName("subject")>]
@@ -6560,21 +6946,21 @@ module ToolsOzoneCommunication =
             { [<JsonPropertyName("contentMarkdown")>]
               ContentMarkdown: string
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("disabled")>]
               Disabled: bool
               [<JsonPropertyName("id")>]
               Id: string
               [<JsonPropertyName("lang")>]
-              Lang: string option
+              Lang: Language option
               [<JsonPropertyName("lastUpdatedBy")>]
-              LastUpdatedBy: string
+              LastUpdatedBy: Did
               [<JsonPropertyName("name")>]
               Name: string
               [<JsonPropertyName("subject")>]
               Subject: string option
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: string }
+              UpdatedAt: AtDateTime }
 
     module DeleteTemplate =
         [<Literal>]
@@ -6613,13 +6999,13 @@ module ToolsOzoneCommunication =
               [<JsonPropertyName("id")>]
               Id: string
               [<JsonPropertyName("lang")>]
-              Lang: string option
+              Lang: Language option
               [<JsonPropertyName("name")>]
               Name: string option
               [<JsonPropertyName("subject")>]
               Subject: string option
               [<JsonPropertyName("updatedBy")>]
-              UpdatedBy: string option }
+              UpdatedBy: Did option }
 
         type Output = Defs.TemplateView
 
@@ -6639,7 +7025,7 @@ module ToolsOzoneHosting =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("events")>]
               Events: string list option
               [<JsonPropertyName("limit")>]
@@ -6655,7 +7041,7 @@ module ToolsOzoneHosting =
             { [<JsonPropertyName("email")>]
               Email: string option
               [<JsonPropertyName("handle")>]
-              Handle: string option }
+              Handle: Handle option }
 
         type EmailConfirmed =
             { [<JsonPropertyName("email")>]
@@ -6665,17 +7051,33 @@ module ToolsOzoneHosting =
             { [<JsonPropertyName("email")>]
               Email: string }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type EventDetailsUnion =
+            | [<JsonName("tools.ozone.hosting.getAccountHistory#accountCreated")>] AccountCreated of
+                GetAccountHistory.AccountCreated
+            | [<JsonName("tools.ozone.hosting.getAccountHistory#emailUpdated")>] EmailUpdated of
+                GetAccountHistory.EmailUpdated
+            | [<JsonName("tools.ozone.hosting.getAccountHistory#emailConfirmed")>] EmailConfirmed of
+                GetAccountHistory.EmailConfirmed
+            | [<JsonName("tools.ozone.hosting.getAccountHistory#passwordUpdated")>] PasswordUpdated of
+                GetAccountHistory.PasswordUpdated
+            | [<JsonName("tools.ozone.hosting.getAccountHistory#handleUpdated")>] HandleUpdated of
+                GetAccountHistory.HandleUpdated
+            | Unknown of string * System.Text.Json.JsonElement
+
         type Event =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("createdBy")>]
               CreatedBy: string
               [<JsonPropertyName("details")>]
-              Details: JsonElement }
+              Details: EventDetailsUnion }
 
         type HandleUpdated =
             { [<JsonPropertyName("handle")>]
-              Handle: string }
+              Handle: Handle }
+
+        type PasswordUpdated = JsonElement
 
 module ToolsOzoneModeration =
     module CancelScheduledActions =
@@ -6689,7 +7091,7 @@ module ToolsOzoneModeration =
             { [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("subjects")>]
-              Subjects: string list }
+              Subjects: Did list }
 
         type Output = CancelScheduledActions.CancellationResults
 
@@ -6697,11 +7099,11 @@ module ToolsOzoneModeration =
             { [<JsonPropertyName("failed")>]
               Failed: CancelScheduledActions.FailedCancellation list
               [<JsonPropertyName("succeeded")>]
-              Succeeded: string list }
+              Succeeded: Did list }
 
         type FailedCancellation =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("error")>]
               Error: string
               [<JsonPropertyName("errorCode")>]
@@ -6717,21 +7119,21 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("status")>]
               Status: string option
               [<JsonPropertyName("timestamp")>]
-              Timestamp: string }
+              Timestamp: AtDateTime }
 
         type AccountHosting =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string option
+              CreatedAt: AtDateTime option
               [<JsonPropertyName("deactivatedAt")>]
-              DeactivatedAt: string option
+              DeactivatedAt: AtDateTime option
               [<JsonPropertyName("deletedAt")>]
-              DeletedAt: string option
+              DeletedAt: AtDateTime option
               [<JsonPropertyName("reactivatedAt")>]
-              ReactivatedAt: string option
+              ReactivatedAt: AtDateTime option
               [<JsonPropertyName("status")>]
               Status: string
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: string option }
+              UpdatedAt: AtDateTime option }
 
         /// Statistics about a particular account subject
         type AccountStats =
@@ -6751,9 +7153,9 @@ module ToolsOzoneModeration =
             { [<JsonPropertyName("activeStrikeCount")>]
               ActiveStrikeCount: int64 option
               [<JsonPropertyName("firstStrikeAt")>]
-              FirstStrikeAt: string option
+              FirstStrikeAt: AtDateTime option
               [<JsonPropertyName("lastStrikeAt")>]
-              LastStrikeAt: string option
+              LastStrikeAt: AtDateTime option
               [<JsonPropertyName("totalStrikeCount")>]
               TotalStrikeCount: int64 option }
 
@@ -6770,7 +7172,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("countryCode")>]
               CountryCode: string option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("initIp")>]
               InitIp: string option
               [<JsonPropertyName("initUa")>]
@@ -6789,13 +7191,19 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("status")>]
               Status: string }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type BlobViewDetailsUnion =
+            | [<JsonName("tools.ozone.moderation.defs#imageDetails")>] ImageDetails of Defs.ImageDetails
+            | [<JsonName("tools.ozone.moderation.defs#videoDetails")>] VideoDetails of Defs.VideoDetails
+            | Unknown of string * System.Text.Json.JsonElement
+
         type BlobView =
             { [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("details")>]
-              Details: JsonElement option
+              Details: BlobViewDetailsUnion option
               [<JsonPropertyName("mimeType")>]
               MimeType: string
               [<JsonPropertyName("moderation")>]
@@ -6813,11 +7221,11 @@ module ToolsOzoneModeration =
             { [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("handle")>]
-              Handle: string option
+              Handle: Handle option
               [<JsonPropertyName("pdsHost")>]
-              PdsHost: string option
+              PdsHost: Uri option
               [<JsonPropertyName("timestamp")>]
-              Timestamp: string
+              Timestamp: AtDateTime
               [<JsonPropertyName("tombstone")>]
               Tombstone: bool option }
 
@@ -6860,7 +7268,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("strikeCount")>]
               StrikeCount: int64 option
               [<JsonPropertyName("strikeExpiresAt")>]
-              StrikeExpiresAt: string option
+              StrikeExpiresAt: AtDateTime option
               [<JsonPropertyName("subjectLine")>]
               SubjectLine: string }
 
@@ -6949,7 +7357,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("strikeCount")>]
               StrikeCount: int64 option
               [<JsonPropertyName("strikeExpiresAt")>]
-              StrikeExpiresAt: string option
+              StrikeExpiresAt: AtDateTime option
               [<JsonPropertyName("targetServices")>]
               TargetServices: string list option }
 
@@ -6963,39 +7371,131 @@ module ToolsOzoneModeration =
             { [<JsonPropertyName("comment")>]
               Comment: string option }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ModEventViewEventUnion =
+            | [<JsonName("tools.ozone.moderation.defs#modEventTakedown")>] ModEventTakedown of Defs.ModEventTakedown
+            | [<JsonName("tools.ozone.moderation.defs#modEventReverseTakedown")>] ModEventReverseTakedown of
+                Defs.ModEventReverseTakedown
+            | [<JsonName("tools.ozone.moderation.defs#modEventComment")>] ModEventComment of Defs.ModEventComment
+            | [<JsonName("tools.ozone.moderation.defs#modEventReport")>] ModEventReport of Defs.ModEventReport
+            | [<JsonName("tools.ozone.moderation.defs#modEventLabel")>] ModEventLabel of Defs.ModEventLabel
+            | [<JsonName("tools.ozone.moderation.defs#modEventAcknowledge")>] ModEventAcknowledge of
+                Defs.ModEventAcknowledge
+            | [<JsonName("tools.ozone.moderation.defs#modEventEscalate")>] ModEventEscalate of Defs.ModEventEscalate
+            | [<JsonName("tools.ozone.moderation.defs#modEventMute")>] ModEventMute of Defs.ModEventMute
+            | [<JsonName("tools.ozone.moderation.defs#modEventUnmute")>] ModEventUnmute of Defs.ModEventUnmute
+            | [<JsonName("tools.ozone.moderation.defs#modEventMuteReporter")>] ModEventMuteReporter of
+                Defs.ModEventMuteReporter
+            | [<JsonName("tools.ozone.moderation.defs#modEventUnmuteReporter")>] ModEventUnmuteReporter of
+                Defs.ModEventUnmuteReporter
+            | [<JsonName("tools.ozone.moderation.defs#modEventEmail")>] ModEventEmail of Defs.ModEventEmail
+            | [<JsonName("tools.ozone.moderation.defs#modEventResolveAppeal")>] ModEventResolveAppeal of
+                Defs.ModEventResolveAppeal
+            | [<JsonName("tools.ozone.moderation.defs#modEventDivert")>] ModEventDivert of Defs.ModEventDivert
+            | [<JsonName("tools.ozone.moderation.defs#modEventTag")>] ModEventTag of Defs.ModEventTag
+            | [<JsonName("tools.ozone.moderation.defs#accountEvent")>] AccountEvent of Defs.AccountEvent
+            | [<JsonName("tools.ozone.moderation.defs#identityEvent")>] IdentityEvent of Defs.IdentityEvent
+            | [<JsonName("tools.ozone.moderation.defs#recordEvent")>] RecordEvent of Defs.RecordEvent
+            | [<JsonName("tools.ozone.moderation.defs#modEventPriorityScore")>] ModEventPriorityScore of
+                Defs.ModEventPriorityScore
+            | [<JsonName("tools.ozone.moderation.defs#ageAssuranceEvent")>] AgeAssuranceEvent of Defs.AgeAssuranceEvent
+            | [<JsonName("tools.ozone.moderation.defs#ageAssuranceOverrideEvent")>] AgeAssuranceOverrideEvent of
+                Defs.AgeAssuranceOverrideEvent
+            | [<JsonName("tools.ozone.moderation.defs#revokeAccountCredentialsEvent")>] RevokeAccountCredentialsEvent of
+                Defs.RevokeAccountCredentialsEvent
+            | [<JsonName("tools.ozone.moderation.defs#scheduleTakedownEvent")>] ScheduleTakedownEvent of
+                Defs.ScheduleTakedownEvent
+            | [<JsonName("tools.ozone.moderation.defs#cancelScheduledTakedownEvent")>] CancelScheduledTakedownEvent of
+                Defs.CancelScheduledTakedownEvent
+            | Unknown of string * System.Text.Json.JsonElement
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ModEventViewSubjectUnion =
+            | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of ComAtprotoAdmin.Defs.RepoRef
+            | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
+            | [<JsonName("chat.bsky.convo.defs#messageRef")>] MessageRef of ChatBskyConvo.Defs.MessageRef
+            | Unknown of string * System.Text.Json.JsonElement
+
         type ModEventView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string
+              CreatedBy: Did
               [<JsonPropertyName("creatorHandle")>]
               CreatorHandle: string option
               [<JsonPropertyName("event")>]
-              Event: JsonElement
+              Event: ModEventViewEventUnion
               [<JsonPropertyName("id")>]
               Id: int64
               [<JsonPropertyName("modTool")>]
               ModTool: Defs.ModTool option
               [<JsonPropertyName("subject")>]
-              Subject: JsonElement
+              Subject: ModEventViewSubjectUnion
               [<JsonPropertyName("subjectBlobCids")>]
               SubjectBlobCids: string list
               [<JsonPropertyName("subjectHandle")>]
               SubjectHandle: string option }
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ModEventViewDetailEventUnion =
+            | [<JsonName("tools.ozone.moderation.defs#modEventTakedown")>] ModEventTakedown of Defs.ModEventTakedown
+            | [<JsonName("tools.ozone.moderation.defs#modEventReverseTakedown")>] ModEventReverseTakedown of
+                Defs.ModEventReverseTakedown
+            | [<JsonName("tools.ozone.moderation.defs#modEventComment")>] ModEventComment of Defs.ModEventComment
+            | [<JsonName("tools.ozone.moderation.defs#modEventReport")>] ModEventReport of Defs.ModEventReport
+            | [<JsonName("tools.ozone.moderation.defs#modEventLabel")>] ModEventLabel of Defs.ModEventLabel
+            | [<JsonName("tools.ozone.moderation.defs#modEventAcknowledge")>] ModEventAcknowledge of
+                Defs.ModEventAcknowledge
+            | [<JsonName("tools.ozone.moderation.defs#modEventEscalate")>] ModEventEscalate of Defs.ModEventEscalate
+            | [<JsonName("tools.ozone.moderation.defs#modEventMute")>] ModEventMute of Defs.ModEventMute
+            | [<JsonName("tools.ozone.moderation.defs#modEventUnmute")>] ModEventUnmute of Defs.ModEventUnmute
+            | [<JsonName("tools.ozone.moderation.defs#modEventMuteReporter")>] ModEventMuteReporter of
+                Defs.ModEventMuteReporter
+            | [<JsonName("tools.ozone.moderation.defs#modEventUnmuteReporter")>] ModEventUnmuteReporter of
+                Defs.ModEventUnmuteReporter
+            | [<JsonName("tools.ozone.moderation.defs#modEventEmail")>] ModEventEmail of Defs.ModEventEmail
+            | [<JsonName("tools.ozone.moderation.defs#modEventResolveAppeal")>] ModEventResolveAppeal of
+                Defs.ModEventResolveAppeal
+            | [<JsonName("tools.ozone.moderation.defs#modEventDivert")>] ModEventDivert of Defs.ModEventDivert
+            | [<JsonName("tools.ozone.moderation.defs#modEventTag")>] ModEventTag of Defs.ModEventTag
+            | [<JsonName("tools.ozone.moderation.defs#accountEvent")>] AccountEvent of Defs.AccountEvent
+            | [<JsonName("tools.ozone.moderation.defs#identityEvent")>] IdentityEvent of Defs.IdentityEvent
+            | [<JsonName("tools.ozone.moderation.defs#recordEvent")>] RecordEvent of Defs.RecordEvent
+            | [<JsonName("tools.ozone.moderation.defs#modEventPriorityScore")>] ModEventPriorityScore of
+                Defs.ModEventPriorityScore
+            | [<JsonName("tools.ozone.moderation.defs#ageAssuranceEvent")>] AgeAssuranceEvent of Defs.AgeAssuranceEvent
+            | [<JsonName("tools.ozone.moderation.defs#ageAssuranceOverrideEvent")>] AgeAssuranceOverrideEvent of
+                Defs.AgeAssuranceOverrideEvent
+            | [<JsonName("tools.ozone.moderation.defs#revokeAccountCredentialsEvent")>] RevokeAccountCredentialsEvent of
+                Defs.RevokeAccountCredentialsEvent
+            | [<JsonName("tools.ozone.moderation.defs#scheduleTakedownEvent")>] ScheduleTakedownEvent of
+                Defs.ScheduleTakedownEvent
+            | [<JsonName("tools.ozone.moderation.defs#cancelScheduledTakedownEvent")>] CancelScheduledTakedownEvent of
+                Defs.CancelScheduledTakedownEvent
+            | Unknown of string * System.Text.Json.JsonElement
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type ModEventViewDetailSubjectUnion =
+            | [<JsonName("tools.ozone.moderation.defs#repoView")>] RepoView of Defs.RepoView
+            | [<JsonName("tools.ozone.moderation.defs#repoViewNotFound")>] RepoViewNotFound of Defs.RepoViewNotFound
+            | [<JsonName("tools.ozone.moderation.defs#recordView")>] RecordView of Defs.RecordView
+            | [<JsonName("tools.ozone.moderation.defs#recordViewNotFound")>] RecordViewNotFound of
+                Defs.RecordViewNotFound
+            | Unknown of string * System.Text.Json.JsonElement
+
         type ModEventViewDetail =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string
+              CreatedBy: Did
               [<JsonPropertyName("event")>]
-              Event: JsonElement
+              Event: ModEventViewDetailEventUnion
               [<JsonPropertyName("id")>]
               Id: int64
               [<JsonPropertyName("modTool")>]
               ModTool: Defs.ModTool option
               [<JsonPropertyName("subject")>]
-              Subject: JsonElement
+              Subject: ModEventViewDetailSubjectUnion
               [<JsonPropertyName("subjectBlobs")>]
               SubjectBlobs: Defs.BlobView list }
 
@@ -7017,37 +7517,37 @@ module ToolsOzoneModeration =
         /// Logs lifecycle event on a record subject. Normally captured by automod from the firehose and emitted to ozone for historical tracking.
         type RecordEvent =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("op")>]
               Op: string
               [<JsonPropertyName("timestamp")>]
-              Timestamp: string }
+              Timestamp: AtDateTime }
 
         type RecordHosting =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string option
+              CreatedAt: AtDateTime option
               [<JsonPropertyName("deletedAt")>]
-              DeletedAt: string option
+              DeletedAt: AtDateTime option
               [<JsonPropertyName("status")>]
               Status: string
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: string option }
+              UpdatedAt: AtDateTime option }
 
         type RecordView =
             { [<JsonPropertyName("blobCids")>]
-              BlobCids: string list
+              BlobCids: Cid list
               [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("moderation")>]
               Moderation: Defs.Moderation
               [<JsonPropertyName("repo")>]
               Repo: Defs.RepoView
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("value")>]
               Value: JsonElement }
 
@@ -7055,9 +7555,9 @@ module ToolsOzoneModeration =
             { [<JsonPropertyName("blobs")>]
               Blobs: Defs.BlobView list
               [<JsonPropertyName("cid")>]
-              Cid: string
+              Cid: Cid
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("moderation")>]
@@ -7065,13 +7565,13 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("repo")>]
               Repo: Defs.RepoView
               [<JsonPropertyName("uri")>]
-              Uri: string
+              Uri: AtUri
               [<JsonPropertyName("value")>]
               Value: JsonElement }
 
         type RecordViewNotFound =
             { [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         /// Statistics about a set of record subject items
         type RecordsStats =
@@ -7094,15 +7594,15 @@ module ToolsOzoneModeration =
 
         type RepoView =
             { [<JsonPropertyName("deactivatedAt")>]
-              DeactivatedAt: string option
+              DeactivatedAt: AtDateTime option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("email")>]
               Email: string option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("inviteNote")>]
               InviteNote: string option
               [<JsonPropertyName("invitedBy")>]
@@ -7118,17 +7618,17 @@ module ToolsOzoneModeration =
 
         type RepoViewDetail =
             { [<JsonPropertyName("deactivatedAt")>]
-              DeactivatedAt: string option
+              DeactivatedAt: AtDateTime option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("email")>]
               Email: string option
               [<JsonPropertyName("emailConfirmedAt")>]
-              EmailConfirmedAt: string option
+              EmailConfirmedAt: AtDateTime option
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: string
+              IndexedAt: AtDateTime
               [<JsonPropertyName("inviteNote")>]
               InviteNote: string option
               [<JsonPropertyName("invitedBy")>]
@@ -7148,13 +7648,13 @@ module ToolsOzoneModeration =
 
         type RepoViewNotFound =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type ReporterStats =
             { [<JsonPropertyName("accountReportCount")>]
               AccountReportCount: int64
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("labeledAccountCount")>]
               LabeledAccountCount: int64
               [<JsonPropertyName("labeledRecordCount")>]
@@ -7192,36 +7692,36 @@ module ToolsOzoneModeration =
             { [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("executeAfter")>]
-              ExecuteAfter: string option
+              ExecuteAfter: AtDateTime option
               [<JsonPropertyName("executeAt")>]
-              ExecuteAt: string option
+              ExecuteAt: AtDateTime option
               [<JsonPropertyName("executeUntil")>]
-              ExecuteUntil: string option }
+              ExecuteUntil: AtDateTime option }
 
         /// View of a scheduled moderation action
         type ScheduledActionView =
             { [<JsonPropertyName("action")>]
               Action: string
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string
+              CreatedBy: Did
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("eventData")>]
               EventData: JsonElement option
               [<JsonPropertyName("executeAfter")>]
-              ExecuteAfter: string option
+              ExecuteAfter: AtDateTime option
               [<JsonPropertyName("executeAt")>]
-              ExecuteAt: string option
+              ExecuteAt: AtDateTime option
               [<JsonPropertyName("executeUntil")>]
-              ExecuteUntil: string option
+              ExecuteUntil: AtDateTime option
               [<JsonPropertyName("executionEventId")>]
               ExecutionEventId: int64 option
               [<JsonPropertyName("id")>]
               Id: int64
               [<JsonPropertyName("lastExecutedAt")>]
-              LastExecutedAt: string option
+              LastExecutedAt: AtDateTime option
               [<JsonPropertyName("lastFailureReason")>]
               LastFailureReason: string option
               [<JsonPropertyName("randomizeExecution")>]
@@ -7229,9 +7729,22 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("status")>]
               Status: string
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: string option }
+              UpdatedAt: AtDateTime option }
 
         type SubjectReviewState = string
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type SubjectStatusViewHostingUnion =
+            | [<JsonName("tools.ozone.moderation.defs#accountHosting")>] AccountHosting of Defs.AccountHosting
+            | [<JsonName("tools.ozone.moderation.defs#recordHosting")>] RecordHosting of Defs.RecordHosting
+            | Unknown of string * System.Text.Json.JsonElement
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type SubjectStatusViewSubjectUnion =
+            | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of ComAtprotoAdmin.Defs.RepoRef
+            | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
+            | [<JsonName("chat.bsky.convo.defs#messageRef")>] MessageRef of ChatBskyConvo.Defs.MessageRef
+            | Unknown of string * System.Text.Json.JsonElement
 
         type SubjectStatusView =
             { [<JsonPropertyName("accountStats")>]
@@ -7247,23 +7760,23 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("hosting")>]
-              Hosting: JsonElement option
+              Hosting: SubjectStatusViewHostingUnion option
               [<JsonPropertyName("id")>]
               Id: int64
               [<JsonPropertyName("lastAppealedAt")>]
-              LastAppealedAt: string option
+              LastAppealedAt: AtDateTime option
               [<JsonPropertyName("lastReportedAt")>]
-              LastReportedAt: string option
+              LastReportedAt: AtDateTime option
               [<JsonPropertyName("lastReviewedAt")>]
-              LastReviewedAt: string option
+              LastReviewedAt: AtDateTime option
               [<JsonPropertyName("lastReviewedBy")>]
-              LastReviewedBy: string option
+              LastReviewedBy: Did option
               [<JsonPropertyName("muteReportingUntil")>]
-              MuteReportingUntil: string option
+              MuteReportingUntil: AtDateTime option
               [<JsonPropertyName("muteUntil")>]
-              MuteUntil: string option
+              MuteUntil: AtDateTime option
               [<JsonPropertyName("priorityScore")>]
               PriorityScore: int64 option
               [<JsonPropertyName("recordsStats")>]
@@ -7271,24 +7784,27 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("reviewState")>]
               ReviewState: Defs.SubjectReviewState
               [<JsonPropertyName("subject")>]
-              Subject: JsonElement
+              Subject: SubjectStatusViewSubjectUnion
               [<JsonPropertyName("subjectBlobCids")>]
-              SubjectBlobCids: string list option
+              SubjectBlobCids: Cid list option
               [<JsonPropertyName("subjectRepoHandle")>]
               SubjectRepoHandle: string option
               [<JsonPropertyName("suspendUntil")>]
-              SuspendUntil: string option
+              SuspendUntil: AtDateTime option
               [<JsonPropertyName("tags")>]
               Tags: string list option
               [<JsonPropertyName("takendown")>]
               Takendown: bool option
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: string }
+              UpdatedAt: AtDateTime }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type SubjectViewProfileUnion = Unknown of string * System.Text.Json.JsonElement
 
         /// Detailed view of a subject. For record subjects, the author's repo and profile will be returned.
         type SubjectView =
             { [<JsonPropertyName("profile")>]
-              Profile: JsonElement option
+              Profile: SubjectViewProfileUnion option
               [<JsonPropertyName("record")>]
               Record: Defs.RecordViewDetail option
               [<JsonPropertyName("repo")>]
@@ -7326,19 +7842,63 @@ module ToolsOzoneModeration =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type InputEventUnion =
+            | [<JsonName("tools.ozone.moderation.defs#modEventTakedown")>] ModEventTakedown of Defs.ModEventTakedown
+            | [<JsonName("tools.ozone.moderation.defs#modEventAcknowledge")>] ModEventAcknowledge of
+                Defs.ModEventAcknowledge
+            | [<JsonName("tools.ozone.moderation.defs#modEventEscalate")>] ModEventEscalate of Defs.ModEventEscalate
+            | [<JsonName("tools.ozone.moderation.defs#modEventComment")>] ModEventComment of Defs.ModEventComment
+            | [<JsonName("tools.ozone.moderation.defs#modEventLabel")>] ModEventLabel of Defs.ModEventLabel
+            | [<JsonName("tools.ozone.moderation.defs#modEventReport")>] ModEventReport of Defs.ModEventReport
+            | [<JsonName("tools.ozone.moderation.defs#modEventMute")>] ModEventMute of Defs.ModEventMute
+            | [<JsonName("tools.ozone.moderation.defs#modEventUnmute")>] ModEventUnmute of Defs.ModEventUnmute
+            | [<JsonName("tools.ozone.moderation.defs#modEventMuteReporter")>] ModEventMuteReporter of
+                Defs.ModEventMuteReporter
+            | [<JsonName("tools.ozone.moderation.defs#modEventUnmuteReporter")>] ModEventUnmuteReporter of
+                Defs.ModEventUnmuteReporter
+            | [<JsonName("tools.ozone.moderation.defs#modEventReverseTakedown")>] ModEventReverseTakedown of
+                Defs.ModEventReverseTakedown
+            | [<JsonName("tools.ozone.moderation.defs#modEventResolveAppeal")>] ModEventResolveAppeal of
+                Defs.ModEventResolveAppeal
+            | [<JsonName("tools.ozone.moderation.defs#modEventEmail")>] ModEventEmail of Defs.ModEventEmail
+            | [<JsonName("tools.ozone.moderation.defs#modEventDivert")>] ModEventDivert of Defs.ModEventDivert
+            | [<JsonName("tools.ozone.moderation.defs#modEventTag")>] ModEventTag of Defs.ModEventTag
+            | [<JsonName("tools.ozone.moderation.defs#accountEvent")>] AccountEvent of Defs.AccountEvent
+            | [<JsonName("tools.ozone.moderation.defs#identityEvent")>] IdentityEvent of Defs.IdentityEvent
+            | [<JsonName("tools.ozone.moderation.defs#recordEvent")>] RecordEvent of Defs.RecordEvent
+            | [<JsonName("tools.ozone.moderation.defs#modEventPriorityScore")>] ModEventPriorityScore of
+                Defs.ModEventPriorityScore
+            | [<JsonName("tools.ozone.moderation.defs#ageAssuranceEvent")>] AgeAssuranceEvent of Defs.AgeAssuranceEvent
+            | [<JsonName("tools.ozone.moderation.defs#ageAssuranceOverrideEvent")>] AgeAssuranceOverrideEvent of
+                Defs.AgeAssuranceOverrideEvent
+            | [<JsonName("tools.ozone.moderation.defs#revokeAccountCredentialsEvent")>] RevokeAccountCredentialsEvent of
+                Defs.RevokeAccountCredentialsEvent
+            | [<JsonName("tools.ozone.moderation.defs#scheduleTakedownEvent")>] ScheduleTakedownEvent of
+                Defs.ScheduleTakedownEvent
+            | [<JsonName("tools.ozone.moderation.defs#cancelScheduledTakedownEvent")>] CancelScheduledTakedownEvent of
+                Defs.CancelScheduledTakedownEvent
+            | Unknown of string * System.Text.Json.JsonElement
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type InputSubjectUnion =
+            | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of ComAtprotoAdmin.Defs.RepoRef
+            | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
+            | Unknown of string * System.Text.Json.JsonElement
+
         type Input =
             { [<JsonPropertyName("createdBy")>]
-              CreatedBy: string
+              CreatedBy: Did
               [<JsonPropertyName("event")>]
-              Event: JsonElement
+              Event: InputEventUnion
               [<JsonPropertyName("externalId")>]
               ExternalId: string option
               [<JsonPropertyName("modTool")>]
               ModTool: Defs.ModTool option
               [<JsonPropertyName("subject")>]
-              Subject: JsonElement
+              Subject: InputSubjectUnion
               [<JsonPropertyName("subjectBlobCids")>]
-              SubjectBlobCids: string list option }
+              SubjectBlobCids: Cid list option }
 
         type Output = Defs.ModEventView
 
@@ -7358,7 +7918,7 @@ module ToolsOzoneModeration =
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type Output =
             { [<JsonPropertyName("timeline")>]
@@ -7404,9 +7964,9 @@ module ToolsOzoneModeration =
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: string option
+              Cid: Cid option
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
         type Output = Defs.RecordViewDetail
 
@@ -7423,11 +7983,18 @@ module ToolsOzoneModeration =
 
         type Params =
             { [<JsonPropertyName("uris")>]
-              Uris: string list }
+              Uris: AtUri list }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputRecordsItem =
+            | [<JsonName("tools.ozone.moderation.defs#recordViewDetail")>] RecordViewDetail of Defs.RecordViewDetail
+            | [<JsonName("tools.ozone.moderation.defs#recordViewNotFound")>] RecordViewNotFound of
+                Defs.RecordViewNotFound
+            | Unknown of string * System.Text.Json.JsonElement
 
         type Output =
             { [<JsonPropertyName("records")>]
-              Records: JsonElement list }
+              Records: OutputRecordsItem list }
 
     module GetRepo =
         [<Literal>]
@@ -7438,7 +8005,7 @@ module ToolsOzoneModeration =
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         type Output = Defs.RepoViewDetail
 
@@ -7455,7 +8022,7 @@ module ToolsOzoneModeration =
 
         type Params =
             { [<JsonPropertyName("dids")>]
-              Dids: string list }
+              Dids: Did list }
 
         type Output =
             { [<JsonPropertyName("stats")>]
@@ -7470,11 +8037,17 @@ module ToolsOzoneModeration =
 
         type Params =
             { [<JsonPropertyName("dids")>]
-              Dids: string list }
+              Dids: Did list }
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type OutputReposItem =
+            | [<JsonName("tools.ozone.moderation.defs#repoViewDetail")>] RepoViewDetail of Defs.RepoViewDetail
+            | [<JsonName("tools.ozone.moderation.defs#repoViewNotFound")>] RepoViewNotFound of Defs.RepoViewNotFound
+            | Unknown of string * System.Text.Json.JsonElement
 
         type Output =
             { [<JsonPropertyName("repos")>]
-              Repos: JsonElement list }
+              Repos: OutputReposItem list }
 
     module GetSubjects =
         [<Literal>]
@@ -7502,15 +8075,15 @@ module ToolsOzoneModeration =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("endsBefore")>]
-              EndsBefore: string option
+              EndsBefore: AtDateTime option
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("startsAfter")>]
-              StartsAfter: string option
+              StartsAfter: AtDateTime option
               [<JsonPropertyName("statuses")>]
               Statuses: string list
               [<JsonPropertyName("subjects")>]
-              Subjects: string list option }
+              Subjects: Did list option }
 
         type Output =
             { [<JsonPropertyName("actions")>]
@@ -7535,15 +8108,15 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("batchId")>]
               BatchId: string option
               [<JsonPropertyName("collections")>]
-              Collections: string list option
+              Collections: Nsid list option
               [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("createdAfter")>]
-              CreatedAfter: string option
+              CreatedAfter: AtDateTime option
               [<JsonPropertyName("createdBefore")>]
-              CreatedBefore: string option
+              CreatedBefore: AtDateTime option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string option
+              CreatedBy: Did option
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("hasComment")>]
@@ -7565,7 +8138,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("sortDirection")>]
               SortDirection: string option
               [<JsonPropertyName("subject")>]
-              Subject: string option
+              Subject: Uri option
               [<JsonPropertyName("subjectType")>]
               SubjectType: string option
               [<JsonPropertyName("types")>]
@@ -7592,7 +8165,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("appealed")>]
               Appealed: bool option
               [<JsonPropertyName("collections")>]
-              Collections: string list option
+              Collections: Nsid list option
               [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("cursor")>]
@@ -7600,23 +8173,23 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("excludeTags")>]
               ExcludeTags: string list option
               [<JsonPropertyName("hostingDeletedAfter")>]
-              HostingDeletedAfter: string option
+              HostingDeletedAfter: AtDateTime option
               [<JsonPropertyName("hostingDeletedBefore")>]
-              HostingDeletedBefore: string option
+              HostingDeletedBefore: AtDateTime option
               [<JsonPropertyName("hostingStatuses")>]
               HostingStatuses: string list option
               [<JsonPropertyName("hostingUpdatedAfter")>]
-              HostingUpdatedAfter: string option
+              HostingUpdatedAfter: AtDateTime option
               [<JsonPropertyName("hostingUpdatedBefore")>]
-              HostingUpdatedBefore: string option
+              HostingUpdatedBefore: AtDateTime option
               [<JsonPropertyName("ignoreSubjects")>]
-              IgnoreSubjects: string list option
+              IgnoreSubjects: Uri list option
               [<JsonPropertyName("includeAllUserRecords")>]
               IncludeAllUserRecords: bool option
               [<JsonPropertyName("includeMuted")>]
               IncludeMuted: bool option
               [<JsonPropertyName("lastReviewedBy")>]
-              LastReviewedBy: string option
+              LastReviewedBy: Did option
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("minAccountSuspendCount")>]
@@ -7638,21 +8211,21 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("queueSeed")>]
               QueueSeed: string option
               [<JsonPropertyName("reportedAfter")>]
-              ReportedAfter: string option
+              ReportedAfter: AtDateTime option
               [<JsonPropertyName("reportedBefore")>]
-              ReportedBefore: string option
+              ReportedBefore: AtDateTime option
               [<JsonPropertyName("reviewState")>]
               ReviewState: string option
               [<JsonPropertyName("reviewedAfter")>]
-              ReviewedAfter: string option
+              ReviewedAfter: AtDateTime option
               [<JsonPropertyName("reviewedBefore")>]
-              ReviewedBefore: string option
+              ReviewedBefore: AtDateTime option
               [<JsonPropertyName("sortDirection")>]
               SortDirection: string option
               [<JsonPropertyName("sortField")>]
               SortField: string option
               [<JsonPropertyName("subject")>]
-              Subject: string option
+              Subject: Uri option
               [<JsonPropertyName("subjectType")>]
               SubjectType: string option
               [<JsonPropertyName("tags")>]
@@ -7673,17 +8246,22 @@ module ToolsOzoneModeration =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type InputActionUnion =
+            | [<JsonName("tools.ozone.moderation.scheduleAction#takedown")>] Takedown of ScheduleAction.Takedown
+            | Unknown of string * System.Text.Json.JsonElement
+
         type Input =
             { [<JsonPropertyName("action")>]
-              Action: JsonElement
+              Action: InputActionUnion
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string
+              CreatedBy: Did
               [<JsonPropertyName("modTool")>]
               ModTool: Defs.ModTool option
               [<JsonPropertyName("scheduling")>]
               Scheduling: ScheduleAction.SchedulingConfig
               [<JsonPropertyName("subjects")>]
-              Subjects: string list }
+              Subjects: Did list }
 
         type Output = ScheduleAction.ScheduledActionResults
 
@@ -7693,22 +8271,22 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("errorCode")>]
               ErrorCode: string option
               [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject: Did }
 
         type ScheduledActionResults =
             { [<JsonPropertyName("failed")>]
               Failed: ScheduleAction.FailedScheduling list
               [<JsonPropertyName("succeeded")>]
-              Succeeded: string list }
+              Succeeded: Did list }
 
         /// Configuration for when the action should be executed
         type SchedulingConfig =
             { [<JsonPropertyName("executeAfter")>]
-              ExecuteAfter: string option
+              ExecuteAfter: AtDateTime option
               [<JsonPropertyName("executeAt")>]
-              ExecuteAt: string option
+              ExecuteAt: AtDateTime option
               [<JsonPropertyName("executeUntil")>]
-              ExecuteUntil: string option }
+              ExecuteUntil: AtDateTime option }
 
         /// Schedule a takedown action
         type Takedown =
@@ -7729,7 +8307,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("strikeCount")>]
               StrikeCount: int64 option
               [<JsonPropertyName("strikeExpiresAt")>]
-              StrikeExpiresAt: string option }
+              StrikeExpiresAt: AtDateTime option }
 
     module SearchRepos =
         [<Literal>]
@@ -7898,7 +8476,7 @@ module ToolsOzoneSafelink =
               [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string option
+              CreatedBy: Did option
               [<JsonPropertyName("pattern")>]
               Pattern: Defs.PatternType
               [<JsonPropertyName("reason")>]
@@ -7925,9 +8503,9 @@ module ToolsOzoneSafelink =
               [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string
+              CreatedBy: Did
               [<JsonPropertyName("eventType")>]
               EventType: Defs.EventType
               [<JsonPropertyName("id")>]
@@ -7950,15 +8528,15 @@ module ToolsOzoneSafelink =
               [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string
+              CreatedBy: Did
               [<JsonPropertyName("pattern")>]
               Pattern: Defs.PatternType
               [<JsonPropertyName("reason")>]
               Reason: Defs.ReasonType
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: string
+              UpdatedAt: AtDateTime
               [<JsonPropertyName("url")>]
               Url: string }
 
@@ -7998,7 +8576,7 @@ module ToolsOzoneSafelink =
             { [<JsonPropertyName("actions")>]
               Actions: string list option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string option
+              CreatedBy: Did option
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("limit")>]
@@ -8029,7 +8607,7 @@ module ToolsOzoneSafelink =
             { [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string option
+              CreatedBy: Did option
               [<JsonPropertyName("pattern")>]
               Pattern: Defs.PatternType
               [<JsonPropertyName("url")>]
@@ -8054,7 +8632,7 @@ module ToolsOzoneSafelink =
               [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string option
+              CreatedBy: Did option
               [<JsonPropertyName("pattern")>]
               Pattern: Defs.PatternType
               [<JsonPropertyName("reason")>]
@@ -8086,13 +8664,13 @@ module ToolsOzoneServer =
               [<JsonPropertyName("pds")>]
               Pds: GetConfig.ServiceConfig option
               [<JsonPropertyName("verifierDid")>]
-              VerifierDid: string option
+              VerifierDid: Did option
               [<JsonPropertyName("viewer")>]
               Viewer: GetConfig.ViewerConfig option }
 
         type ServiceConfig =
             { [<JsonPropertyName("url")>]
-              Url: string option }
+              Url: Uri option }
 
         type ViewerConfig =
             { [<JsonPropertyName("role")>]
@@ -8121,7 +8699,7 @@ module ToolsOzoneSet =
 
         type SetView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("description")>]
               Description: string option
               [<JsonPropertyName("name")>]
@@ -8129,7 +8707,7 @@ module ToolsOzoneSet =
               [<JsonPropertyName("setSize")>]
               SetSize: int64
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: string }
+              UpdatedAt: AtDateTime }
 
     module DeleteSet =
         [<Literal>]
@@ -8229,23 +8807,23 @@ module ToolsOzoneSetting =
     module Defs =
         type Option =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string option
+              CreatedAt: AtDateTime option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string
+              CreatedBy: Did
               [<JsonPropertyName("description")>]
               Description: string option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("key")>]
-              Key: string
+              Key: Nsid
               [<JsonPropertyName("lastUpdatedBy")>]
-              LastUpdatedBy: string
+              LastUpdatedBy: Did
               [<JsonPropertyName("managerRole")>]
               ManagerRole: string option
               [<JsonPropertyName("scope")>]
               Scope: string
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: string option
+              UpdatedAt: AtDateTime option
               [<JsonPropertyName("value")>]
               Value: JsonElement }
 
@@ -8260,7 +8838,7 @@ module ToolsOzoneSetting =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("keys")>]
-              Keys: string list option
+              Keys: Nsid list option
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("prefix")>]
@@ -8283,7 +8861,7 @@ module ToolsOzoneSetting =
 
         type Input =
             { [<JsonPropertyName("keys")>]
-              Keys: string list
+              Keys: Nsid list
               [<JsonPropertyName("scope")>]
               Scope: string }
 
@@ -8298,7 +8876,7 @@ module ToolsOzoneSetting =
             { [<JsonPropertyName("description")>]
               Description: string option
               [<JsonPropertyName("key")>]
-              Key: string
+              Key: Nsid
               [<JsonPropertyName("managerRole")>]
               ManagerRole: string option
               [<JsonPropertyName("scope")>]
@@ -8327,7 +8905,7 @@ module ToolsOzoneSignature =
 
         type Params =
             { [<JsonPropertyName("dids")>]
-              Dids: string list }
+              Dids: Did list }
 
         type Output =
             { [<JsonPropertyName("details")>]
@@ -8344,7 +8922,7 @@ module ToolsOzoneSignature =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("limit")>]
               Limit: int64 option }
 
@@ -8391,7 +8969,7 @@ module ToolsOzoneTeam =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("role")>]
               Role: string }
 
@@ -8404,9 +8982,9 @@ module ToolsOzoneTeam =
     module Defs =
         type Member =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string option
+              CreatedAt: AtDateTime option
               [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("disabled")>]
               Disabled: bool option
               [<JsonPropertyName("lastUpdatedBy")>]
@@ -8416,7 +8994,7 @@ module ToolsOzoneTeam =
               [<JsonPropertyName("role")>]
               Role: string
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: string option }
+              UpdatedAt: AtDateTime option }
 
         [<Literal>]
         let RoleAdmin = "tools.ozone.team.defs#roleAdmin"
@@ -8439,7 +9017,7 @@ module ToolsOzoneTeam =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: string }
+              Did: Did }
 
         module Errors =
             [<Literal>]
@@ -8482,7 +9060,7 @@ module ToolsOzoneTeam =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: string
+              Did: Did
               [<JsonPropertyName("disabled")>]
               Disabled: bool option
               [<JsonPropertyName("role")>]
@@ -8496,34 +9074,45 @@ module ToolsOzoneTeam =
 
 module ToolsOzoneVerification =
     module Defs =
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type VerificationViewIssuerProfileUnion = Unknown of string * System.Text.Json.JsonElement
+
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        type VerificationViewIssuerRepoUnion =
+            | [<JsonName("tools.ozone.moderation.defs#repoViewDetail")>] RepoViewDetail of
+                ToolsOzoneModeration.Defs.RepoViewDetail
+            | [<JsonName("tools.ozone.moderation.defs#repoViewNotFound")>] RepoViewNotFound of
+                ToolsOzoneModeration.Defs.RepoViewNotFound
+            | Unknown of string * System.Text.Json.JsonElement
+
         /// Verification data for the associated subject.
         type VerificationView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string
+              CreatedAt: AtDateTime
               [<JsonPropertyName("displayName")>]
               DisplayName: string
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("issuer")>]
-              Issuer: string
+              Issuer: Did
               [<JsonPropertyName("issuerProfile")>]
-              IssuerProfile: JsonElement option
+              IssuerProfile: VerificationViewIssuerProfileUnion option
               [<JsonPropertyName("issuerRepo")>]
-              IssuerRepo: JsonElement option
+              IssuerRepo: VerificationViewIssuerRepoUnion option
               [<JsonPropertyName("revokeReason")>]
               RevokeReason: string option
               [<JsonPropertyName("revokedAt")>]
-              RevokedAt: string option
+              RevokedAt: AtDateTime option
               [<JsonPropertyName("revokedBy")>]
-              RevokedBy: string option
+              RevokedBy: Did option
               [<JsonPropertyName("subject")>]
-              Subject: string
+              Subject: Did
               [<JsonPropertyName("subjectProfile")>]
-              SubjectProfile: JsonElement option
+              SubjectProfile: VerificationViewIssuerProfileUnion option
               [<JsonPropertyName("subjectRepo")>]
-              SubjectRepo: JsonElement option
+              SubjectRepo: VerificationViewIssuerRepoUnion option
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }
 
     module GrantVerifications =
         [<Literal>]
@@ -8547,17 +9136,17 @@ module ToolsOzoneVerification =
             { [<JsonPropertyName("error")>]
               Error: string
               [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject: Did }
 
         type VerificationInput =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: string option
+              CreatedAt: AtDateTime option
               [<JsonPropertyName("displayName")>]
               DisplayName: string
               [<JsonPropertyName("handle")>]
-              Handle: string
+              Handle: Handle
               [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject: Did }
 
     module ListVerifications =
         [<Literal>]
@@ -8568,21 +9157,21 @@ module ToolsOzoneVerification =
 
         type Params =
             { [<JsonPropertyName("createdAfter")>]
-              CreatedAfter: string option
+              CreatedAfter: AtDateTime option
               [<JsonPropertyName("createdBefore")>]
-              CreatedBefore: string option
+              CreatedBefore: AtDateTime option
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("isRevoked")>]
               IsRevoked: bool option
               [<JsonPropertyName("issuers")>]
-              Issuers: string list option
+              Issuers: Did list option
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("sortDirection")>]
               SortDirection: string option
               [<JsonPropertyName("subjects")>]
-              Subjects: string list option }
+              Subjects: Did list option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
@@ -8601,17 +9190,17 @@ module ToolsOzoneVerification =
             { [<JsonPropertyName("revokeReason")>]
               RevokeReason: string option
               [<JsonPropertyName("uris")>]
-              Uris: string list }
+              Uris: AtUri list }
 
         type Output =
             { [<JsonPropertyName("failedRevocations")>]
               FailedRevocations: RevokeVerifications.RevokeError list
               [<JsonPropertyName("revokedVerifications")>]
-              RevokedVerifications: string list }
+              RevokedVerifications: AtUri list }
 
         /// Error object for failed revocations
         type RevokeError =
             { [<JsonPropertyName("error")>]
               Error: string
               [<JsonPropertyName("uri")>]
-              Uri: string }
+              Uri: AtUri }

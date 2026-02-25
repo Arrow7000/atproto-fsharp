@@ -2,6 +2,7 @@ namespace FSharp.ATProto.Bluesky
 
 open System.Threading.Tasks
 open FSharp.ATProto.Core
+open FSharp.ATProto.Syntax
 
 /// <summary>
 /// Convenience methods for Bluesky direct message (DM) and chat operations.
@@ -30,8 +31,9 @@ module Chat =
     /// <returns>The conversation details, or an <see cref="XrpcError"/>.</returns>
     let getConvoForMembers (agent: AtpAgent) (members: string list)
         : Task<Result<ChatBskyConvo.GetConvoForMembers.Output, XrpcError>> =
+        let membersDid = members |> List.map (fun m -> Did.parse m |> Result.defaultWith failwith)
         ChatBskyConvo.GetConvoForMembers.query agent
-            { Members = members }
+            { Members = membersDid }
 
     /// <summary>
     /// Send a plain text message to a conversation.

@@ -3,6 +3,7 @@ namespace FSharp.ATProto.Bluesky
 open System.Text.Json
 open System.Threading.Tasks
 open FSharp.ATProto.Core
+open FSharp.ATProto.Syntax
 
 /// <summary>
 /// AT Protocol identity resolution: DID documents, handle resolution, and bidirectional verification.
@@ -137,8 +138,9 @@ module Identity =
     /// </returns>
     let resolveHandle (agent: AtpAgent) (handle: string) : Task<Result<string, XrpcError>> =
         task {
-            let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handle }
-            return result |> Result.map (fun o -> o.Did)
+            let handleTyped = Handle.parse handle |> Result.defaultWith failwith
+            let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handleTyped }
+            return result |> Result.map (fun o -> Did.value o.Did)
         }
 
     /// <summary>

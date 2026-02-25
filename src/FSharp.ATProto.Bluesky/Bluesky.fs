@@ -6,6 +6,7 @@ open System.Net.Http.Headers
 open System.Text.Json
 open System.Threading.Tasks
 open FSharp.ATProto.Core
+open FSharp.ATProto.Syntax
 
 /// <summary>
 /// High-level convenience methods for common Bluesky operations:
@@ -24,9 +25,10 @@ module Bluesky =
 
     let private createRecord (agent: AtpAgent) (collection: string) (record: obj) =
         let recordElement = JsonSerializer.SerializeToElement(record, Json.options)
+        let nsid = Nsid.parse collection |> Result.defaultWith failwith
         ComAtprotoRepo.CreateRecord.call agent
             { Repo = sessionDid agent
-              Collection = collection
+              Collection = nsid
               Record = recordElement
               Rkey = None
               SwapCommit = None
@@ -178,8 +180,8 @@ module Bluesky =
             // Parse AT-URI: at://did/collection/rkey
             let parts = atUri.Replace("at://", "").Split('/')
             let repo = parts.[0]
-            let collection = parts.[1]
-            let rkey = parts.[2]
+            let collection = Nsid.parse parts.[1] |> Result.defaultWith failwith
+            let rkey = RecordKey.parse parts.[2] |> Result.defaultWith failwith
             let! result = ComAtprotoRepo.DeleteRecord.call agent
                             { Repo = repo
                               Collection = collection
@@ -208,7 +210,7 @@ module Bluesky =
     let uploadBlob (agent: AtpAgent) (data: byte[]) (mimeType: string)
         : Task<Result<JsonElement, XrpcError>> =
         task {
-            let url = Uri(agent.BaseUrl, sprintf "xrpc/%s" ComAtprotoRepo.UploadBlob.TypeId)
+            let url = System.Uri(agent.BaseUrl, sprintf "xrpc/%s" ComAtprotoRepo.UploadBlob.TypeId)
             let request = new HttpRequestMessage(HttpMethod.Post, url)
             request.Content <- new ByteArrayContent(data)
             request.Content.Headers.ContentType <- MediaTypeHeaderValue(mimeType)

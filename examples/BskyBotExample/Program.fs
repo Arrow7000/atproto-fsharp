@@ -15,6 +15,7 @@ open System.IO
 open System.Text.Json
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
+open FSharp.ATProto.Syntax
 
 let env key =
     match Environment.GetEnvironmentVariable(key) with
@@ -50,7 +51,7 @@ let main _ =
         let post =
             match postResult with
             | Ok p ->
-                printfn "Posted: %s (cid: %s)" p.Uri p.Cid
+                printfn "Posted: %s (cid: %s)" (AtUri.value p.Uri) (Cid.value p.Cid)
                 p
             | Error e ->
                 failwithf "Post failed: %A" e
@@ -60,30 +61,32 @@ let main _ =
         // ---------------------------------------------------------------
         // For a reply, you need both the parent ref and the root ref.
         // When replying to a top-level post, parent and root are the same.
+        let postUriStr = AtUri.value post.Uri
+        let postCidStr = Cid.value post.Cid
         let! replyResult =
-            Bluesky.reply agent "Replying to my own post!" post.Uri post.Cid post.Uri post.Cid
+            Bluesky.reply agent "Replying to my own post!" postUriStr postCidStr postUriStr postCidStr
 
         let _reply =
             match replyResult with
-            | Ok r -> printfn "Replied: %s" r.Uri; r
+            | Ok r -> printfn "Replied: %s" (AtUri.value r.Uri); r
             | Error e -> failwithf "Reply failed: %A" e
 
         // ---------------------------------------------------------------
         // 4. Like a post
         // ---------------------------------------------------------------
-        let! likeResult = Bluesky.like agent post.Uri post.Cid
+        let! likeResult = Bluesky.like agent postUriStr postCidStr
 
         match likeResult with
-        | Ok l -> printfn "Liked: %s" l.Uri
+        | Ok l -> printfn "Liked: %s" (AtUri.value l.Uri)
         | Error e -> printfn "Like failed: %A" e
 
         // ---------------------------------------------------------------
         // 5. Repost
         // ---------------------------------------------------------------
-        let! repostResult = Bluesky.repost agent post.Uri post.Cid
+        let! repostResult = Bluesky.repost agent postUriStr postCidStr
 
         match repostResult with
-        | Ok r -> printfn "Reposted: %s" r.Uri
+        | Ok r -> printfn "Reposted: %s" (AtUri.value r.Uri)
         | Error e -> printfn "Repost failed: %A" e
 
         // ---------------------------------------------------------------
@@ -94,16 +97,16 @@ let main _ =
         let! followResult = Bluesky.follow agent session.Did // following ourselves as demo
 
         match followResult with
-        | Ok f -> printfn "Followed: %s" f.Uri
+        | Ok f -> printfn "Followed: %s" (AtUri.value f.Uri)
         | Error e -> printfn "Follow failed: %A" e
 
         // ---------------------------------------------------------------
         // 7. Delete a record (e.g. delete the post we just created)
         // ---------------------------------------------------------------
-        let! deleteResult = Bluesky.deleteRecord agent post.Uri
+        let! deleteResult = Bluesky.deleteRecord agent postUriStr
 
         match deleteResult with
-        | Ok () -> printfn "Deleted: %s" post.Uri
+        | Ok () -> printfn "Deleted: %s" postUriStr
         | Error e -> printfn "Delete failed: %A" e
 
         // ---------------------------------------------------------------
@@ -119,7 +122,7 @@ let main _ =
             ]
 
         match imgPostResult with
-        | Ok p -> printfn "Image post: %s" p.Uri
+        | Ok p -> printfn "Image post: %s" (AtUri.value p.Uri)
         | Error e -> printfn "Image post failed (expected with dummy data): %A" e
 
         // ---------------------------------------------------------------
@@ -134,7 +137,7 @@ let main _ =
             printfn "Timeline (%d posts):" tl.Feed.Length
             for item in tl.Feed do
                 printfn "  @%s: %s"
-                    item.Post.Author.Handle
+                    (Handle.value item.Post.Author.Handle)
                     (item.Post.Record.GetProperty("text").GetString()
                      |> fun s -> if s.Length > 60 then s.[..59] + "..." else s)
         | Error e ->
@@ -152,7 +155,16 @@ let main _ =
                     { Uri = sampleUri; Depth = Some 3L; ParentHeight = Some 1L }
 
             match threadResult with
-            | Ok t -> printfn "Thread loaded (type: %s)" (t.Thread.GetProperty("$type").GetString())
+            | Ok t ->
+                match t.Thread with
+                | AppBskyFeed.GetPostThread.OutputThreadUnion.ThreadViewPost _ ->
+                    printfn "Thread loaded (type: threadViewPost)"
+                | AppBskyFeed.GetPostThread.OutputThreadUnion.NotFoundPost _ ->
+                    printfn "Thread loaded (type: notFoundPost)"
+                | AppBskyFeed.GetPostThread.OutputThreadUnion.BlockedPost _ ->
+                    printfn "Thread loaded (type: blockedPost)"
+                | AppBskyFeed.GetPostThread.OutputThreadUnion.Unknown (tag, _) ->
+                    printfn "Thread loaded (type: %s)" tag
             | Error e -> printfn "Thread failed: %A" e
         | _ -> ()
 
@@ -167,7 +179,7 @@ let main _ =
         | Ok n ->
             printfn "Notifications (%d):" n.Notifications.Length
             for notif in n.Notifications do
-                printfn "  [%s] from @%s" notif.Reason notif.Author.Handle
+                printfn "  [%s] from @%s" notif.Reason (Handle.value notif.Author.Handle)
         | Error e ->
             printfn "Notifications failed: %A" e
 
@@ -186,7 +198,7 @@ let main _ =
         | Ok f ->
             printfn "Author feed (%d posts):" f.Feed.Length
             for item in f.Feed do
-                printfn "  %s (cid: %s)" item.Post.Uri item.Post.Cid
+                printfn "  %s (cid: %s)" (AtUri.value item.Post.Uri) (Cid.value item.Post.Cid)
         | Error e ->
             printfn "Author feed failed: %A" e
 
@@ -199,7 +211,7 @@ let main _ =
 
         match profileResult with
         | Ok p ->
-            printfn "Profile: @%s (%s)" p.Handle p.Did
+            printfn "Profile: @%s (%s)" (Handle.value p.Handle) (Did.value p.Did)
             printfn "  Display name: %s" (p.DisplayName |> Option.defaultValue "(none)")
             printfn "  Posts: %s, Followers: %s, Following: %s"
                 (p.PostsCount |> Option.map string |> Option.defaultValue "?")
@@ -285,7 +297,7 @@ let main _ =
         let msg =
             match msgResult with
             | Ok m ->
-                printfn "Sent message: %s (id: %s, sentAt: %s)" m.Text m.Id m.SentAt
+                printfn "Sent message: %s (id: %s, sentAt: %s)" m.Text m.Id (AtDateTime.value m.SentAt)
                 m
             | Error e ->
                 failwithf "Send message failed: %A" e
@@ -324,16 +336,17 @@ let main _ =
         | Ok ms ->
             printfn "Messages in convo (%d):" ms.Messages.Length
             for m in ms.Messages do
-                // Messages come back as JsonElement (union type in the schema).
-                // MessageView has $type = "chat.bsky.convo.defs#messageView".
-                let typ = m.GetProperty("$type").GetString()
-                if typ = "chat.bsky.convo.defs#messageView" then
-                    let text = m.GetProperty("text").GetString()
-                    let sender = m.GetProperty("sender").GetProperty("did").GetString()
-                    printfn "  [%s] %s" sender
+                // Messages are now typed as a discriminated union.
+                match m with
+                | ChatBskyConvo.GetMessages.OutputMessagesItem.MessageView mv ->
+                    let senderDid = Did.value mv.Sender.Did
+                    let text = mv.Text
+                    printfn "  [%s] %s" senderDid
                         (if text.Length > 50 then text.[..49] + "..." else text)
-                else
-                    printfn "  [%s]" typ
+                | ChatBskyConvo.GetMessages.OutputMessagesItem.DeletedMessageView dv ->
+                    printfn "  [deleted message by %s]" (Did.value dv.Sender.Did)
+                | ChatBskyConvo.GetMessages.OutputMessagesItem.Unknown (tag, _) ->
+                    printfn "  [%s]" tag
         | Error e ->
             printfn "Get messages failed: %A" e
 
@@ -365,7 +378,7 @@ let main _ =
             printfn "Conversations (%d):" cs.Convos.Length
             for c in cs.Convos do
                 let memberHandles =
-                    c.Members |> List.map (fun m -> m.Handle) |> String.concat ", "
+                    c.Members |> List.map (fun m -> Handle.value m.Handle) |> String.concat ", "
                 printfn "  %s (members: %s, muted: %b, unread: %d)"
                     c.Id memberHandles c.Muted c.UnreadCount
         | Error e ->
@@ -401,17 +414,15 @@ let main _ =
         let! delMsgResult = Chat.deleteMessage chatAgent convo.Id msg.Id
 
         match delMsgResult with
-        | Ok d -> printfn "Deleted message: %s (sentAt: %s)" d.Id d.SentAt
+        | Ok d -> printfn "Deleted message: %s (sentAt: %s)" d.Id (AtDateTime.value d.SentAt)
         | Error e -> printfn "Delete message failed: %A" e
 
         // ---------------------------------------------------------------
         // NOTE on DM attachments:
-        // The MessageInput.Embed field accepts a JsonElement option, which
-        // corresponds to a union type in the schema. Currently the only
-        // defined embed type for DMs is record embeds (sharing a post
-        // into a DM). Image attachments in DMs are not part of the
-        // official lexicon schema yet -- they would require constructing
-        // a custom embed JsonElement if/when the schema adds support.
+        // The MessageInput.Embed field accepts a union type option.
+        // Currently the only defined embed type for DMs is record embeds
+        // (sharing a post into a DM). Image attachments in DMs are not
+        // part of the official lexicon schema yet.
         // ---------------------------------------------------------------
 
         printfn "Done!"
