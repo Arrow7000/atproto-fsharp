@@ -1,6 +1,8 @@
 namespace FSharp.ATProto.Bluesky
 
 open System.Text.Json
+open System.Threading.Tasks
+open FSharp.ATProto.Core
 
 module Identity =
 
@@ -63,3 +65,68 @@ module Identity =
                  Handle = extractHandle doc
                  PdsEndpoint = extractPdsEndpoint doc
                  SigningKey = extractSigningKey doc }
+
+    let private plcDirectoryUrl = "https://plc.directory"
+
+    let resolveDid (agent: AtpAgent) (did: string) : Task<Result<AtprotoIdentity, string>> =
+        task {
+            if did.StartsWith("did:plc:") then
+                let url = $"{plcDirectoryUrl}/{did}"
+                let! response = agent.HttpClient.GetAsync(url)
+                if response.IsSuccessStatusCode then
+                    let! json = response.Content.ReadAsStringAsync()
+                    let doc = JsonSerializer.Deserialize<JsonElement>(json)
+                    return parseDidDocument doc
+                else
+                    return Error $"PLC directory returned {int response.StatusCode} for {did}"
+            elif did.StartsWith("did:web:") then
+                let domain = did.Substring(8)
+                let url = $"https://{domain}/.well-known/did.json"
+                let! response = agent.HttpClient.GetAsync(url)
+                if response.IsSuccessStatusCode then
+                    let! json = response.Content.ReadAsStringAsync()
+                    let doc = JsonSerializer.Deserialize<JsonElement>(json)
+                    return parseDidDocument doc
+                else
+                    return Error $"did:web resolution returned {int response.StatusCode} for {did}"
+            else
+                return Error $"Unsupported DID method: {did}"
+        }
+
+    let resolveHandle (agent: AtpAgent) (handle: string) : Task<Result<string, XrpcError>> =
+        task {
+            let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handle }
+            return result |> Result.map (fun o -> o.Did)
+        }
+
+    let resolveIdentity (agent: AtpAgent) (identifier: string) : Task<Result<AtprotoIdentity, string>> =
+        task {
+            let isDid = identifier.StartsWith("did:")
+            if isDid then
+                let! identity = resolveDid agent identifier
+                match identity with
+                | Error e -> return Error e
+                | Ok id ->
+                    match id.Handle with
+                    | None -> return Ok id
+                    | Some handle ->
+                        let! reverseResult = resolveHandle agent handle
+                        match reverseResult with
+                        | Ok reverseDid when reverseDid = identifier -> return Ok id
+                        | _ -> return Ok { id with Handle = None }
+            else
+                // identifier is a handle
+                let! handleResult = resolveHandle agent identifier
+                match handleResult with
+                | Error e ->
+                    let errorMsg = e.Error |> Option.defaultValue "unknown"
+                    return Error $"Handle resolution failed: {errorMsg}"
+                | Ok did ->
+                    let! identity = resolveDid agent did
+                    match identity with
+                    | Error e -> return Error e
+                    | Ok id ->
+                        // Bidirectional: check DID doc's handle matches
+                        if id.Handle = Some identifier then return Ok id
+                        else return Ok { id with Handle = None }
+        }

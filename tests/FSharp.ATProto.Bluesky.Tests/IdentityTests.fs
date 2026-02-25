@@ -1,8 +1,11 @@
 module FSharp.ATProto.Bluesky.Tests.IdentityTests
 
 open Expecto
+open System.Net
 open System.Text.Json
 open FSharp.ATProto.Bluesky
+open FSharp.ATProto.Core
+open TestHelpers
 
 let private parseJson (json: string) =
     JsonSerializer.Deserialize<JsonElement>(json)
@@ -76,4 +79,83 @@ let parseTests =
             let doc = parseJson """{"alsoKnownAs": []}"""
             let result = Identity.parseDidDocument doc
             Expect.isError result "should error without id"
+    ]
+
+let private plcDidDoc = """{
+    "id": "did:plc:abc123",
+    "alsoKnownAs": ["at://alice.example.com"],
+    "verificationMethod": [{"id": "#atproto", "type": "Multikey", "publicKeyMultibase": "zKey123"}],
+    "service": [{"id": "#atproto_pds", "type": "AtprotoPersonalDataServer", "serviceEndpoint": "https://pds.example.com"}]
+}"""
+
+[<Tests>]
+let resolveTests =
+    testList "Identity resolution" [
+        testCase "resolveDid resolves did:plc via PLC directory" <| fun _ ->
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.Host = "plc.directory" then
+                    jsonResponse HttpStatusCode.OK (JsonSerializer.Deserialize<JsonElement>(plcDidDoc))
+                else
+                    emptyResponse HttpStatusCode.NotFound)
+            let result = Identity.resolveDid agent "did:plc:abc123" |> Async.AwaitTask |> Async.RunSynchronously
+            let identity = Expect.wantOk result "should resolve"
+            Expect.equal identity.Did "did:plc:abc123" "did"
+            Expect.equal identity.Handle (Some "alice.example.com") "handle"
+            Expect.equal identity.PdsEndpoint (Some "https://pds.example.com") "pds"
+
+        testCase "resolveDid resolves did:web via .well-known" <| fun _ ->
+            let webDidDoc = """{"id": "did:web:bob.example.com", "alsoKnownAs": ["at://bob.example.com"]}"""
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.PathAndQuery.Contains(".well-known/did.json") then
+                    jsonResponse HttpStatusCode.OK (JsonSerializer.Deserialize<JsonElement>(webDidDoc))
+                else
+                    emptyResponse HttpStatusCode.NotFound)
+            let result = Identity.resolveDid agent "did:web:bob.example.com" |> Async.AwaitTask |> Async.RunSynchronously
+            let identity = Expect.wantOk result "should resolve"
+            Expect.equal identity.Did "did:web:bob.example.com" "did"
+
+        testCase "resolveDid returns error for unsupported method" <| fun _ ->
+            let agent = createMockAgent (fun _ -> emptyResponse HttpStatusCode.NotFound)
+            let result = Identity.resolveDid agent "did:key:abc" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isError result "unsupported DID method"
+
+        testCase "resolveHandle calls XRPC resolveHandle" <| fun _ ->
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.PathAndQuery.Contains("resolveHandle") then
+                    jsonResponse HttpStatusCode.OK {| did = "did:plc:abc123" |}
+                else
+                    emptyResponse HttpStatusCode.NotFound)
+            agent.Session <- Some { AccessJwt = "t"; RefreshJwt = "t"; Did = "did:plc:me"; Handle = "me.test" }
+            let result = Identity.resolveHandle agent "alice.example.com" |> Async.AwaitTask |> Async.RunSynchronously
+            let did = Expect.wantOk result "should resolve"
+            Expect.equal did "did:plc:abc123" "resolved DID"
+
+        testCase "resolveIdentity does bidirectional verification from handle" <| fun _ ->
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.PathAndQuery.Contains("resolveHandle") then
+                    jsonResponse HttpStatusCode.OK {| did = "did:plc:abc123" |}
+                elif req.RequestUri.Host = "plc.directory" then
+                    jsonResponse HttpStatusCode.OK (JsonSerializer.Deserialize<JsonElement>(plcDidDoc))
+                else
+                    emptyResponse HttpStatusCode.NotFound)
+            agent.Session <- Some { AccessJwt = "t"; RefreshJwt = "t"; Did = "did:plc:me"; Handle = "me.test" }
+            let result = Identity.resolveIdentity agent "alice.example.com" |> Async.AwaitTask |> Async.RunSynchronously
+            let identity = Expect.wantOk result "should resolve"
+            Expect.equal identity.Did "did:plc:abc123" "did"
+            Expect.equal identity.Handle (Some "alice.example.com") "verified handle"
+
+        testCase "resolveIdentity clears handle when bidirectional check fails" <| fun _ ->
+            // resolveHandle returns did:plc:abc123, but DID doc says handle is "other.com"
+            let mismatchDoc = """{"id": "did:plc:abc123", "alsoKnownAs": ["at://other.com"]}"""
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.PathAndQuery.Contains("resolveHandle") then
+                    jsonResponse HttpStatusCode.OK {| did = "did:plc:abc123" |}
+                elif req.RequestUri.Host = "plc.directory" then
+                    jsonResponse HttpStatusCode.OK (JsonSerializer.Deserialize<JsonElement>(mismatchDoc))
+                else
+                    emptyResponse HttpStatusCode.NotFound)
+            agent.Session <- Some { AccessJwt = "t"; RefreshJwt = "t"; Did = "did:plc:me"; Handle = "me.test" }
+            let result = Identity.resolveIdentity agent "alice.example.com" |> Async.AwaitTask |> Async.RunSynchronously
+            let identity = Expect.wantOk result "should resolve but with no handle"
+            Expect.isNone identity.Handle "handle cleared due to mismatch"
     ]
