@@ -34,23 +34,33 @@ let fullNamespace (namespaceName: string) : string =
     "FSharp.ATProto.Bluesky." + namespaceName
 
 /// "main" uses the module name; others PascalCased.
+/// Disambiguates when a non-main def would collide with the module name.
 /// defToTypeName "Post" "main" -> "Post"
 /// defToTypeName "Post" "replyRef" -> "ReplyRef"
+/// defToTypeName "External" "external" -> "ExternalDef" (collision avoided)
 let defToTypeName (moduleName: string) (defName: string) : string =
     if defName = "main" then moduleName
-    else toPascalCase defName
+    else
+        let name = toPascalCase defName
+        if name = moduleName then name + "Def"
+        else name
 
-/// Resolve a fully-qualified ref to (targetNamespace, "Module.TypeName").
+/// Resolve a fully-qualified ref to (targetNamespace, qualifiedTypePath).
 /// Refs are already fully qualified (LexiconParser resolves local refs).
-/// refToQualifiedType "AppBskyFeed" "app.bsky.feed.defs#feedViewPost" -> ("AppBskyFeed", "Defs.FeedViewPost")
-let refToQualifiedType (_currentNamespace: string) (ref: string) : string * string =
+/// For same-namespace refs: "Defs.FeedViewPost"
+/// For cross-namespace refs: "AppBskyFeed.Defs.FeedViewPost" (includes group module prefix)
+let refToQualifiedType (currentNamespace: string) (ref: string) : string * string =
     let parts = ref.Split('#')
     let nsid = parts.[0]
     let defName = if parts.Length > 1 then parts.[1] else "main"
     let targetNamespace = nsidToNamespace nsid
     let moduleName = nsidToModuleName nsid
     let typeName = defToTypeName moduleName defName
-    (targetNamespace, moduleName + "." + typeName)
+
+    if targetNamespace = currentNamespace then
+        (targetNamespace, moduleName + "." + typeName)
+    else
+        (targetNamespace, targetNamespace + "." + moduleName + "." + typeName)
 
 /// F# reserved words that need double-backtick escaping.
 let private reservedWords =

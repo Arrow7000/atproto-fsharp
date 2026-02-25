@@ -235,11 +235,11 @@ let private generateUnionWidget
     | Some desc -> u.xmlDocs([ desc ])
     | None -> u
 
-/// Check if a LexBody has JSON schema (application/json encoding with an object schema).
+/// Check if a LexBody has JSON schema (application/json encoding with a non-empty object schema).
 let private hasJsonObjectSchema (body: LexBody) : LexObject option =
     if body.Encoding = "application/json" then
         match body.Schema with
-        | Some (LexType.Object obj) -> Some obj
+        | Some (LexType.Object obj) when not obj.Properties.IsEmpty -> Some obj
         | _ -> None
     else
         None
@@ -260,39 +260,22 @@ let private generateRecordModule
         Value("TypeId", ConstantExpr(Ast.String(nsid)))
             .attribute(Attribute("Literal"))
 
-        generateRecordWidget currentNamespace moduleName record.Description record.Record
+        if not record.Record.Properties.IsEmpty then
+            generateRecordWidget currentNamespace moduleName record.Description record.Record
 
         for (defName, def) in otherDefs do
             let typeName = Naming.defToTypeName moduleName defName
 
             match def with
-            | LexDef.DefType (LexType.Object obj) ->
+            | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
                 generateRecordWidget currentNamespace typeName obj.Description obj
             | LexDef.DefType (LexType.Union u) ->
                 generateUnionWidget currentNamespace typeName u
             | LexDef.Token t ->
                 Value(typeName, ConstantExpr(Ast.String(sprintf "%s#%s" nsid defName)))
                     .attribute(Attribute("Literal"))
-            | LexDef.DefType (LexType.String s) ->
-                match s.KnownValues with
-                | Some values ->
-                    Module(typeName) {
-                        for v in values do
-                            let name =
-                                if v.Contains('#') then
-                                    let afterHash = v.Substring(v.IndexOf('#') + 1)
-                                    Naming.toPascalCase afterHash |> Naming.escapeReservedWord
-                                else
-                                    v.Split('.')
-                                    |> Array.map Naming.toPascalCase
-                                    |> System.String.Concat
-                                    |> Naming.escapeReservedWord
-
-                            Value(name, ConstantExpr(Ast.String(v)))
-                                .attribute(Attribute("Literal"))
-                    }
-                | None ->
-                    Abbrev(typeName, LongIdent("string"))
+            | LexDef.DefType (LexType.String _) ->
+                Abbrev(typeName, LongIdent("string"))
             | _ -> ()
     }
 
@@ -334,33 +317,15 @@ let private generateQueryModule
             let typeName = Naming.defToTypeName moduleName defName
 
             match def with
-            | LexDef.DefType (LexType.Object obj) ->
+            | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
                 generateRecordWidget currentNamespace typeName obj.Description obj
             | LexDef.DefType (LexType.Union u) ->
                 generateUnionWidget currentNamespace typeName u
             | LexDef.Token t ->
                 Value(typeName, ConstantExpr(Ast.String(sprintf "%s#%s" nsid defName)))
                     .attribute(Attribute("Literal"))
-            | LexDef.DefType (LexType.String s) ->
-                match s.KnownValues with
-                | Some values ->
-                    Module(typeName) {
-                        for v in values do
-                            let name =
-                                if v.Contains('#') then
-                                    let afterHash = v.Substring(v.IndexOf('#') + 1)
-                                    Naming.toPascalCase afterHash |> Naming.escapeReservedWord
-                                else
-                                    v.Split('.')
-                                    |> Array.map Naming.toPascalCase
-                                    |> System.String.Concat
-                                    |> Naming.escapeReservedWord
-
-                            Value(name, ConstantExpr(Ast.String(v)))
-                                .attribute(Attribute("Literal"))
-                    }
-                | None ->
-                    Abbrev(typeName, LongIdent("string"))
+            | LexDef.DefType (LexType.String _) ->
+                Abbrev(typeName, LongIdent("string"))
             | _ -> ()
     }
 
@@ -410,33 +375,15 @@ let private generateProcedureModule
             let typeName = Naming.defToTypeName moduleName defName
 
             match def with
-            | LexDef.DefType (LexType.Object obj) ->
+            | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
                 generateRecordWidget currentNamespace typeName obj.Description obj
             | LexDef.DefType (LexType.Union u) ->
                 generateUnionWidget currentNamespace typeName u
             | LexDef.Token t ->
                 Value(typeName, ConstantExpr(Ast.String(sprintf "%s#%s" nsid defName)))
                     .attribute(Attribute("Literal"))
-            | LexDef.DefType (LexType.String s) ->
-                match s.KnownValues with
-                | Some values ->
-                    Module(typeName) {
-                        for v in values do
-                            let name =
-                                if v.Contains('#') then
-                                    let afterHash = v.Substring(v.IndexOf('#') + 1)
-                                    Naming.toPascalCase afterHash |> Naming.escapeReservedWord
-                                else
-                                    v.Split('.')
-                                    |> Array.map Naming.toPascalCase
-                                    |> System.String.Concat
-                                    |> Naming.escapeReservedWord
-
-                            Value(name, ConstantExpr(Ast.String(v)))
-                                .attribute(Attribute("Literal"))
-                    }
-                | None ->
-                    Abbrev(typeName, LongIdent("string"))
+            | LexDef.DefType (LexType.String _) ->
+                Abbrev(typeName, LongIdent("string"))
             | _ -> ()
     }
 
@@ -475,33 +422,15 @@ let private generateSubscriptionModule
             let typeName = Naming.defToTypeName moduleName defName
 
             match def with
-            | LexDef.DefType (LexType.Object obj) ->
+            | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
                 generateRecordWidget currentNamespace typeName obj.Description obj
             | LexDef.DefType (LexType.Union u) ->
                 generateUnionWidget currentNamespace typeName u
             | LexDef.Token t ->
                 Value(typeName, ConstantExpr(Ast.String(sprintf "%s#%s" nsid defName)))
                     .attribute(Attribute("Literal"))
-            | LexDef.DefType (LexType.String s) ->
-                match s.KnownValues with
-                | Some values ->
-                    Module(typeName) {
-                        for v in values do
-                            let name =
-                                if v.Contains('#') then
-                                    let afterHash = v.Substring(v.IndexOf('#') + 1)
-                                    Naming.toPascalCase afterHash |> Naming.escapeReservedWord
-                                else
-                                    v.Split('.')
-                                    |> Array.map Naming.toPascalCase
-                                    |> System.String.Concat
-                                    |> Naming.escapeReservedWord
-
-                            Value(name, ConstantExpr(Ast.String(v)))
-                                .attribute(Attribute("Literal"))
-                    }
-                | None ->
-                    Abbrev(typeName, LongIdent("string"))
+            | LexDef.DefType (LexType.String _) ->
+                Abbrev(typeName, LongIdent("string"))
             | _ -> ()
     }
 
@@ -517,33 +446,24 @@ let private generateDefsOnlyModule
             let typeName = Naming.defToTypeName moduleName defName
 
             match def with
-            | LexDef.DefType (LexType.Object obj) ->
+            | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
                 generateRecordWidget currentNamespace typeName obj.Description obj
             | LexDef.DefType (LexType.Union u) ->
                 generateUnionWidget currentNamespace typeName u
             | LexDef.Token t ->
                 Value(typeName, ConstantExpr(Ast.String(sprintf "%s#%s" nsid defName)))
                     .attribute(Attribute("Literal"))
-            | LexDef.DefType (LexType.String s) ->
-                match s.KnownValues with
-                | Some values ->
-                    Module(typeName) {
-                        for v in values do
-                            let name =
-                                if v.Contains('#') then
-                                    let afterHash = v.Substring(v.IndexOf('#') + 1)
-                                    Naming.toPascalCase afterHash |> Naming.escapeReservedWord
-                                else
-                                    v.Split('.')
-                                    |> Array.map Naming.toPascalCase
-                                    |> System.String.Concat
-                                    |> Naming.escapeReservedWord
-
-                            Value(name, ConstantExpr(Ast.String(v)))
-                                .attribute(Attribute("Literal"))
-                    }
-                | None ->
-                    Abbrev(typeName, LongIdent("string"))
+            | LexDef.DefType (LexType.String _) ->
+                Abbrev(typeName, LongIdent("string"))
+            | LexDef.DefType (LexType.Array arr) ->
+                let inner = TypeMapping.lexTypeToFSharpType currentNamespace arr.Items
+                Abbrev(typeName, LongIdent(sprintf "%s list" inner))
+            | LexDef.DefType (LexType.Boolean _) ->
+                Abbrev(typeName, LongIdent("bool"))
+            | LexDef.DefType (LexType.Integer _) ->
+                Abbrev(typeName, LongIdent("int64"))
+            | LexDef.DefType (LexType.Bytes _) ->
+                Abbrev(typeName, LongIdent("byte[]"))
             | LexDef.PermissionSet _ ->
                 // PermissionSets are skipped in code generation
                 ()
@@ -551,78 +471,65 @@ let private generateDefsOnlyModule
     }
 
 // ---------------------------------------------------------------------------
-// File generation
+// Group module generation
 // ---------------------------------------------------------------------------
 
-/// Generate a complete .fs file for a namespace.
-let generateNamespaceFile (nsName: string) (docs: LexiconDoc list) : string =
-    let fullNs = Naming.fullNamespace nsName
-
-    // Collect cross-namespace dependencies for open statements
-    let crossDeps = collectDependencies nsName docs
-
+/// Generate a top-level module widget for a namespace group.
+/// Each namespace group becomes a module within the single shared namespace.
+let private generateGroupModule (nsName: string) (docs: LexiconDoc list) =
     // Sort docs by NSID for deterministic output
     let sortedDocs =
         docs |> List.sortBy (fun doc -> Nsid.value doc.Id)
 
-    // Build the namespace widget
-    let namespaceWidget =
-        (Namespace(fullNs) {
-            Open("System.Text.Json")
-            Open("System.Text.Json.Serialization")
+    Module(nsName) {
+        for doc in sortedDocs do
+            let nsid = Nsid.value doc.Id
+            let moduleName = Naming.nsidToModuleName nsid
+            let currentNamespace = nsName
 
-            for dep in crossDeps |> Set.toList |> List.sort do
-                Open(Naming.fullNamespace dep)
+            // Separate main def from other defs
+            let mainDef = Map.tryFind "main" doc.Defs
 
-            for doc in sortedDocs do
-                let nsid = Nsid.value doc.Id
-                let moduleName = Naming.nsidToModuleName nsid
-                let currentNamespace = nsName
+            let otherDefs =
+                doc.Defs
+                |> Map.toList
+                |> List.filter (fun (name, _) -> name <> "main")
+                |> List.sortBy fst
 
-                // Separate main def from other defs
-                let mainDef = Map.tryFind "main" doc.Defs
-
-                let otherDefs =
-                    doc.Defs
-                    |> Map.toList
-                    |> List.filter (fun (name, _) -> name <> "main")
-                    |> List.sortBy fst
-
-                match mainDef with
-                | Some (LexDef.Record r) ->
-                    generateRecordModule currentNamespace nsid moduleName r otherDefs
-                | Some (LexDef.Query q) ->
-                    generateQueryModule currentNamespace nsid moduleName q otherDefs
-                | Some (LexDef.Procedure p) ->
-                    generateProcedureModule currentNamespace nsid moduleName p otherDefs
-                | Some (LexDef.Subscription s) ->
-                    generateSubscriptionModule currentNamespace nsid moduleName s otherDefs
-                | Some (LexDef.PermissionSet _) ->
-                    // PermissionSets: generate module with non-main defs only (if any)
-                    if not otherDefs.IsEmpty then
-                        generateDefsOnlyModule currentNamespace nsid moduleName otherDefs
-                | Some _ ->
-                    // Other main def types (unlikely): generate non-main defs
-                    if not otherDefs.IsEmpty then
-                        generateDefsOnlyModule currentNamespace nsid moduleName otherDefs
-                | None ->
-                    // No main def: generate all defs in a module
-                    let allDefs = doc.Defs |> Map.toList |> List.sortBy fst
-                    if not allDefs.IsEmpty then
-                        generateDefsOnlyModule currentNamespace nsid moduleName allDefs
-        })
-            .toRecursive()
-
-    Oak() { namespaceWidget }
-    |> Gen.mkOak
-    |> Gen.run
+            match mainDef with
+            | Some (LexDef.Record r) ->
+                generateRecordModule currentNamespace nsid moduleName r otherDefs
+            | Some (LexDef.Query q) ->
+                generateQueryModule currentNamespace nsid moduleName q otherDefs
+            | Some (LexDef.Procedure p) ->
+                generateProcedureModule currentNamespace nsid moduleName p otherDefs
+            | Some (LexDef.Subscription s) ->
+                generateSubscriptionModule currentNamespace nsid moduleName s otherDefs
+            | Some (LexDef.PermissionSet _) ->
+                // PermissionSets: generate module with non-main defs only (if any)
+                if not otherDefs.IsEmpty then
+                    generateDefsOnlyModule currentNamespace nsid moduleName otherDefs
+            | Some (LexDef.DefType mainLexType) ->
+                // Main def is a type (object, union, array, string, etc.)
+                // Generate it alongside other defs in a module
+                let allDefs = ("main", LexDef.DefType mainLexType) :: otherDefs
+                generateDefsOnlyModule currentNamespace nsid moduleName allDefs
+            | Some _ ->
+                if not otherDefs.IsEmpty then
+                    generateDefsOnlyModule currentNamespace nsid moduleName otherDefs
+            | None ->
+                // No main def: generate all defs in a module
+                let allDefs = doc.Defs |> Map.toList |> List.sortBy fst
+                if not allDefs.IsEmpty then
+                    generateDefsOnlyModule currentNamespace nsid moduleName allDefs
+    }
 
 // ---------------------------------------------------------------------------
 // Complete pipeline
 // ---------------------------------------------------------------------------
 
-/// Generate all namespace files from a list of LexiconDocs.
-/// Returns (fileName, content) pairs in compilation order.
+/// Generate all types as a single file under one namespace rec.
+/// Returns a single (fileName, content) pair.
 let generateAll (docs: LexiconDoc list) : (string * string) list =
     // 1. Group by namespace
     let groups = groupByNamespace docs
@@ -632,17 +539,26 @@ let generateAll (docs: LexiconDoc list) : (string * string) list =
         groups
         |> Map.map (fun nsName nsDocs -> collectDependencies nsName nsDocs)
 
-    // 3. Topological sort
+    // 3. Topological sort for module ordering within the file
     let order = topologicalSort deps
 
-    // 4. Generate each namespace file in order
-    order
-    |> List.choose (fun nsName ->
-        match Map.tryFind nsName groups with
-        | Some nsDocs ->
-            let fileName = Naming.nsidToFileName nsName
-            let content = generateNamespaceFile nsName nsDocs
-            Some(fileName, content)
-        | None ->
-            // Namespace referenced as dependency but has no docs
-            None)
+    // 4. Generate a single file with all modules under one namespace rec
+    let namespaceWidget =
+        (Namespace("FSharp.ATProto.Bluesky") {
+            Open("System.Text.Json")
+            Open("System.Text.Json.Serialization")
+
+            for nsName in order do
+                match Map.tryFind nsName groups with
+                | Some nsDocs ->
+                    generateGroupModule nsName nsDocs
+                | None -> ()
+        })
+            .toRecursive()
+
+    let content =
+        Oak() { namespaceWidget }
+        |> Gen.mkOak
+        |> Gen.run
+
+    [ ("Generated.fs", content) ]

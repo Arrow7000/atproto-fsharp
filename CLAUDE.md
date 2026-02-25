@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # FSharp.ATProto Project Instructions
 
 ## Decision Authority
@@ -5,6 +7,10 @@
 The user does not have strong opinions on implementation details. Use your best judgment for all technical decisions — architecture, internal APIs, data structures, algorithms, error handling patterns, test organization, etc. Only surface questions when you are genuinely stuck between options with no clear winner, or when a decision affects the **user-facing API shape of the library** (public types, module structure, function signatures that consumers will call).
 
 If your judgment says option A is better than B or C, go with A.
+
+## Implementation Strategy
+
+If context is <35% full, go with the subagent driven approach in this session. Otherwise advise the user to clear the context and give him specific instructions for how to prompt you for the next phase of the work – make sure you give the prompt a friendly tone :)
 
 ## Design Principles
 
@@ -41,4 +47,5 @@ extern/
 
 ## Git
 
+- Avoid merge commits. Merge branches into `main` with fast-forward strategy. Or if `main` is ahead of the feature branch, rebase the branch on `main` and then merge with fast-forward.
 - Never add Claude as co-author on commit messages

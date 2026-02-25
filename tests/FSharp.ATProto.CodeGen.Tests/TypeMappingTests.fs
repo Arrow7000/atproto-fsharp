@@ -60,9 +60,9 @@ let lexTypeToFSharpTypeTests =
             let result = lexTypeToFSharpType "AppBskyFeed" Unknown
             Expect.equal result "JsonElement" "Unknown should map to JsonElement"
 
-        testCase "Blob maps to Blob" <| fun () ->
+        testCase "Blob maps to JsonElement" <| fun () ->
             let result = lexTypeToFSharpType "AppBskyFeed" (Blob emptyBlobConstraints)
-            Expect.equal result "Blob" "Blob should map to Blob"
+            Expect.equal result "JsonElement" "Blob should map to JsonElement"
 
         testCase "Array of strings maps to string list" <| fun () ->
             let arr = emptyArrayOf (LexType.String emptyStringConstraints)
@@ -83,9 +83,9 @@ let lexTypeToFSharpTypeTests =
             let result = lexTypeToFSharpType "AppBskyFeed" (Ref { Description = None; Ref = "app.bsky.feed.defs#feedViewPost" })
             Expect.equal result "Defs.FeedViewPost" "Ref in same namespace should use Module.TypeName"
 
-        testCase "Ref to different namespace uses Module.TypeName" <| fun () ->
+        testCase "Ref to different namespace uses Namespace.Module.TypeName" <| fun () ->
             let result = lexTypeToFSharpType "AppBskyFeed" (Ref { Description = None; Ref = "com.atproto.repo.strongRef" })
-            Expect.equal result "StrongRef.StrongRef" "Ref to different namespace should use Module.TypeName"
+            Expect.equal result "ComAtprotoRepo.StrongRef.StrongRef" "Ref to different namespace should use Namespace.Module.TypeName"
 
         testCase "Ref with main def uses module name as type name" <| fun () ->
             let result = lexTypeToFSharpType "AppBskyFeed" (Ref { Description = None; Ref = "app.bsky.feed.post" })

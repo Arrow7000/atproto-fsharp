@@ -118,12 +118,12 @@ let refToQualifiedTypeTests =
         testCase "different namespace no fragment" <| fun () ->
             let (ns, typeName) = refToQualifiedType "AppBskyFeed" "com.atproto.repo.strongRef"
             Expect.equal ns "ComAtprotoRepo" "namespace"
-            Expect.equal typeName "StrongRef.StrongRef" "type name"
+            Expect.equal typeName "ComAtprotoRepo.StrongRef.StrongRef" "type name"
 
         testCase "different namespace with fragment" <| fun () ->
             let (ns, typeName) = refToQualifiedType "AppBskyFeed" "com.atproto.label.defs#label"
             Expect.equal ns "ComAtprotoLabel" "namespace"
-            Expect.equal typeName "Defs.Label" "type name"
+            Expect.equal typeName "ComAtprotoLabel.Defs.Label" "type name"
 
         testCase "three segment ref no fragment" <| fun () ->
             let (ns, typeName) = refToQualifiedType "AppBsky" "app.bsky.authFullApp"

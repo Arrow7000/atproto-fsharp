@@ -11,7 +11,7 @@ let rec lexTypeToFSharpType (currentNamespace: string) (lexType: LexType) : stri
     | String _ -> "string"
     | Bytes _ -> "byte[]"
     | CidLink -> "string"
-    | Blob _ -> "Blob"
+    | Blob _ -> "JsonElement"
     | Unknown -> "JsonElement"
     | Array arr ->
         let inner = lexTypeToFSharpType currentNamespace arr.Items

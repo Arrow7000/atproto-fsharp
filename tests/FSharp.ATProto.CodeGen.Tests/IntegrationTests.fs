@@ -216,49 +216,47 @@ let collectDependenciesTests =
     ]
 
 [<Tests>]
-let generateNamespaceFileTests =
-    testList "generateNamespaceFile" [
-        testCase "generates namespace and module for record" <| fun () ->
+let generateAllTests =
+    testList "generateAll" [
+        testCase "generates single file with namespace rec" <| fun () ->
             let doc =
                 mkRecordDoc "app.bsky.feed.post"
                     [ "text", LexType.String emptyStringConstraints
                       "createdAt", LexType.String emptyStringConstraints ]
                     [ "text"; "createdAt" ]
 
-            let content = generateNamespaceFile "AppBskyFeed" [ doc ]
-            Expect.stringContains content "namespace rec FSharp.ATProto.Bluesky.AppBskyFeed" "has namespace"
-            Expect.stringContains content "module Post" "has module"
+            let result = generateAll [ doc ]
+            Expect.equal (List.length result) 1 "1 file"
+            let (fileName, content) = result.[0]
+            Expect.equal fileName "Generated.fs" "file named Generated.fs"
+            Expect.stringContains content "namespace rec FSharp.ATProto.Bluesky" "has namespace rec"
+            Expect.stringContains content "module AppBskyFeed" "has group module"
+            Expect.stringContains content "module Post" "has NSID module"
             Expect.stringContains content "let TypeId = \"app.bsky.feed.post\"" "has TypeId"
             Expect.stringContains content "type Post =" "has record type"
             Expect.stringContains content "Text: string" "has Text field"
 
-        testCase "generates open statements for cross-namespace deps" <| fun () ->
-            let doc =
+        testCase "generates modules for multiple namespaces" <| fun () ->
+            let doc1 =
+                mkRecordDoc "com.atproto.repo.strongRef"
+                    [ "uri", LexType.String emptyStringConstraints ]
+                    [ "uri" ]
+
+            let doc2 =
                 mkRecordDoc "app.bsky.feed.like"
                     [ "subject", LexType.Ref { Description = None; Ref = "com.atproto.repo.strongRef" } ]
                     [ "subject" ]
 
-            let content = generateNamespaceFile "AppBskyFeed" [ doc ]
-            Expect.stringContains content "open FSharp.ATProto.Bluesky.ComAtprotoRepo" "has open for dep"
-
-        testCase "generates multiple modules for multiple docs" <| fun () ->
-            let doc1 =
-                mkRecordDoc "app.bsky.feed.post"
-                    [ "text", LexType.String emptyStringConstraints ]
-                    [ "text" ]
-
-            let doc2 =
-                mkRecordDoc "app.bsky.feed.like"
-                    [ "subject", LexType.String emptyStringConstraints ]
-                    [ "subject" ]
-
-            let content = generateNamespaceFile "AppBskyFeed" [ doc1; doc2 ]
-            Expect.stringContains content "module Like" "has Like module"
-            Expect.stringContains content "module Post" "has Post module"
+            let result = generateAll [ doc2; doc1 ]
+            Expect.equal (List.length result) 1 "1 file"
+            let (_fileName, content) = result.[0]
+            Expect.stringContains content "module ComAtprotoRepo" "has repo module"
+            Expect.stringContains content "module AppBskyFeed" "has feed module"
 
         testCase "generates query module with Params and Output" <| fun () ->
             let doc = mkQueryDoc "app.bsky.feed.getAuthorFeed" true
-            let content = generateNamespaceFile "AppBskyFeed" [ doc ]
+            let result = generateAll [ doc ]
+            let (_fileName, content) = result.[0]
             Expect.stringContains content "module GetAuthorFeed" "has module"
             Expect.stringContains content "type Params" "has Params type"
             Expect.stringContains content "type Output" "has Output type"
@@ -276,44 +274,11 @@ let generateNamespaceFileTests =
                           LexDef.Token { Description = Some "Interaction seen" }
                       ] }
 
-            let content = generateNamespaceFile "AppBskyFeed" [ doc ]
+            let result = generateAll [ doc ]
+            let (_fileName, content) = result.[0]
             Expect.stringContains content "[<Literal>]" "has Literal"
             Expect.stringContains content "InteractionSeen" "has PascalCase name"
             Expect.stringContains content "app.bsky.feed.defs#interactionSeen" "has token value"
-    ]
-
-[<Tests>]
-let generateAllTests =
-    testList "generateAll" [
-        testCase "generates files in dependency order" <| fun () ->
-            let doc1 =
-                mkRecordDoc "com.atproto.repo.strongRef"
-                    [ "uri", LexType.String emptyStringConstraints ]
-                    [ "uri" ]
-
-            let doc2 =
-                mkRecordDoc "app.bsky.feed.like"
-                    [ "subject", LexType.Ref { Description = None; Ref = "com.atproto.repo.strongRef" } ]
-                    [ "subject" ]
-
-            let result = generateAll [ doc2; doc1 ]
-            Expect.equal (List.length result) 2 "2 files"
-
-            let fileNames = result |> List.map fst
-            let repoIdx = List.findIndex ((=) "ComAtprotoRepo.fs") fileNames
-            let feedIdx = List.findIndex ((=) "AppBskyFeed.fs") fileNames
-            Expect.isTrue (repoIdx < feedIdx) "repo before feed"
-
-        testCase "each file has namespace declaration" <| fun () ->
-            let doc =
-                mkRecordDoc "app.bsky.feed.post"
-                    [ "text", LexType.String emptyStringConstraints ]
-                    [ "text" ]
-
-            let result = generateAll [ doc ]
-            Expect.equal (List.length result) 1 "1 file"
-            let (_fileName, content) = result.[0]
-            Expect.stringContains content "namespace" "has namespace"
     ]
 
 [<Tests>]
@@ -330,7 +295,7 @@ let realLexiconTests =
             let groups = groupByNamespace docs
             Expect.isGreaterThan (Map.count groups) 30 "30+ namespaces"
 
-        testCase "generateAll produces files for all namespaces" <| fun () ->
+        testCase "generateAll produces single file for all namespaces" <| fun () ->
             let files = Directory.GetFiles(TestHelpers.lexiconDir, "*.json", SearchOption.AllDirectories)
             let docs =
                 files
@@ -339,28 +304,11 @@ let realLexiconTests =
                 |> Array.toList
 
             let generated = generateAll docs
-            Expect.isGreaterThan generated.Length 30 "30+ files"
-
-            for (fileName, content) in generated do
-                Expect.stringContains content "namespace" (sprintf "%s should have namespace" fileName)
-
-        testCase "dependency ordering puts referenced namespaces first" <| fun () ->
-            let files = Directory.GetFiles(TestHelpers.lexiconDir, "*.json", SearchOption.AllDirectories)
-            let docs =
-                files
-                |> Array.choose (fun f ->
-                    LexiconParser.parse(File.ReadAllText(f)) |> Result.toOption)
-                |> Array.toList
-
-            let generated = generateAll docs
-            let fileNames = generated |> List.map fst
-
-            // ComAtprotoLabel should come before AppBskyFeed (feed references labels)
-            match List.tryFindIndex ((=) "ComAtprotoLabel.fs") fileNames,
-                  List.tryFindIndex ((=) "AppBskyFeed.fs") fileNames with
-            | Some labelIdx, Some feedIdx ->
-                Expect.isTrue (labelIdx < feedIdx) "label before feed"
-            | _ ->
-                // If either isn't found, this test passes vacuously
-                ()
+            Expect.equal generated.Length 1 "1 file"
+            let (_fileName, content) = generated.[0]
+            Expect.stringContains content "namespace rec FSharp.ATProto.Bluesky" "has namespace rec"
+            // Verify key group modules are present
+            Expect.stringContains content "module AppBskyFeed" "has AppBskyFeed"
+            Expect.stringContains content "module ComAtprotoRepo" "has ComAtprotoRepo"
+            Expect.stringContains content "module ComAtprotoLabel" "has ComAtprotoLabel"
     ]
