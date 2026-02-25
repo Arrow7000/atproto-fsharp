@@ -137,7 +137,7 @@ let private generateWrapper (indent: string) (info: WrapperInfo) : string =
     | QueryWithParams ->
         $"\n\n{indent}let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =\n{indent}    FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent"
     | QueryNoParams ->
-        $"\n\n{indent}let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =\n{indent}    FSharp.ATProto.Core.Xrpc.query<{{||}}, Output> TypeId {{||}} agent"
+        $"\n\n{indent}let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =\n{indent}    FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent"
     | ProcedureWithIO ->
         $"\n\n{indent}let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =\n{indent}    FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent"
     | ProcedureInputOnly ->

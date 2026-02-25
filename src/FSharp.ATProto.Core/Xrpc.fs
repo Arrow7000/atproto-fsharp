@@ -77,6 +77,53 @@ module Xrpc =
                 return false
         }
 
+    /// Execute an XRPC query (HTTP GET) with no parameters.
+    let queryNoParams<'O> (nsid: string) (agent: AtpAgent) : Task<Result<'O, XrpcError>> =
+        task {
+            let url = $"{agent.BaseUrl}xrpc/{nsid}"
+            let request = new HttpRequestMessage(HttpMethod.Get, url)
+            addAuth agent request
+
+            let! response = agent.HttpClient.SendAsync(request)
+
+            if response.IsSuccessStatusCode then
+                let! body = response.Content.ReadAsStringAsync()
+                let output = JsonSerializer.Deserialize<'O>(body, Json.options)
+                return Ok output
+            else
+                let! error = tryDeserializeError response
+                // Rate limit retry
+                if error.StatusCode = 429 then
+                    let! _ = waitForRateLimit response
+                    let retryRequest = new HttpRequestMessage(HttpMethod.Get, url)
+                    addAuth agent retryRequest
+                    let! retryResponse = agent.HttpClient.SendAsync(retryRequest)
+                    if retryResponse.IsSuccessStatusCode then
+                        let! retryBody = retryResponse.Content.ReadAsStringAsync()
+                        return Ok(JsonSerializer.Deserialize<'O>(retryBody, Json.options))
+                    else
+                        let! retryError = tryDeserializeError retryResponse
+                        return Error retryError
+                // Auto-refresh on ExpiredToken
+                elif error.StatusCode = 401 && error.Error = Some "ExpiredToken" && agent.Session.IsSome then
+                    let! refreshResult = refreshSession agent
+                    match refreshResult with
+                    | Ok _ ->
+                        let retryRequest = new HttpRequestMessage(HttpMethod.Get, url)
+                        addAuth agent retryRequest
+                        let! retryResponse = agent.HttpClient.SendAsync(retryRequest)
+                        if retryResponse.IsSuccessStatusCode then
+                            let! retryBody = retryResponse.Content.ReadAsStringAsync()
+                            return Ok(JsonSerializer.Deserialize<'O>(retryBody, Json.options))
+                        else
+                            let! retryError = tryDeserializeError retryResponse
+                            return Error retryError
+                    | Error refreshError ->
+                        return Error refreshError
+                else
+                    return Error error
+        }
+
     /// Execute an XRPC query (HTTP GET).
     let query<'P, 'O> (nsid: string) (parameters: 'P) (agent: AtpAgent) : Task<Result<'O, XrpcError>> =
         task {

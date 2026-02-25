@@ -2,6 +2,8 @@ namespace rec FSharp.ATProto.Bluesky
 
 open System.Text.Json
 open System.Text.Json.Serialization
+open System.Threading.Tasks
+open FSharp.ATProto.Core
 
 module AppBsky =
     begin end
@@ -100,6 +102,9 @@ module ComAtprotoLabel =
         [<Literal>]
         let TypeId = "com.atproto.label.queryLabels"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -150,6 +155,9 @@ module ComAtprotoRepo =
     module ApplyWrites =
         [<Literal>]
         let TypeId = "com.atproto.repo.applyWrites"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("repo")>]
@@ -216,6 +224,9 @@ module ComAtprotoRepo =
         [<Literal>]
         let TypeId = "com.atproto.repo.createRecord"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("collection")>]
               Collection: string
@@ -255,6 +266,9 @@ module ComAtprotoRepo =
         [<Literal>]
         let TypeId = "com.atproto.repo.deleteRecord"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("collection")>]
               Collection: string
@@ -279,6 +293,9 @@ module ComAtprotoRepo =
         [<Literal>]
         let TypeId = "com.atproto.repo.describeRepo"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("repo")>]
               Repo: string }
@@ -298,6 +315,9 @@ module ComAtprotoRepo =
     module GetRecord =
         [<Literal>]
         let TypeId = "com.atproto.repo.getRecord"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cid")>]
@@ -329,6 +349,9 @@ module ComAtprotoRepo =
         [<Literal>]
         let TypeId = "com.atproto.repo.listMissingBlobs"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -350,6 +373,9 @@ module ComAtprotoRepo =
     module ListRecords =
         [<Literal>]
         let TypeId = "com.atproto.repo.listRecords"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("collection")>]
@@ -380,6 +406,9 @@ module ComAtprotoRepo =
     module PutRecord =
         [<Literal>]
         let TypeId = "com.atproto.repo.putRecord"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("collection")>]
@@ -593,6 +622,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.getActorStarterPacks"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("actor")>]
               Actor: string
@@ -611,6 +643,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.getBlocks"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -626,6 +661,9 @@ module AppBskyGraph =
     module GetFollowers =
         [<Literal>]
         let TypeId = "app.bsky.graph.getFollowers"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
@@ -647,6 +685,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.getFollows"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("actor")>]
               Actor: string
@@ -666,6 +707,9 @@ module AppBskyGraph =
     module GetKnownFollowers =
         [<Literal>]
         let TypeId = "app.bsky.graph.getKnownFollowers"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
@@ -687,6 +731,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.getList"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -707,6 +754,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.getListBlocks"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -723,6 +773,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.getListMutes"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -738,6 +791,9 @@ module AppBskyGraph =
     module GetLists =
         [<Literal>]
         let TypeId = "app.bsky.graph.getLists"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
@@ -758,6 +814,9 @@ module AppBskyGraph =
     module GetListsWithMembership =
         [<Literal>]
         let TypeId = "app.bsky.graph.getListsWithMembership"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
@@ -786,6 +845,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.getMutes"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -801,6 +863,9 @@ module AppBskyGraph =
     module GetRelationships =
         [<Literal>]
         let TypeId = "app.bsky.graph.getRelationships"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
@@ -822,6 +887,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.getStarterPack"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("starterPack")>]
               StarterPack: string }
@@ -834,6 +902,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.getStarterPacks"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("uris")>]
               Uris: string list }
@@ -845,6 +916,9 @@ module AppBskyGraph =
     module GetStarterPacksWithMembership =
         [<Literal>]
         let TypeId = "app.bsky.graph.getStarterPacksWithMembership"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
@@ -870,6 +944,9 @@ module AppBskyGraph =
     module GetSuggestedFollowsByActor =
         [<Literal>]
         let TypeId = "app.bsky.graph.getSuggestedFollowsByActor"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
@@ -934,6 +1011,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.muteActor"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("actor")>]
               Actor: string }
@@ -941,6 +1021,9 @@ module AppBskyGraph =
     module MuteActorList =
         [<Literal>]
         let TypeId = "app.bsky.graph.muteActorList"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("list")>]
@@ -950,6 +1033,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.muteThread"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("root")>]
               Root: string }
@@ -957,6 +1043,9 @@ module AppBskyGraph =
     module SearchStarterPacks =
         [<Literal>]
         let TypeId = "app.bsky.graph.searchStarterPacks"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -999,6 +1088,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.unmuteActor"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("actor")>]
               Actor: string }
@@ -1007,6 +1099,9 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.unmuteActorList"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("list")>]
               List: string }
@@ -1014,6 +1109,9 @@ module AppBskyGraph =
     module UnmuteThread =
         [<Literal>]
         let TypeId = "app.bsky.graph.unmuteThread"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("root")>]
@@ -1262,6 +1360,9 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.describeFeedGenerator"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
         type Output =
             { [<JsonPropertyName("did")>]
               Did: string
@@ -1309,6 +1410,9 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getActorFeeds"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("actor")>]
               Actor: string
@@ -1326,6 +1430,9 @@ module AppBskyFeed =
     module GetActorLikes =
         [<Literal>]
         let TypeId = "app.bsky.feed.getActorLikes"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
@@ -1351,6 +1458,9 @@ module AppBskyFeed =
     module GetAuthorFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getAuthorFeed"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
@@ -1381,6 +1491,9 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getFeed"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -1403,6 +1516,9 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getFeedGenerator"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("feed")>]
               Feed: string }
@@ -1419,6 +1535,9 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getFeedGenerators"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("feeds")>]
               Feeds: string list }
@@ -1430,6 +1549,9 @@ module AppBskyFeed =
     module GetFeedSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.feed.getFeedSkeleton"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -1454,6 +1576,9 @@ module AppBskyFeed =
     module GetLikes =
         [<Literal>]
         let TypeId = "app.bsky.feed.getLikes"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cid")>]
@@ -1487,6 +1612,9 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getListFeed"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -1508,6 +1636,9 @@ module AppBskyFeed =
     module GetPostThread =
         [<Literal>]
         let TypeId = "app.bsky.feed.getPostThread"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("depth")>]
@@ -1531,6 +1662,9 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getPosts"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("uris")>]
               Uris: string list }
@@ -1542,6 +1676,9 @@ module AppBskyFeed =
     module GetQuotes =
         [<Literal>]
         let TypeId = "app.bsky.feed.getQuotes"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cid")>]
@@ -1567,6 +1704,9 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getRepostedBy"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cid")>]
               Cid: string option
@@ -1591,6 +1731,9 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getSuggestedFeeds"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -1606,6 +1749,9 @@ module AppBskyFeed =
     module GetTimeline =
         [<Literal>]
         let TypeId = "app.bsky.feed.getTimeline"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("algorithm")>]
@@ -1713,6 +1859,9 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.searchPosts"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("author")>]
               Author: string option
@@ -1755,6 +1904,9 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.sendInteractions"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("interactions")>]
               Interactions: Defs.Interaction list }
@@ -1788,6 +1940,9 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.checkAccountStatus"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
         type Output =
             { [<JsonPropertyName("activated")>]
               Activated: bool
@@ -1812,6 +1967,9 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.confirmEmail"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("email")>]
               Email: string
@@ -1834,6 +1992,9 @@ module ComAtprotoServer =
     module CreateAccount =
         [<Literal>]
         let TypeId = "com.atproto.server.createAccount"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
@@ -1893,6 +2054,9 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.createAppPassword"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("name")>]
               Name: string
@@ -1917,6 +2081,9 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.createInviteCode"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("forAccount")>]
               ForAccount: string option
@@ -1930,6 +2097,9 @@ module ComAtprotoServer =
     module CreateInviteCodes =
         [<Literal>]
         let TypeId = "com.atproto.server.createInviteCodes"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("codeCount")>]
@@ -1952,6 +2122,9 @@ module ComAtprotoServer =
     module CreateSession =
         [<Literal>]
         let TypeId = "com.atproto.server.createSession"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("allowTakendown")>]
@@ -1996,6 +2169,9 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.deactivateAccount"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("deleteAfter")>]
               DeleteAfter: string option }
@@ -2027,6 +2203,9 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.deleteAccount"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("did")>]
               Did: string
@@ -2057,6 +2236,9 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.describeServer"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
         type Output =
             { [<JsonPropertyName("availableUserDomains")>]
               AvailableUserDomains: string list
@@ -2085,6 +2267,9 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.getAccountInviteCodes"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("createAvailable")>]
               CreateAvailable: bool option
@@ -2102,6 +2287,9 @@ module ComAtprotoServer =
     module GetServiceAuth =
         [<Literal>]
         let TypeId = "com.atproto.server.getServiceAuth"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("aud")>]
@@ -2122,6 +2310,9 @@ module ComAtprotoServer =
     module GetSession =
         [<Literal>]
         let TypeId = "com.atproto.server.getSession"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("active")>]
@@ -2144,6 +2335,9 @@ module ComAtprotoServer =
     module ListAppPasswords =
         [<Literal>]
         let TypeId = "com.atproto.server.listAppPasswords"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("passwords")>]
@@ -2217,6 +2411,9 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.requestPasswordReset"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("email")>]
               Email: string }
@@ -2224,6 +2421,9 @@ module ComAtprotoServer =
     module ReserveSigningKey =
         [<Literal>]
         let TypeId = "com.atproto.server.reserveSigningKey"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
@@ -2236,6 +2436,9 @@ module ComAtprotoServer =
     module ResetPassword =
         [<Literal>]
         let TypeId = "com.atproto.server.resetPassword"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("password")>]
@@ -2254,6 +2457,9 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.revokeAppPassword"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("name")>]
               Name: string }
@@ -2261,6 +2467,9 @@ module ComAtprotoServer =
     module UpdateEmail =
         [<Literal>]
         let TypeId = "com.atproto.server.updateEmail"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("email")>]
@@ -2336,6 +2545,9 @@ module ComAtprotoAdmin =
         [<Literal>]
         let TypeId = "com.atproto.admin.deleteAccount"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("did")>]
               Did: string }
@@ -2343,6 +2555,9 @@ module ComAtprotoAdmin =
     module DisableAccountInvites =
         [<Literal>]
         let TypeId = "com.atproto.admin.disableAccountInvites"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("account")>]
@@ -2354,6 +2569,9 @@ module ComAtprotoAdmin =
         [<Literal>]
         let TypeId = "com.atproto.admin.disableInviteCodes"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("accounts")>]
               Accounts: string list option
@@ -2363,6 +2581,9 @@ module ComAtprotoAdmin =
     module EnableAccountInvites =
         [<Literal>]
         let TypeId = "com.atproto.admin.enableAccountInvites"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("account")>]
@@ -2382,6 +2603,9 @@ module ComAtprotoAdmin =
         [<Literal>]
         let TypeId = "com.atproto.admin.getAccountInfos"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("dids")>]
               Dids: string list }
@@ -2393,6 +2617,9 @@ module ComAtprotoAdmin =
     module GetInviteCodes =
         [<Literal>]
         let TypeId = "com.atproto.admin.getInviteCodes"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -2411,6 +2638,9 @@ module ComAtprotoAdmin =
     module GetSubjectStatus =
         [<Literal>]
         let TypeId = "com.atproto.admin.getSubjectStatus"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("blob")>]
@@ -2432,6 +2662,9 @@ module ComAtprotoAdmin =
         [<Literal>]
         let TypeId = "com.atproto.admin.searchAccounts"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -2449,6 +2682,9 @@ module ComAtprotoAdmin =
     module SendEmail =
         [<Literal>]
         let TypeId = "com.atproto.admin.sendEmail"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("comment")>]
@@ -2470,6 +2706,9 @@ module ComAtprotoAdmin =
         [<Literal>]
         let TypeId = "com.atproto.admin.updateAccountEmail"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("account")>]
               Account: string
@@ -2479,6 +2718,9 @@ module ComAtprotoAdmin =
     module UpdateAccountHandle =
         [<Literal>]
         let TypeId = "com.atproto.admin.updateAccountHandle"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
@@ -2490,6 +2732,9 @@ module ComAtprotoAdmin =
         [<Literal>]
         let TypeId = "com.atproto.admin.updateAccountPassword"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("did")>]
               Did: string
@@ -2500,6 +2745,9 @@ module ComAtprotoAdmin =
         [<Literal>]
         let TypeId = "com.atproto.admin.updateAccountSigningKey"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("did")>]
               Did: string
@@ -2509,6 +2757,9 @@ module ComAtprotoAdmin =
     module UpdateSubjectStatus =
         [<Literal>]
         let TypeId = "com.atproto.admin.updateSubjectStatus"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("deactivated")>]
@@ -2528,6 +2779,9 @@ module ComAtprotoModeration =
     module CreateReport =
         [<Literal>]
         let TypeId = "com.atproto.moderation.createReport"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("modTool")>]
@@ -2641,6 +2895,9 @@ module AppBskyLabeler =
     module GetServices =
         [<Literal>]
         let TypeId = "app.bsky.labeler.getServices"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("detailed")>]
@@ -2912,6 +3169,9 @@ module AppBskyNotification =
         [<Literal>]
         let TypeId = "app.bsky.notification.getPreferences"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
         type Output =
             { [<JsonPropertyName("preferences")>]
               Preferences: Defs.Preferences }
@@ -2919,6 +3179,9 @@ module AppBskyNotification =
     module GetUnreadCount =
         [<Literal>]
         let TypeId = "app.bsky.notification.getUnreadCount"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("priority")>]
@@ -2933,6 +3196,9 @@ module AppBskyNotification =
     module ListActivitySubscriptions =
         [<Literal>]
         let TypeId = "app.bsky.notification.listActivitySubscriptions"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -2949,6 +3215,9 @@ module AppBskyNotification =
     module ListNotifications =
         [<Literal>]
         let TypeId = "app.bsky.notification.listNotifications"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -2996,6 +3265,9 @@ module AppBskyNotification =
         [<Literal>]
         let TypeId = "app.bsky.notification.putActivitySubscription"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("activitySubscription")>]
               ActivitySubscription: Defs.ActivitySubscription
@@ -3012,6 +3284,9 @@ module AppBskyNotification =
         [<Literal>]
         let TypeId = "app.bsky.notification.putPreferences"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("priority")>]
               Priority: bool }
@@ -3019,6 +3294,9 @@ module AppBskyNotification =
     module PutPreferencesV2 =
         [<Literal>]
         let TypeId = "app.bsky.notification.putPreferencesV2"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("chat")>]
@@ -3056,6 +3334,9 @@ module AppBskyNotification =
         [<Literal>]
         let TypeId = "app.bsky.notification.registerPush"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("ageRestricted")>]
               AgeRestricted: bool option
@@ -3072,6 +3353,9 @@ module AppBskyNotification =
         [<Literal>]
         let TypeId = "app.bsky.notification.unregisterPush"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("appId")>]
               AppId: string
@@ -3085,6 +3369,9 @@ module AppBskyNotification =
     module UpdateSeen =
         [<Literal>]
         let TypeId = "app.bsky.notification.updateSeen"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("seenAt")>]
@@ -3438,6 +3725,9 @@ module AppBskyActor =
         [<Literal>]
         let TypeId = "app.bsky.actor.getPreferences"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
         type Output =
             { [<JsonPropertyName("preferences")>]
               Preferences: Defs.Preferences }
@@ -3454,6 +3744,9 @@ module AppBskyActor =
         [<Literal>]
         let TypeId = "app.bsky.actor.getProfiles"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("actors")>]
               Actors: string list }
@@ -3465,6 +3758,9 @@ module AppBskyActor =
     module GetSuggestions =
         [<Literal>]
         let TypeId = "app.bsky.actor.getSuggestions"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -3511,6 +3807,9 @@ module AppBskyActor =
         [<Literal>]
         let TypeId = "app.bsky.actor.putPreferences"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("preferences")>]
               Preferences: Defs.Preferences }
@@ -3518,6 +3817,9 @@ module AppBskyActor =
     module SearchActors =
         [<Literal>]
         let TypeId = "app.bsky.actor.searchActors"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -3538,6 +3840,9 @@ module AppBskyActor =
     module SearchActorsTypeahead =
         [<Literal>]
         let TypeId = "app.bsky.actor.searchActorsTypeahead"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
@@ -3573,6 +3878,9 @@ module AppBskyAgeassurance =
     module Begin =
         [<Literal>]
         let TypeId = "app.bsky.ageassurance.begin"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("countryCode")>]
@@ -3712,6 +4020,9 @@ module AppBskyAgeassurance =
         [<Literal>]
         let TypeId = "app.bsky.ageassurance.getState"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("countryCode")>]
               CountryCode: string
@@ -3728,6 +4039,9 @@ module AppBskyBookmark =
     module CreateBookmark =
         [<Literal>]
         let TypeId = "app.bsky.bookmark.createBookmark"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("cid")>]
@@ -3757,6 +4071,9 @@ module AppBskyBookmark =
         [<Literal>]
         let TypeId = "app.bsky.bookmark.deleteBookmark"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("uri")>]
               Uri: string }
@@ -3768,6 +4085,9 @@ module AppBskyBookmark =
     module GetBookmarks =
         [<Literal>]
         let TypeId = "app.bsky.bookmark.getBookmarks"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -3807,6 +4127,9 @@ module AppBskyContact =
         [<Literal>]
         let TypeId = "app.bsky.contact.dismissMatch"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("subject")>]
               Subject: string }
@@ -3821,6 +4144,9 @@ module AppBskyContact =
     module GetMatches =
         [<Literal>]
         let TypeId = "app.bsky.contact.getMatches"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -3851,6 +4177,9 @@ module AppBskyContact =
         [<Literal>]
         let TypeId = "app.bsky.contact.getSyncStatus"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
         type Output =
             { [<JsonPropertyName("syncStatus")>]
               SyncStatus: Defs.SyncStatus option }
@@ -3865,6 +4194,9 @@ module AppBskyContact =
     module ImportContacts =
         [<Literal>]
         let TypeId = "app.bsky.contact.importContacts"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("contacts")>]
@@ -3907,6 +4239,9 @@ module AppBskyContact =
         [<Literal>]
         let TypeId = "app.bsky.contact.sendNotification"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("from")>]
               From: string
@@ -3916,6 +4251,9 @@ module AppBskyContact =
     module StartPhoneVerification =
         [<Literal>]
         let TypeId = "app.bsky.contact.startPhoneVerification"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("phone")>]
@@ -3937,6 +4275,9 @@ module AppBskyContact =
     module VerifyPhone =
         [<Literal>]
         let TypeId = "app.bsky.contact.verifyPhone"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("code")>]
@@ -3968,6 +4309,9 @@ module AppBskyDraft =
     module CreateDraft =
         [<Literal>]
         let TypeId = "app.bsky.draft.createDraft"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("draft")>]
@@ -4066,6 +4410,9 @@ module AppBskyDraft =
         [<Literal>]
         let TypeId = "app.bsky.draft.deleteDraft"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("id")>]
               Id: string }
@@ -4073,6 +4420,9 @@ module AppBskyDraft =
     module GetDrafts =
         [<Literal>]
         let TypeId = "app.bsky.draft.getDrafts"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -4089,6 +4439,9 @@ module AppBskyDraft =
     module UpdateDraft =
         [<Literal>]
         let TypeId = "app.bsky.draft.updateDraft"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("draft")>]
@@ -4206,6 +4559,9 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getConfig"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
         type Output =
             { [<JsonPropertyName("checkEmailConfirmed")>]
               CheckEmailConfirmed: bool option
@@ -4222,6 +4578,9 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getOnboardingSuggestedStarterPacks"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("limit")>]
               Limit: int64 option }
@@ -4233,6 +4592,9 @@ module AppBskyUnspecced =
     module GetOnboardingSuggestedStarterPacksSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getOnboardingSuggestedStarterPacksSkeleton"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
@@ -4247,6 +4609,9 @@ module AppBskyUnspecced =
     module GetOnboardingSuggestedUsersSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getOnboardingSuggestedUsersSkeleton"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("category")>]
@@ -4266,6 +4631,9 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getPopularFeedGenerators"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -4283,6 +4651,9 @@ module AppBskyUnspecced =
     module GetPostThreadOtherV2 =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getPostThreadOtherV2"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("anchor")>]
@@ -4303,6 +4674,9 @@ module AppBskyUnspecced =
     module GetPostThreadV2 =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getPostThreadV2"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("above")>]
@@ -4336,6 +4710,9 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedFeeds"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("limit")>]
               Limit: int64 option }
@@ -4347,6 +4724,9 @@ module AppBskyUnspecced =
     module GetSuggestedFeedsSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedFeedsSkeleton"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
@@ -4361,6 +4741,9 @@ module AppBskyUnspecced =
     module GetSuggestedOnboardingUsers =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedOnboardingUsers"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("category")>]
@@ -4378,6 +4761,9 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedStarterPacks"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("limit")>]
               Limit: int64 option }
@@ -4389,6 +4775,9 @@ module AppBskyUnspecced =
     module GetSuggestedStarterPacksSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedStarterPacksSkeleton"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
@@ -4403,6 +4792,9 @@ module AppBskyUnspecced =
     module GetSuggestedUsers =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedUsers"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("category")>]
@@ -4419,6 +4811,9 @@ module AppBskyUnspecced =
     module GetSuggestedUsersSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedUsersSkeleton"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("category")>]
@@ -4437,6 +4832,9 @@ module AppBskyUnspecced =
     module GetSuggestionsSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestionsSkeleton"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -4464,6 +4862,9 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getTaggedSuggestions"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
         type Output =
             { [<JsonPropertyName("suggestions")>]
               Suggestions: GetTaggedSuggestions.Suggestion list }
@@ -4479,6 +4880,9 @@ module AppBskyUnspecced =
     module GetTrendingTopics =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getTrendingTopics"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
@@ -4496,6 +4900,9 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getTrends"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("limit")>]
               Limit: int64 option }
@@ -4507,6 +4914,9 @@ module AppBskyUnspecced =
     module GetTrendsSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getTrendsSkeleton"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
@@ -4521,6 +4931,9 @@ module AppBskyUnspecced =
     module InitAgeAssurance =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.initAgeAssurance"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("countryCode")>]
@@ -4543,6 +4956,9 @@ module AppBskyUnspecced =
     module SearchActorsSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.searchActorsSkeleton"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -4571,6 +4987,9 @@ module AppBskyUnspecced =
     module SearchPostsSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.searchPostsSkeleton"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("author")>]
@@ -4616,6 +5035,9 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.searchStarterPacksSkeleton"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -4660,6 +5082,9 @@ module AppBskyVideo =
         [<Literal>]
         let TypeId = "app.bsky.video.getJobStatus"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("jobId")>]
               JobId: string }
@@ -4671,6 +5096,9 @@ module AppBskyVideo =
     module GetUploadLimits =
         [<Literal>]
         let TypeId = "app.bsky.video.getUploadLimits"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("canUpload")>]
@@ -4739,6 +5167,9 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.acceptConvo"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string }
@@ -4750,6 +5181,9 @@ module ChatBskyConvo =
     module AddReaction =
         [<Literal>]
         let TypeId = "chat.bsky.convo.addReaction"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
@@ -4936,6 +5370,9 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.deleteMessageForSelf"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string
@@ -4945,6 +5382,9 @@ module ChatBskyConvo =
     module GetConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.getConvo"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("convoId")>]
@@ -4957,6 +5397,9 @@ module ChatBskyConvo =
     module GetConvoAvailability =
         [<Literal>]
         let TypeId = "chat.bsky.convo.getConvoAvailability"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("members")>]
@@ -4972,6 +5415,9 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.getConvoForMembers"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("members")>]
               Members: string list }
@@ -4983,6 +5429,9 @@ module ChatBskyConvo =
     module GetLog =
         [<Literal>]
         let TypeId = "chat.bsky.convo.getLog"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -4997,6 +5446,9 @@ module ChatBskyConvo =
     module GetMessages =
         [<Literal>]
         let TypeId = "chat.bsky.convo.getMessages"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("convoId")>]
@@ -5016,6 +5468,9 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.leaveConvo"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string }
@@ -5029,6 +5484,9 @@ module ChatBskyConvo =
     module ListConvos =
         [<Literal>]
         let TypeId = "chat.bsky.convo.listConvos"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -5050,6 +5508,9 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.muteConvo"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string }
@@ -5061,6 +5522,9 @@ module ChatBskyConvo =
     module RemoveReaction =
         [<Literal>]
         let TypeId = "chat.bsky.convo.removeReaction"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
@@ -5085,6 +5549,9 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.sendMessage"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string
@@ -5094,6 +5561,9 @@ module ChatBskyConvo =
     module SendMessageBatch =
         [<Literal>]
         let TypeId = "chat.bsky.convo.sendMessageBatch"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("items")>]
@@ -5113,6 +5583,9 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.unmuteConvo"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("convoId")>]
               ConvoId: string }
@@ -5125,6 +5598,9 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.updateAllRead"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("status")>]
               Status: string option }
@@ -5136,6 +5612,9 @@ module ChatBskyConvo =
     module UpdateRead =
         [<Literal>]
         let TypeId = "chat.bsky.convo.updateRead"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
@@ -5151,6 +5630,9 @@ module ChatBskyModeration =
     module GetActorMetadata =
         [<Literal>]
         let TypeId = "chat.bsky.moderation.getActorMetadata"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
@@ -5178,6 +5660,9 @@ module ChatBskyModeration =
         [<Literal>]
         let TypeId = "chat.bsky.moderation.getMessageContext"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("after")>]
               After: int64 option
@@ -5195,6 +5680,9 @@ module ChatBskyModeration =
     module UpdateActorAccess =
         [<Literal>]
         let TypeId = "chat.bsky.moderation.updateActorAccess"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("actor")>]
@@ -5218,6 +5706,9 @@ module ComAtprotoIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.getRecommendedDidCredentials"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
         type Output =
             { [<JsonPropertyName("alsoKnownAs")>]
               AlsoKnownAs: string list option
@@ -5231,6 +5722,9 @@ module ComAtprotoIdentity =
     module RefreshIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.refreshIdentity"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("identifier")>]
@@ -5254,6 +5748,9 @@ module ComAtprotoIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.resolveDid"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("did")>]
               Did: string }
@@ -5272,6 +5769,9 @@ module ComAtprotoIdentity =
     module ResolveHandle =
         [<Literal>]
         let TypeId = "com.atproto.identity.resolveHandle"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("handle")>]
@@ -5307,6 +5807,9 @@ module ComAtprotoIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.signPlcOperation"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("alsoKnownAs")>]
               AlsoKnownAs: string list option
@@ -5327,6 +5830,9 @@ module ComAtprotoIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.submitPlcOperation"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("operation")>]
               Operation: JsonElement }
@@ -5334,6 +5840,9 @@ module ComAtprotoIdentity =
     module UpdateHandle =
         [<Literal>]
         let TypeId = "com.atproto.identity.updateHandle"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("handle")>]
@@ -5343,6 +5852,9 @@ module ComAtprotoLexicon =
     module ResolveLexicon =
         [<Literal>]
         let TypeId = "com.atproto.lexicon.resolveLexicon"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("nsid")>]
@@ -5437,6 +5949,9 @@ module ComAtprotoSync =
         [<Literal>]
         let TypeId = "com.atproto.sync.getHead"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("did")>]
               Did: string }
@@ -5452,6 +5967,9 @@ module ComAtprotoSync =
     module GetHostStatus =
         [<Literal>]
         let TypeId = "com.atproto.sync.getHostStatus"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("hostname")>]
@@ -5474,6 +5992,9 @@ module ComAtprotoSync =
     module GetLatestCommit =
         [<Literal>]
         let TypeId = "com.atproto.sync.getLatestCommit"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("did")>]
@@ -5553,6 +6074,9 @@ module ComAtprotoSync =
         [<Literal>]
         let TypeId = "com.atproto.sync.getRepoStatus"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("did")>]
               Did: string }
@@ -5574,6 +6098,9 @@ module ComAtprotoSync =
     module ListBlobs =
         [<Literal>]
         let TypeId = "com.atproto.sync.listBlobs"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -5608,6 +6135,9 @@ module ComAtprotoSync =
         [<Literal>]
         let TypeId = "com.atproto.sync.listHosts"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -5633,6 +6163,9 @@ module ComAtprotoSync =
     module ListRepos =
         [<Literal>]
         let TypeId = "com.atproto.sync.listRepos"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -5662,6 +6195,9 @@ module ComAtprotoSync =
         [<Literal>]
         let TypeId = "com.atproto.sync.listReposByCollection"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("collection")>]
               Collection: string
@@ -5684,6 +6220,9 @@ module ComAtprotoSync =
         [<Literal>]
         let TypeId = "com.atproto.sync.notifyOfUpdate"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("hostname")>]
               Hostname: string }
@@ -5691,6 +6230,9 @@ module ComAtprotoSync =
     module RequestCrawl =
         [<Literal>]
         let TypeId = "com.atproto.sync.requestCrawl"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("hostname")>]
@@ -5810,6 +6352,9 @@ module ComAtprotoTemp =
         [<Literal>]
         let TypeId = "com.atproto.temp.addReservedHandle"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("handle")>]
               Handle: string }
@@ -5817,6 +6362,9 @@ module ComAtprotoTemp =
     module CheckHandleAvailability =
         [<Literal>]
         let TypeId = "com.atproto.temp.checkHandleAvailability"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("birthDate")>]
@@ -5851,6 +6399,9 @@ module ComAtprotoTemp =
         [<Literal>]
         let TypeId = "com.atproto.temp.checkSignupQueue"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
         type Output =
             { [<JsonPropertyName("activated")>]
               Activated: bool
@@ -5862,6 +6413,9 @@ module ComAtprotoTemp =
     module DereferenceScope =
         [<Literal>]
         let TypeId = "com.atproto.temp.dereferenceScope"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("scope")>]
@@ -5879,6 +6433,9 @@ module ComAtprotoTemp =
         [<Literal>]
         let TypeId = "com.atproto.temp.fetchLabels"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("limit")>]
               Limit: int64 option
@@ -5893,6 +6450,9 @@ module ComAtprotoTemp =
         [<Literal>]
         let TypeId = "com.atproto.temp.requestPhoneVerification"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("phoneNumber")>]
               PhoneNumber: string }
@@ -5900,6 +6460,9 @@ module ComAtprotoTemp =
     module RevokeAccountCredentials =
         [<Literal>]
         let TypeId = "com.atproto.temp.revokeAccountCredentials"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("account")>]
@@ -5933,6 +6496,9 @@ module ToolsOzoneCommunication =
     module CreateTemplate =
         [<Literal>]
         let TypeId = "tools.ozone.communication.createTemplate"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("contentMarkdown")>]
@@ -5975,6 +6541,9 @@ module ToolsOzoneCommunication =
         [<Literal>]
         let TypeId = "tools.ozone.communication.deleteTemplate"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("id")>]
               Id: string }
@@ -5983,6 +6552,9 @@ module ToolsOzoneCommunication =
         [<Literal>]
         let TypeId = "tools.ozone.communication.listTemplates"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
+
         type Output =
             { [<JsonPropertyName("communicationTemplates")>]
               CommunicationTemplates: Defs.TemplateView list }
@@ -5990,6 +6562,9 @@ module ToolsOzoneCommunication =
     module UpdateTemplate =
         [<Literal>]
         let TypeId = "tools.ozone.communication.updateTemplate"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("contentMarkdown")>]
@@ -6015,6 +6590,9 @@ module ToolsOzoneHosting =
     module GetAccountHistory =
         [<Literal>]
         let TypeId = "tools.ozone.hosting.getAccountHistory"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -6062,6 +6640,9 @@ module ToolsOzoneModeration =
     module CancelScheduledActions =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.cancelScheduledActions"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("comment")>]
@@ -6699,6 +7280,9 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.emitEvent"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("createdBy")>]
               CreatedBy: string
@@ -6723,6 +7307,9 @@ module ToolsOzoneModeration =
     module GetAccountTimeline =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getAccountTimeline"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("did")>]
@@ -6776,6 +7363,9 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getRecords"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("uris")>]
               Uris: string list }
@@ -6800,6 +7390,9 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getReporterStats"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("dids")>]
               Dids: string list }
@@ -6811,6 +7404,9 @@ module ToolsOzoneModeration =
     module GetRepos =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getRepos"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("dids")>]
@@ -6824,6 +7420,9 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getSubjects"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("subjects")>]
               Subjects: string list }
@@ -6835,6 +7434,9 @@ module ToolsOzoneModeration =
     module ListScheduledActions =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.listScheduledActions"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("cursor")>]
@@ -6859,6 +7461,9 @@ module ToolsOzoneModeration =
     module QueryEvents =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.queryEvents"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("addedLabels")>]
@@ -6917,6 +7522,9 @@ module ToolsOzoneModeration =
     module QueryStatuses =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.queryStatuses"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("ageAssuranceState")>]
@@ -7002,6 +7610,9 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.scheduleAction"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("action")>]
               Action: JsonElement
@@ -7061,6 +7672,9 @@ module ToolsOzoneModeration =
     module SearchRepos =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.searchRepos"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -7213,6 +7827,9 @@ module ToolsOzoneSafelink =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.addRule"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("action")>]
               Action: Defs.ActionType
@@ -7285,6 +7902,9 @@ module ToolsOzoneSafelink =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.queryEvents"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -7306,6 +7926,9 @@ module ToolsOzoneSafelink =
     module QueryRules =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.queryRules"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("actions")>]
@@ -7335,6 +7958,9 @@ module ToolsOzoneSafelink =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.removeRule"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("comment")>]
               Comment: string option
@@ -7352,6 +7978,9 @@ module ToolsOzoneSafelink =
     module UpdateRule =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.updateRule"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("action")>]
@@ -7375,6 +8004,9 @@ module ToolsOzoneServer =
     module GetConfig =
         [<Literal>]
         let TypeId = "tools.ozone.server.getConfig"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("appview")>]
@@ -7402,6 +8034,9 @@ module ToolsOzoneSet =
     module AddValues =
         [<Literal>]
         let TypeId = "tools.ozone.set.addValues"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("name")>]
@@ -7432,6 +8067,9 @@ module ToolsOzoneSet =
         [<Literal>]
         let TypeId = "tools.ozone.set.deleteSet"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("name")>]
               Name: string }
@@ -7443,6 +8081,9 @@ module ToolsOzoneSet =
     module DeleteValues =
         [<Literal>]
         let TypeId = "tools.ozone.set.deleteValues"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("name")>]
@@ -7457,6 +8098,9 @@ module ToolsOzoneSet =
     module GetValues =
         [<Literal>]
         let TypeId = "tools.ozone.set.getValues"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -7481,6 +8125,9 @@ module ToolsOzoneSet =
     module QuerySets =
         [<Literal>]
         let TypeId = "tools.ozone.set.querySets"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -7532,6 +8179,9 @@ module ToolsOzoneSetting =
         [<Literal>]
         let TypeId = "tools.ozone.setting.listOptions"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -7554,6 +8204,9 @@ module ToolsOzoneSetting =
         [<Literal>]
         let TypeId = "tools.ozone.setting.removeOptions"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("keys")>]
               Keys: string list
@@ -7563,6 +8216,9 @@ module ToolsOzoneSetting =
     module UpsertOption =
         [<Literal>]
         let TypeId = "tools.ozone.setting.upsertOption"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("description")>]
@@ -7592,6 +8248,9 @@ module ToolsOzoneSignature =
         [<Literal>]
         let TypeId = "tools.ozone.signature.findCorrelation"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("dids")>]
               Dids: string list }
@@ -7603,6 +8262,9 @@ module ToolsOzoneSignature =
     module FindRelatedAccounts =
         [<Literal>]
         let TypeId = "tools.ozone.signature.findRelatedAccounts"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -7628,6 +8290,9 @@ module ToolsOzoneSignature =
         [<Literal>]
         let TypeId = "tools.ozone.signature.searchAccounts"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -7646,6 +8311,9 @@ module ToolsOzoneTeam =
     module AddMember =
         [<Literal>]
         let TypeId = "tools.ozone.team.addMember"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
@@ -7690,6 +8358,9 @@ module ToolsOzoneTeam =
         [<Literal>]
         let TypeId = "tools.ozone.team.deleteMember"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("did")>]
               Did: string }
@@ -7704,6 +8375,9 @@ module ToolsOzoneTeam =
     module ListMembers =
         [<Literal>]
         let TypeId = "tools.ozone.team.listMembers"
+
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
@@ -7726,6 +8400,9 @@ module ToolsOzoneTeam =
     module UpdateMember =
         [<Literal>]
         let TypeId = "tools.ozone.team.updateMember"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
@@ -7774,6 +8451,9 @@ module ToolsOzoneVerification =
         [<Literal>]
         let TypeId = "tools.ozone.verification.grantVerifications"
 
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
+
         type Input =
             { [<JsonPropertyName("verifications")>]
               Verifications: GrantVerifications.VerificationInput list }
@@ -7805,6 +8485,9 @@ module ToolsOzoneVerification =
         [<Literal>]
         let TypeId = "tools.ozone.verification.listVerifications"
 
+        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
+
         type Params =
             { [<JsonPropertyName("createdAfter")>]
               CreatedAfter: string option
@@ -7832,6 +8515,9 @@ module ToolsOzoneVerification =
     module RevokeVerifications =
         [<Literal>]
         let TypeId = "tools.ozone.verification.revokeVerifications"
+
+        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+            FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("revokeReason")>]
