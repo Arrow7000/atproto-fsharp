@@ -17,6 +17,7 @@
     <Compile Include="AtIdentifier.fs" />
     <Compile Include="Language.fs" />
     <Compile Include="Uri.fs" />
+    <Compile Include="Converters.fs" />
   </ItemGroup>
 
   <ItemGroup>
