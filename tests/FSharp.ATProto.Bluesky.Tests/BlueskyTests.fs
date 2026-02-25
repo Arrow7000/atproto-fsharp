@@ -2,6 +2,7 @@ module FSharp.ATProto.Bluesky.Tests.BlueskyTests
 
 open Expecto
 open System.Net
+open System.Net.Http
 open System.Text.Json
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
@@ -120,4 +121,98 @@ let replyTests =
             let body = captured.Value.Content.ReadAsStringAsync().Result
             Expect.stringContains body "bafyparent" "parent cid"
             Expect.stringContains body "bafyroot" "root cid"
+    ]
+
+[<Tests>]
+let blobTests =
+    testList "Bluesky.uploadBlob" [
+        testCase "uploadBlob sends binary content with correct content type" <| fun _ ->
+            let mutable captured = None
+            let agent = createMockAgent (fun req ->
+                captured <- Some req
+                jsonResponse HttpStatusCode.OK {| blob = {| ``$type`` = "blob"; ref = {| ``$link`` = "bafyblob" |}; mimeType = "image/png"; size = 100 |} |})
+            agent.Session <- Some testSession
+            let data = [| 0x89uy; 0x50uy; 0x4Euy; 0x47uy |] // PNG header bytes
+            let result = Bluesky.uploadBlob agent data "image/png" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let req = captured.Value
+            Expect.equal (req.Content.Headers.ContentType.MediaType) "image/png" "content type"
+            Expect.equal (req.Method) HttpMethod.Post "POST method"
+
+        testCase "uploadBlob includes Bearer auth header" <| fun _ ->
+            let mutable captured = None
+            let agent = createMockAgent (fun req ->
+                captured <- Some req
+                jsonResponse HttpStatusCode.OK {| blob = {| ``$type`` = "blob"; ref = {| ``$link`` = "bafyblob" |}; mimeType = "image/jpeg"; size = 50 |} |})
+            agent.Session <- Some testSession
+            let result = Bluesky.uploadBlob agent [| 0xFFuy; 0xD8uy |] "image/jpeg" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let req = captured.Value
+            Expect.equal (req.Headers.Authorization.Scheme) "Bearer" "auth scheme"
+            Expect.equal (req.Headers.Authorization.Parameter) "test-jwt" "auth token"
+
+        testCase "uploadBlob returns error on failure" <| fun _ ->
+            let agent = createMockAgent (fun _ ->
+                jsonResponse HttpStatusCode.BadRequest {| error = "InvalidBlob"; message = "too large" |})
+            agent.Session <- Some testSession
+            let result = Bluesky.uploadBlob agent [| 0uy |] "image/png" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isError result "should fail"
+
+        testCase "uploadBlob sends to correct XRPC endpoint" <| fun _ ->
+            let mutable captured = None
+            let agent = createMockAgent (fun req ->
+                captured <- Some req
+                jsonResponse HttpStatusCode.OK {| blob = {| ``$type`` = "blob"; ref = {| ``$link`` = "bafyblob" |}; mimeType = "image/png"; size = 10 |} |})
+            agent.Session <- Some testSession
+            let result = Bluesky.uploadBlob agent [| 0uy |] "image/png" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let req = captured.Value
+            Expect.stringContains (req.RequestUri.ToString()) "com.atproto.repo.uploadBlob" "correct endpoint"
+    ]
+
+[<Tests>]
+let imagePostTests =
+    testList "Bluesky.postWithImages" [
+        testCase "postWithImages uploads blob and creates post with embed" <| fun _ ->
+            let mutable requestCount = 0
+            let agent = createMockAgent (fun req ->
+                requestCount <- requestCount + 1
+                if req.RequestUri.PathAndQuery.Contains("uploadBlob") then
+                    jsonResponse HttpStatusCode.OK
+                        {| blob = {| ``$type`` = "blob"; ref = {| ``$link`` = "bafyblob" |}; mimeType = "image/png"; size = 100 |} |}
+                else
+                    jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.feed.post/abc"; cid = "bafypost" |})
+            agent.Session <- Some testSession
+            let images = [ ([| 0x89uy; 0x50uy |], "image/png", "A test image") ]
+            let result = Bluesky.postWithImages agent "Check this out" images |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            Expect.isGreaterThanOrEqual requestCount 2 "at least 2 requests (upload + create)"
+
+        testCase "postWithImages includes embed in record body" <| fun _ ->
+            let mutable lastBody = ""
+            let agent = createMockAgent (fun req ->
+                let body = req.Content.ReadAsStringAsync().Result
+                lastBody <- body
+                if req.RequestUri.PathAndQuery.Contains("uploadBlob") then
+                    jsonResponse HttpStatusCode.OK
+                        {| blob = {| ``$type`` = "blob"; ref = {| ``$link`` = "bafyblob" |}; mimeType = "image/png"; size = 100 |} |}
+                else
+                    jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.feed.post/abc"; cid = "bafypost" |})
+            agent.Session <- Some testSession
+            let images = [ ([| 0x89uy |], "image/png", "My image") ]
+            let result = Bluesky.postWithImages agent "Look at this" images |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            Expect.stringContains lastBody "app.bsky.embed.images" "embed type in body"
+            Expect.stringContains lastBody "My image" "alt text in body"
+
+        testCase "postWithImages fails if blob upload fails" <| fun _ ->
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.PathAndQuery.Contains("uploadBlob") then
+                    jsonResponse HttpStatusCode.BadRequest {| error = "BlobError"; message = "failed" |}
+                else
+                    jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.feed.post/abc"; cid = "bafypost" |})
+            agent.Session <- Some testSession
+            let images = [ ([| 0x89uy |], "image/png", "fail") ]
+            let result = Bluesky.postWithImages agent "Should fail" images |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isError result "should fail when blob upload fails"
     ]
