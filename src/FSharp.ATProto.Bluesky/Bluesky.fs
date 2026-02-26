@@ -39,21 +39,33 @@ module Bluesky =
     let private nowTimestamp () =
         DateTimeOffset.UtcNow.ToString("o")
 
-    let private sessionDid (agent: AtpAgent) =
-        match agent.Session with
-        | Some s -> s.Did
-        | None -> failwith "Not logged in"
+    let private notLoggedInError : XrpcError =
+        { StatusCode = 401; Error = Some "NotLoggedIn"; Message = Some "No active session" }
 
-    let private createRecord (agent: AtpAgent) (collection: string) (record: obj) =
-        let recordElement = JsonSerializer.SerializeToElement(record, Json.options)
-        let nsid = Nsid.parse collection |> Result.defaultWith failwith
-        ComAtprotoRepo.CreateRecord.call agent
-            { Repo = sessionDid agent
-              Collection = nsid
-              Record = recordElement
-              Rkey = None
-              SwapCommit = None
-              Validate = None }
+    let private sessionDid (agent: AtpAgent) : Result<string, XrpcError> =
+        match agent.Session with
+        | Some s -> Ok s.Did
+        | None -> Error notLoggedInError
+
+    let private toXrpcError (msg: string) : XrpcError =
+        { StatusCode = 400; Error = Some "InvalidRequest"; Message = Some msg }
+
+    let private createRecord (agent: AtpAgent) (collection: string) (record: obj)
+        : Task<Result<ComAtprotoRepo.CreateRecord.Output, XrpcError>> =
+        match sessionDid agent with
+        | Error e -> Task.FromResult(Error e)
+        | Ok did ->
+            match Nsid.parse collection with
+            | Error msg -> Task.FromResult(Error (toXrpcError (sprintf "Invalid NSID: %s" msg)))
+            | Ok nsid ->
+                let recordElement = JsonSerializer.SerializeToElement(record, Json.options)
+                ComAtprotoRepo.CreateRecord.call agent
+                    { Repo = did
+                      Collection = nsid
+                      Record = recordElement
+                      Rkey = None
+                      SwapCommit = None
+                      Validate = None }
 
     let private toPostRef (output: ComAtprotoRepo.CreateRecord.Output) : PostRef =
         { Uri = output.Uri; Cid = output.Cid }
@@ -214,20 +226,28 @@ module Bluesky =
     /// </remarks>
     let deleteRecord (agent: AtpAgent) (atUri: AtUri)
         : Task<Result<unit, XrpcError>> =
-        task {
-            // Parse AT-URI: at://did/collection/rkey
-            let parts = (AtUri.value atUri).Replace("at://", "").Split('/')
-            let repo = parts.[0]
-            let collection = Nsid.parse parts.[1] |> Result.defaultWith failwith
-            let rkey = RecordKey.parse parts.[2] |> Result.defaultWith failwith
-            let! result = ComAtprotoRepo.DeleteRecord.call agent
-                            { Repo = repo
-                              Collection = collection
-                              Rkey = rkey
-                              SwapCommit = None
-                              SwapRecord = None }
-            return result |> Result.map ignore
-        }
+        let repo = AtUri.authority atUri
+        match AtUri.collection atUri, AtUri.rkey atUri with
+        | None, _ ->
+            Task.FromResult(Error (toXrpcError "AT-URI must include a collection"))
+        | _, None ->
+            Task.FromResult(Error (toXrpcError "AT-URI must include a record key"))
+        | Some collStr, Some rkeyStr ->
+            match Nsid.parse collStr, RecordKey.parse rkeyStr with
+            | Error msg, _ ->
+                Task.FromResult(Error (toXrpcError (sprintf "Invalid collection NSID: %s" msg)))
+            | _, Error msg ->
+                Task.FromResult(Error (toXrpcError (sprintf "Invalid record key: %s" msg)))
+            | Ok collection, Ok rkey ->
+                task {
+                    let! result = ComAtprotoRepo.DeleteRecord.call agent
+                                    { Repo = repo
+                                      Collection = collection
+                                      Rkey = rkey
+                                      SwapCommit = None
+                                      SwapRecord = None }
+                    return result |> Result.map ignore
+                }
 
     /// <summary>
     /// Upload a blob (image, video, or other binary data) to the PDS.
@@ -261,7 +281,9 @@ module Bluesky =
             if response.IsSuccessStatusCode then
                 let! json = response.Content.ReadAsStringAsync()
                 let doc = JsonSerializer.Deserialize<JsonElement>(json)
-                return Ok(doc.GetProperty("blob"))
+                match doc.TryGetProperty("blob") with
+                | true, blob -> return Ok blob
+                | false, _ -> return Error (toXrpcError "Response missing 'blob' property")
             else
                 let! errorJson = response.Content.ReadAsStringAsync()
                 try

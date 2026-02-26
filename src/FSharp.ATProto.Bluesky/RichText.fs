@@ -135,17 +135,21 @@ module RichText =
             for facet in detected do
                 match facet with
                 | DetectedMention (s, e, handle) ->
-                    let handleTyped = Handle.parse handle |> Result.defaultWith failwith
-                    let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handleTyped }
-                    match result with
-                    | Ok output ->
-                        let feature = AppBskyRichtext.Facet.FacetFeaturesItem.Mention { Did = output.Did }
-                        results.Add(makeFacet s e feature)
-                    | Error _ -> ()
+                    match Handle.parse handle with
+                    | Error _ -> () // Drop mentions with unparseable handles
+                    | Ok handleTyped ->
+                        let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handleTyped }
+                        match result with
+                        | Ok output ->
+                            let feature = AppBskyRichtext.Facet.FacetFeaturesItem.Mention { Did = output.Did }
+                            results.Add(makeFacet s e feature)
+                        | Error _ -> () // Drop unresolvable mentions
                 | DetectedLink (s, e, uri) ->
-                    let uriTyped = FSharp.ATProto.Syntax.Uri.parse uri |> Result.defaultWith failwith
-                    let feature = AppBskyRichtext.Facet.FacetFeaturesItem.Link { Uri = uriTyped }
-                    results.Add(makeFacet s e feature)
+                    match FSharp.ATProto.Syntax.Uri.parse uri with
+                    | Error _ -> () // Drop links with unparseable URIs
+                    | Ok uriTyped ->
+                        let feature = AppBskyRichtext.Facet.FacetFeaturesItem.Link { Uri = uriTyped }
+                        results.Add(makeFacet s e feature)
                 | DetectedTag (s, e, tag) ->
                     let feature = AppBskyRichtext.Facet.FacetFeaturesItem.Tag { Tag = tag }
                     results.Add(makeFacet s e feature)

@@ -61,6 +61,15 @@ let postTests =
             ]
             let result = Bluesky.postWith agent "#hello world" facets |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
+
+        testCase "postWith returns NotLoggedIn error without session" <| fun _ ->
+            let agent = createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
+            // No session set
+            let result = Bluesky.postWith agent "Hello world" [] |> Async.AwaitTask |> Async.RunSynchronously
+            let err = Expect.wantError result "should fail without session"
+            Expect.equal err.StatusCode 401 "status code"
+            Expect.equal err.Error (Some "NotLoggedIn") "error code"
+            Expect.equal err.Message (Some "No active session") "message"
     ]
 
 [<Tests>]
@@ -89,6 +98,13 @@ let likeTests =
             Expect.isOk result "should succeed"
             let body = captured.Value.Content.ReadAsStringAsync().Result
             Expect.stringContains body "app.bsky.feed.repost" "repost collection"
+
+        testCase "like returns NotLoggedIn error without session" <| fun _ ->
+            let agent = createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
+            let result = Bluesky.like agent (parseAtUri "at://did:plc:other/app.bsky.feed.post/abc") (parseCid "bafyreiabc") |> Async.AwaitTask |> Async.RunSynchronously
+            let err = Expect.wantError result "should fail without session"
+            Expect.equal err.StatusCode 401 "status code"
+            Expect.equal err.Error (Some "NotLoggedIn") "error code"
     ]
 
 [<Tests>]
@@ -117,6 +133,12 @@ let followTests =
             Expect.isOk result "should succeed"
             let body = captured.Value.Content.ReadAsStringAsync().Result
             Expect.stringContains body "app.bsky.graph.block" "block collection"
+
+        testCase "follow returns NotLoggedIn error without session" <| fun _ ->
+            let agent = createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
+            let result = Bluesky.follow agent (parseDid "did:plc:other") |> Async.AwaitTask |> Async.RunSynchronously
+            let err = Expect.wantError result "should fail without session"
+            Expect.equal err.StatusCode 401 "status code"
     ]
 
 [<Tests>]
@@ -131,6 +153,20 @@ let deleteTests =
             Expect.stringContains body "app.bsky.feed.post" "collection"
             Expect.stringContains body "abc123" "rkey"
             Expect.stringContains body "did:plc:testuser" "repo"
+
+        testCase "deleteRecord returns error for AT-URI without collection" <| fun _ ->
+            let agent = deleteRecordAgent (fun _ -> ())
+            let result = Bluesky.deleteRecord agent (parseAtUri "at://did:plc:testuser") |> Async.AwaitTask |> Async.RunSynchronously
+            let err = Expect.wantError result "should fail without collection"
+            Expect.equal err.StatusCode 400 "status code"
+            Expect.isSome err.Message "should have message"
+
+        testCase "deleteRecord returns error for AT-URI without rkey" <| fun _ ->
+            let agent = deleteRecordAgent (fun _ -> ())
+            let result = Bluesky.deleteRecord agent (parseAtUri "at://did:plc:testuser/app.bsky.feed.post") |> Async.AwaitTask |> Async.RunSynchronously
+            let err = Expect.wantError result "should fail without rkey"
+            Expect.equal err.StatusCode 400 "status code"
+            Expect.isSome err.Message "should have message"
     ]
 
 [<Tests>]
@@ -207,6 +243,15 @@ let blobTests =
             Expect.isOk result "should succeed"
             let req = captured.Value
             Expect.stringContains (req.RequestUri.ToString()) "com.atproto.repo.uploadBlob" "correct endpoint"
+
+        testCase "uploadBlob returns error when response missing blob property" <| fun _ ->
+            let agent = createMockAgent (fun _ ->
+                jsonResponse HttpStatusCode.OK {| unexpected = "data" |})
+            agent.Session <- Some testSession
+            let result = Bluesky.uploadBlob agent [| 0uy |] "image/png" |> Async.AwaitTask |> Async.RunSynchronously
+            let err = Expect.wantError result "should fail when blob property missing"
+            Expect.equal err.StatusCode 400 "status code"
+            Expect.isSome err.Message "should have message"
     ]
 
 [<Tests>]
