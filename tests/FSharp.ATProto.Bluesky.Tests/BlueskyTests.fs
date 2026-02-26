@@ -369,6 +369,86 @@ let replyTests =
     ]
 
 [<Tests>]
+let replyToTests =
+    testList "Bluesky.replyTo" [
+        testCase "replyTo top-level post uses parent as root" <| fun _ ->
+            let mutable captured = None
+            let agent = createRecordAgent (fun req -> captured <- Some req)
+            let parent = { PostRef.Uri = parseAtUri "at://did:plc:p/app.bsky.feed.post/parent"; Cid = parseCid "bafyparent" }
+            // A top-level post has no "reply" field
+            let recordJson = JsonSerializer.SerializeToElement({| text = "Hello"; createdAt = "2026-01-01T00:00:00Z" |})
+            let result =
+                Bluesky.replyTo agent "My reply" parent recordJson
+                |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            // Both parent and root should be the same (the parent post itself)
+            Expect.stringContains body "bafyparent" "parent cid in body"
+            // The root URI should also be the parent URI since there's no reply field
+            Expect.stringContains body "at://did:plc:p/app.bsky.feed.post/parent" "parent uri used as root"
+
+        testCase "replyTo reply post extracts root from reply field" <| fun _ ->
+            let mutable captured = None
+            let agent = createRecordAgent (fun req -> captured <- Some req)
+            let parent = { PostRef.Uri = parseAtUri "at://did:plc:p/app.bsky.feed.post/parent"; Cid = parseCid "bafyparent" }
+            // A reply post has a "reply" field with root info
+            let recordJson = JsonSerializer.SerializeToElement(
+                {| text = "A reply"
+                   createdAt = "2026-01-01T00:00:00Z"
+                   reply = {| root = {| uri = "at://did:plc:r/app.bsky.feed.post/root"; cid = "bafyroot00" |}
+                              parent = {| uri = "at://did:plc:x/app.bsky.feed.post/other"; cid = "bafyother0" |} |} |})
+            let result =
+                Bluesky.replyTo agent "Deeper reply" parent recordJson
+                |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            // Parent should be the one we passed in
+            Expect.stringContains body "bafyparent" "parent cid in body"
+            // Root should be extracted from the reply field, NOT the parent
+            Expect.stringContains body "bafyroot00" "root cid from reply field"
+            Expect.stringContains body "at://did:plc:r/app.bsky.feed.post/root" "root uri from reply field"
+
+        testCase "replyTo returns error for invalid root URI in reply field" <| fun _ ->
+            let agent = createRecordAgent (fun _ -> ())
+            let parent = { PostRef.Uri = parseAtUri "at://did:plc:p/app.bsky.feed.post/parent"; Cid = parseCid "bafyparent" }
+            let recordJson = JsonSerializer.SerializeToElement(
+                {| text = "A reply"
+                   reply = {| root = {| uri = "not-a-valid-uri"; cid = "bafyroot00" |}
+                              parent = {| uri = "at://did:plc:x/app.bsky.feed.post/x"; cid = "bafyother0" |} |} |})
+            let result =
+                Bluesky.replyTo agent "Reply" parent recordJson
+                |> Async.AwaitTask |> Async.RunSynchronously
+            let err = Expect.wantError result "should fail for invalid root URI"
+            Expect.equal err.StatusCode 400 "status code"
+            Expect.isSome err.Message "should have error message"
+
+        testCase "replyTo returns error for malformed reply field" <| fun _ ->
+            let agent = createRecordAgent (fun _ -> ())
+            let parent = { PostRef.Uri = parseAtUri "at://did:plc:p/app.bsky.feed.post/parent"; Cid = parseCid "bafyparent" }
+            // reply field exists but has wrong structure (no root property)
+            let recordJson = JsonSerializer.SerializeToElement(
+                {| text = "A reply"
+                   reply = {| wrong = "structure" |} |})
+            let result =
+                Bluesky.replyTo agent "Reply" parent recordJson
+                |> Async.AwaitTask |> Async.RunSynchronously
+            let err = Expect.wantError result "should fail for malformed reply"
+            Expect.equal err.StatusCode 400 "status code"
+            Expect.isSome err.Message "should have error message"
+
+        testCase "replyTo returns PostRef on success" <| fun _ ->
+            let agent = createRecordAgent (fun _ -> ())
+            let parent = { PostRef.Uri = parseAtUri "at://did:plc:p/app.bsky.feed.post/parent"; Cid = parseCid "bafyparent" }
+            let recordJson = JsonSerializer.SerializeToElement({| text = "Hello" |})
+            let result =
+                Bluesky.replyTo agent "Reply" parent recordJson
+                |> Async.AwaitTask |> Async.RunSynchronously
+            let postRef = Expect.wantOk result "should succeed"
+            Expect.equal (AtUri.value postRef.Uri) "at://did:plc:testuser/app.bsky.feed.post/abc123" "uri"
+            Expect.equal (Cid.value postRef.Cid) "bafyreiabc123" "cid"
+    ]
+
+[<Tests>]
 let blobTests =
     testList "Bluesky.uploadBlob" [
         testCase "uploadBlob sends binary content with correct content type" <| fun _ ->
