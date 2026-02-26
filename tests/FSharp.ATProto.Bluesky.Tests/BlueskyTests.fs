@@ -762,3 +762,34 @@ let getNotificationsTests =
             Expect.equal output.Cursor (Some "notif-cursor") "cursor"
             Expect.equal output.Notifications [] "empty notifications"
     ]
+
+[<Tests>]
+let loginTests =
+    testList "Bluesky.login" [
+        testCase "loginWithClient authenticates and returns agent with session" <| fun _ ->
+            let loginResponse =
+                {| did = "did:plc:testlogin"
+                   handle = "testlogin.bsky.social"
+                   accessJwt = "access-jwt-123"
+                   refreshJwt = "refresh-jwt-456" |}
+            let client = new HttpClient(new MockHandler(fun _ ->
+                jsonResponse HttpStatusCode.OK loginResponse))
+            let result =
+                Bluesky.loginWithClient client "https://bsky.social" "testlogin.bsky.social" "app-pass"
+                |> Async.AwaitTask |> Async.RunSynchronously
+            let agent = Expect.wantOk result "login should succeed"
+            Expect.isSome agent.Session "agent should have session"
+            let session = agent.Session.Value
+            Expect.equal (Did.value session.Did) "did:plc:testlogin" "session DID"
+            Expect.equal (Handle.value session.Handle) "testlogin.bsky.social" "session handle"
+            Expect.equal session.AccessJwt "access-jwt-123" "access JWT"
+            Expect.equal session.RefreshJwt "refresh-jwt-456" "refresh JWT"
+
+        testCase "loginWithClient returns error on auth failure" <| fun _ ->
+            let client = new HttpClient(new MockHandler(fun _ ->
+                jsonResponse HttpStatusCode.Unauthorized {| error = "AuthenticationRequired"; message = "Invalid password" |}))
+            let result =
+                Bluesky.loginWithClient client "https://bsky.social" "test.bsky.social" "wrong-pass"
+                |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isError result "login should fail"
+    ]

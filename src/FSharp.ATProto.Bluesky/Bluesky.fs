@@ -132,6 +132,47 @@ module Bluesky =
         { Uri = output.Uri; Cid = output.Cid }
 
     /// <summary>
+    /// Create an agent and authenticate in one step.
+    /// This is the simplest way to get started with the Bluesky API.
+    /// </summary>
+    /// <param name="baseUrl">The PDS base URL (e.g. <c>"https://bsky.social"</c>).</param>
+    /// <param name="identifier">A handle (e.g. <c>"alice.bsky.social"</c>) or DID.</param>
+    /// <param name="password">An app password (not the account password).</param>
+    /// <returns>An authenticated <see cref="AtpAgent"/> on success, or an <see cref="XrpcError"/>.</returns>
+    /// <example>
+    /// <code>
+    /// let! agent = Bluesky.login "https://bsky.social" "alice.bsky.social" "app-password"
+    /// </code>
+    /// </example>
+    let login (baseUrl: string) (identifier: string) (password: string) : Task<Result<AtpAgent, XrpcError>> =
+        task {
+            let agent = AtpAgent.create baseUrl
+            let! result = AtpAgent.login identifier password agent
+            return result |> Result.map (fun _ -> agent)
+        }
+
+    /// <summary>
+    /// Create an agent with a custom <see cref="System.Net.Http.HttpClient"/> and authenticate.
+    /// Useful for testing with mock HTTP handlers or custom client configuration.
+    /// </summary>
+    /// <param name="client">The HTTP client to use for all requests.</param>
+    /// <param name="baseUrl">The PDS base URL (e.g. <c>"https://bsky.social"</c>).</param>
+    /// <param name="identifier">A handle (e.g. <c>"alice.bsky.social"</c>) or DID.</param>
+    /// <param name="password">An app password (not the account password).</param>
+    /// <returns>An authenticated <see cref="AtpAgent"/> on success, or an <see cref="XrpcError"/>.</returns>
+    let loginWithClient
+        (client: HttpClient)
+        (baseUrl: string)
+        (identifier: string)
+        (password: string)
+        : Task<Result<AtpAgent, XrpcError>> =
+        task {
+            let agent = AtpAgent.createWithClient client baseUrl
+            let! result = AtpAgent.login identifier password agent
+            return result |> Result.map (fun _ -> agent)
+        }
+
+    /// <summary>
     /// Create a post with pre-resolved facets. Use this when you have already detected
     /// and resolved rich text facets, or when you want full control over facet content.
     /// </summary>
