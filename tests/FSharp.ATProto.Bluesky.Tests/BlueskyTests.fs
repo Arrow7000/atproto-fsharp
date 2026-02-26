@@ -636,6 +636,29 @@ let getProfileTests =
             agent.Session <- Some testSession
             let result = Bluesky.getProfile agent "nonexistent" |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isError result "should fail"
+
+        testCase "getProfile accepts Handle directly" <| fun _ ->
+            let mutable captured = None
+            let agent = queryAgent (fun req -> captured <- Some req) profileJson
+            let handle = Handle.parse "alice.bsky.social" |> Result.defaultWith failwith
+            let result = Bluesky.getProfile agent handle |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            Expect.stringContains (captured.Value.RequestUri.ToString()) "alice.bsky.social" "handle value in query string"
+
+        testCase "getProfile accepts Did directly" <| fun _ ->
+            let mutable captured = None
+            let agent = queryAgent (fun req -> captured <- Some req) profileJson
+            let did = Did.parse "did:plc:testuser" |> Result.defaultWith failwith
+            let result = Bluesky.getProfile agent did |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            Expect.stringContains (captured.Value.RequestUri.ToString()) "did%3Aplc%3Atestuser" "DID value in query string (URL-encoded)"
+
+        testCase "getProfile still accepts plain string" <| fun _ ->
+            let mutable captured = None
+            let agent = queryAgent (fun req -> captured <- Some req) profileJson
+            let result = Bluesky.getProfile agent "bob.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            Expect.stringContains (captured.Value.RequestUri.ToString()) "bob.bsky.social" "string value in query string"
     ]
 
 [<Tests>]

@@ -77,11 +77,26 @@ type BlobRef =
       Size: int64 }
 
 /// <summary>
+/// Witness type enabling SRTP-based overloading for actor parameters.
+/// Allows functions like <c>getProfile</c> to accept <see cref="Handle"/>, <see cref="Did"/>, or <c>string</c> directly.
+/// This type is an implementation detail and should not be used directly.
+/// </summary>
+[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type ActorWitness =
+    | ActorWitness
+    static member ToActorString(ActorWitness, h: Handle) = Handle.value h
+    static member ToActorString(ActorWitness, d: Did) = Did.value d
+    static member ToActorString(ActorWitness, s: string) = s
+
+/// <summary>
 /// High-level convenience methods for common Bluesky operations:
 /// posting, replying, liking, reposting, following, blocking, uploading blobs, and deleting records.
 /// All methods require an authenticated <see cref="AtpAgent"/>.
 /// </summary>
 module Bluesky =
+
+    let inline internal toActorString (x: ^a) : string =
+        ((^a or ActorWitness) : (static member ToActorString : ActorWitness * ^a -> string) (ActorWitness, x))
 
     let private nowTimestamp () =
         DateTimeOffset.UtcNow.ToString("o")
@@ -589,14 +604,15 @@ module Bluesky =
     // ── Read convenience methods ────────────────────────────────────────
 
     /// <summary>
-    /// Get a user's profile by handle or DID string.
+    /// Get a user's profile. Accepts a <see cref="Handle"/>, <see cref="Did"/>, or plain <c>string</c>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="actor">A handle (e.g., <c>alice.bsky.social</c>) or DID (e.g., <c>did:plc:...</c>).</param>
+    /// <param name="actor">A <see cref="Handle"/>, <see cref="Did"/>, or string identifier.</param>
     /// <returns>The profile view on success, or an <see cref="XrpcError"/>.</returns>
-    let getProfile (agent: AtpAgent) (actor: string)
+    let inline getProfile (agent: AtpAgent) (actor: ^a)
         : Task<Result<AppBskyActor.GetProfile.Output, XrpcError>> =
-        AppBskyActor.GetProfile.query agent { Actor = actor }
+        let actorStr = toActorString actor
+        AppBskyActor.GetProfile.query agent { Actor = actorStr }
 
     /// <summary>
     /// Get the authenticated user's home timeline.
