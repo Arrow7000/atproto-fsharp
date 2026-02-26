@@ -35,7 +35,7 @@ module AtUri =
     /// Extract the authority segment (DID or handle) from an AT-URI.
     /// </summary>
     /// <param name="atUri">The AT-URI to extract the authority from.</param>
-    /// <returns>The authority string (e.g. <c>"did:plc:z72i7hdynmk6r22z27h6tvur"</c> or <c>"alice.bsky.social"</c>).</returns>
+    /// <returns>The authority string (e.g. <c>"did:plc:z72i7hdynmk6r22z27h6tvur"</c> or <c>"my-handle.bsky.social"</c>).</returns>
     let authority atUri =
         (segments atUri).[0]
 
@@ -73,7 +73,7 @@ module AtUri =
     /// </returns>
     /// <example>
     /// <code>
-    /// match AtUri.parse "at://alice.bsky.social/app.bsky.feed.post/3k2la3b" with
+    /// match AtUri.parse "at://my-handle.bsky.social/app.bsky.feed.post/3k2la3b" with
     /// | Ok uri -> printfn "Valid: %s" (AtUri.value uri)
     /// | Error e -> printfn "Invalid: %s" e
     /// </code>

@@ -4,7 +4,7 @@ open System.Text.RegularExpressions
 
 /// <summary>
 /// A handle (domain name) used as a human-readable identifier in the AT Protocol.
-/// Handles are DNS-based names (e.g. <c>alice.bsky.social</c>) that resolve to a <see cref="Did"/>.
+/// Handles are DNS-based names (e.g. <c>my-handle.bsky.social</c>) that resolve to a <see cref="Did"/>.
 /// They must be valid domain names with at least two segments and a maximum length of 253 characters.
 /// </summary>
 /// <remarks>
@@ -27,14 +27,14 @@ module Handle =
     /// Extract the string representation of a handle.
     /// </summary>
     /// <param name="handle">The handle to extract the value from.</param>
-    /// <returns>The full handle string (e.g. <c>"alice.bsky.social"</c>).</returns>
+    /// <returns>The full handle string (e.g. <c>"my-handle.bsky.social"</c>).</returns>
     let value (Handle s) = s
 
     /// <summary>
     /// Parse and validate a handle string.
     /// </summary>
     /// <param name="s">
-    /// A handle string in domain-name format (e.g. <c>"alice.bsky.social"</c>).
+    /// A handle string in domain-name format (e.g. <c>"my-handle.bsky.social"</c>).
     /// Must be a valid hostname with at least two segments, each segment starting and
     /// ending with an alphanumeric character, and the TLD starting with a letter.
     /// </param>
@@ -45,7 +45,7 @@ module Handle =
     /// </returns>
     /// <example>
     /// <code>
-    /// match Handle.parse "alice.bsky.social" with
+    /// match Handle.parse "my-handle.bsky.social" with
     /// | Ok handle -> printfn "Valid: %s" (Handle.value handle)
     /// | Error e -> printfn "Invalid: %s" e
     /// </code>

@@ -175,7 +175,7 @@ module Xrpc =
     /// <example>
     /// <code>
     /// type GetProfileParams = { Actor: string }
-    /// let! result = Xrpc.query "app.bsky.actor.getProfile" { Actor = "alice.bsky.social" } agent
+    /// let! result = Xrpc.query "app.bsky.actor.getProfile" { Actor = "my-handle.bsky.social" } agent
     /// </code>
     /// </example>
     let query<'P, 'O> (nsid: string) (parameters: 'P) (agent: AtpAgent) : Task<Result<'O, XrpcError>> =

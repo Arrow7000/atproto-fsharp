@@ -45,9 +45,9 @@ let tests =
 
         testList "Handle" [
             testCase "roundtrip" <| fun () ->
-                let handle = Handle.parse "alice.bsky.social" |> Result.defaultWith failwith
+                let handle = Handle.parse "my-handle.bsky.social" |> Result.defaultWith failwith
                 let result = roundtrip handle
-                Expect.equal (Handle.value result) "alice.bsky.social" "Handle roundtrip"
+                Expect.equal (Handle.value result) "my-handle.bsky.social" "Handle roundtrip"
 
             testCase "rejects invalid" <| fun () ->
                 expectInvalid<Handle> "\"not a handle!\""

@@ -46,13 +46,13 @@ let queryTests =
 
             let result =
                 Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile"
-                    { Actor = "alice.bsky.social" } agent
+                    { Actor = "my-handle.bsky.social" } agent
                 |> Async.AwaitTask |> Async.RunSynchronously
 
             let req = capturedRequest.Value
             Expect.equal req.Method HttpMethod.Get "should be GET"
             Expect.stringContains (string req.RequestUri) "xrpc/app.bsky.actor.getProfile" "correct path"
-            Expect.stringContains (string req.RequestUri) "actor=alice.bsky.social" "has query param"
+            Expect.stringContains (string req.RequestUri) "actor=my-handle.bsky.social" "has query param"
 
             match result with
             | Ok output ->

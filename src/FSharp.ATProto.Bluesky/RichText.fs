@@ -93,8 +93,8 @@ module RichText =
     /// </remarks>
     /// <example>
     /// <code>
-    /// let facets = RichText.detect "Hello @alice.bsky.social! #atproto"
-    /// // Returns [DetectedMention(6, 27, "alice.bsky.social"); DetectedTag(29, 37, "atproto")]
+    /// let facets = RichText.detect "Hello @my-handle.bsky.social! #atproto"
+    /// // Returns [DetectedMention(6, 28, "my-handle.bsky.social"); DetectedTag(30, 38, "atproto")]
     /// </code>
     /// </example>
     let detect (text: string) : DetectedFacet list =
@@ -166,7 +166,7 @@ module RichText =
     /// <returns>A list of resolved <see cref="AppBskyRichtext.Facet.Facet"/> records.</returns>
     /// <example>
     /// <code>
-    /// let! facets = RichText.parse agent "Hello @alice.bsky.social! Check https://example.com #atproto"
+    /// let! facets = RichText.parse agent "Hello @my-handle.bsky.social! Check https://example.com #atproto"
     /// </code>
     /// </example>
     let parse (agent: AtpAgent) (text: string) : Task<AppBskyRichtext.Facet.Facet list> =

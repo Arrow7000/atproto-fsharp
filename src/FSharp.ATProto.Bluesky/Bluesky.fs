@@ -199,12 +199,12 @@ module Bluesky =
     /// This is the simplest way to get started with the Bluesky API.
     /// </summary>
     /// <param name="baseUrl">The PDS base URL (e.g. <c>"https://bsky.social"</c>).</param>
-    /// <param name="identifier">A handle (e.g. <c>"alice.bsky.social"</c>) or DID.</param>
+    /// <param name="identifier">A handle (e.g. <c>"my-handle.bsky.social"</c>) or DID.</param>
     /// <param name="password">An app password (not the account password).</param>
     /// <returns>An authenticated <see cref="AtpAgent"/> on success, or an <see cref="XrpcError"/>.</returns>
     /// <example>
     /// <code>
-    /// let! agent = Bluesky.login "https://bsky.social" "alice.bsky.social" "app-password"
+    /// let! agent = Bluesky.login "https://bsky.social" "my-handle.bsky.social" "app-password"
     /// </code>
     /// </example>
     let login (baseUrl: string) (identifier: string) (password: string) : Task<Result<AtpAgent, XrpcError>> =
@@ -220,7 +220,7 @@ module Bluesky =
     /// </summary>
     /// <param name="client">The HTTP client to use for all requests.</param>
     /// <param name="baseUrl">The PDS base URL (e.g. <c>"https://bsky.social"</c>).</param>
-    /// <param name="identifier">A handle (e.g. <c>"alice.bsky.social"</c>) or DID.</param>
+    /// <param name="identifier">A handle (e.g. <c>"my-handle.bsky.social"</c>) or DID.</param>
     /// <param name="password">An app password (not the account password).</param>
     /// <returns>An authenticated <see cref="AtpAgent"/> on success, or an <see cref="XrpcError"/>.</returns>
     let loginWithClient
@@ -269,7 +269,7 @@ module Bluesky =
     /// </remarks>
     /// <example>
     /// <code>
-    /// let! result = Bluesky.post agent "Hello @alice.bsky.social! Check out https://example.com #atproto"
+    /// let! result = Bluesky.post agent "Hello @my-handle.bsky.social! Check out https://example.com #atproto"
     /// </code>
     /// </example>
     let post (agent: AtpAgent) (text: string)
@@ -449,7 +449,7 @@ module Bluesky =
     /// it is parsed as a DID directly. Otherwise, the handle is resolved to a DID first.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="identifier">A DID string (e.g., <c>did:plc:abc123</c>) or handle (e.g., <c>alice.bsky.social</c>).</param>
+    /// <param name="identifier">A DID string (e.g., <c>did:plc:abc123</c>) or handle (e.g., <c>my-handle.bsky.social</c>).</param>
     /// <returns>A <see cref="FollowRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>FollowRef</c> to <see cref="unfollow"/> to undo.</returns>
     /// <remarks>
     /// For type-safe usage when you already have a <see cref="Did"/>, use <see cref="follow"/> instead.
@@ -467,7 +467,7 @@ module Bluesky =
     /// it is parsed as a DID directly. Otherwise, the handle is resolved to a DID first.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="identifier">A DID string (e.g., <c>did:plc:abc123</c>) or handle (e.g., <c>alice.bsky.social</c>).</param>
+    /// <param name="identifier">A DID string (e.g., <c>did:plc:abc123</c>) or handle (e.g., <c>my-handle.bsky.social</c>).</param>
     /// <returns>A <see cref="BlockRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>BlockRef</c> to <see cref="unblock"/> to undo.</returns>
     /// <remarks>
     /// For type-safe usage when you already have a <see cref="Did"/>, use <see cref="block"/> instead.

@@ -70,7 +70,7 @@ module AtpAgent =
     /// Logs in to a PDS with an identifier and app password.
     /// On success, stores the session on the agent for subsequent authenticated requests.
     /// </summary>
-    /// <param name="identifier">A handle (e.g. <c>"alice.bsky.social"</c>) or DID (e.g. <c>"did:plc:xyz123"</c>).</param>
+    /// <param name="identifier">A handle (e.g. <c>"my-handle.bsky.social"</c>) or DID (e.g. <c>"did:plc:xyz123"</c>).</param>
     /// <param name="password">An app password (not the account password).</param>
     /// <param name="agent">The agent to authenticate.</param>
     /// <returns>
@@ -85,7 +85,7 @@ module AtpAgent =
     /// <example>
     /// <code>
     /// let agent = AtpAgent.create "https://bsky.social"
-    /// let! result = AtpAgent.login "alice.bsky.social" "app-password" agent
+    /// let! result = AtpAgent.login "my-handle.bsky.social" "app-password" agent
     /// match result with
     /// | Ok session -> printfn "Logged in as %s" session.Handle
     /// | Error e -> printfn "Login failed: %A" e.Message

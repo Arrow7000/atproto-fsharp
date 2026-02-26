@@ -7,13 +7,13 @@ open FSharp.ATProto.Bluesky
 let detectTests =
     testList "RichText.detect" [
         testCase "detects mention in text" <| fun _ ->
-            let facets = RichText.detect "Hello @alice.bsky.social!"
+            let facets = RichText.detect "Hello @my-handle.bsky.social!"
             Expect.equal facets.Length 1 "should find one facet"
             match facets.[0] with
             | RichText.DetectedMention (s, e, h) ->
                 Expect.equal s 6 "byteStart"
-                Expect.equal e 24 "byteEnd"
-                Expect.equal h "alice.bsky.social" "handle"
+                Expect.equal e 28 "byteEnd"
+                Expect.equal h "my-handle.bsky.social" "handle"
             | _ -> failtest "expected mention"
 
         testCase "detects link in text" <| fun _ ->
@@ -37,7 +37,7 @@ let detectTests =
             | _ -> failtest "expected tag"
 
         testCase "detects multiple facets" <| fun _ ->
-            let facets = RichText.detect "Hi @alice.bsky.social check #atproto"
+            let facets = RichText.detect "Hi @my-handle.bsky.social check #atproto"
             Expect.equal facets.Length 2 "should find two facets"
 
         testCase "no facets in plain text" <| fun _ ->
@@ -50,23 +50,23 @@ let detectTests =
 
         testCase "correct byte offsets with emoji" <| fun _ ->
             // 👋 is 4 bytes in UTF-8
-            let facets = RichText.detect "👋 @alice.bsky.social"
+            let facets = RichText.detect "👋 @my-handle.bsky.social"
             Expect.equal facets.Length 1 "should find one facet"
             match facets.[0] with
             | RichText.DetectedMention (s, e, _) ->
                 Expect.equal s 5 "byteStart (4 bytes emoji + 1 byte space)"
-                Expect.equal e 23 "byteEnd (5 + 18 = 23)"
+                Expect.equal e 27 "byteEnd (5 + 22 = 27)"
             | _ -> failtest "expected mention"
 
         testCase "correct byte offsets with accented chars" <| fun _ ->
             // "Posição " has multibyte chars: ç (2 bytes), ã (2 bytes)
-            let facets = RichText.detect "Posição @alice.bsky.social"
+            let facets = RichText.detect "Posição @my-handle.bsky.social"
             Expect.equal facets.Length 1 "should find one facet"
             match facets.[0] with
             | RichText.DetectedMention (s, e, _) ->
                 // P(1)+o(1)+s(1)+i(1)+ç(2)+ã(2)+o(1)+ (1) = 10 bytes
                 Expect.equal s 10 "byteStart"
-                Expect.equal e 28 "byteEnd (10 + 18 = 28)"
+                Expect.equal e 32 "byteEnd (10 + 22 = 32)"
             | _ -> failtest "expected mention"
 
         testCase "strips trailing punctuation from links" <| fun _ ->
@@ -81,7 +81,7 @@ let detectTests =
             Expect.equal facets.Length 0 "pure numeric hashtag excluded"
 
         testCase "mention at start of text" <| fun _ ->
-            let facets = RichText.detect "@alice.bsky.social hello"
+            let facets = RichText.detect "@my-handle.bsky.social hello"
             Expect.equal facets.Length 1 "mention at start"
             match facets.[0] with
             | RichText.DetectedMention (s, _, _) ->
@@ -122,17 +122,17 @@ let resolveTests =
                 else
                     emptyResponse HttpStatusCode.NotFound)
             agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = FSharp.ATProto.Syntax.Did.parse "did:plc:me" |> Result.defaultWith failwith; Handle = FSharp.ATProto.Syntax.Handle.parse "me.bsky.social" |> Result.defaultWith failwith }
-            let detected = [ RichText.DetectedMention(0, 18, "alice.bsky.social") ]
+            let detected = [ RichText.DetectedMention(0, 22, "my-handle.bsky.social") ]
             let facets = RichText.resolve agent detected |> Async.AwaitTask |> Async.RunSynchronously
             Expect.equal facets.Length 1 "one facet"
             Expect.equal facets.[0].Index.ByteStart 0L "byteStart"
-            Expect.equal facets.[0].Index.ByteEnd 18L "byteEnd"
+            Expect.equal facets.[0].Index.ByteEnd 22L "byteEnd"
 
         testCase "drops mention when handle resolution fails" <| fun _ ->
             let agent = createMockAgent (fun _ ->
                 jsonResponse HttpStatusCode.BadRequest {| error = "HandleNotFound"; message = "not found" |})
             agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = FSharp.ATProto.Syntax.Did.parse "did:plc:me" |> Result.defaultWith failwith; Handle = FSharp.ATProto.Syntax.Handle.parse "me.bsky.social" |> Result.defaultWith failwith }
-            let detected = [ RichText.DetectedMention(0, 18, "alice.bsky.social") ]
+            let detected = [ RichText.DetectedMention(0, 22, "my-handle.bsky.social") ]
             let facets = RichText.resolve agent detected |> Async.AwaitTask |> Async.RunSynchronously
             Expect.equal facets.Length 0 "mention dropped on failure"
 
@@ -152,7 +152,7 @@ let resolveTests =
                 else
                     emptyResponse HttpStatusCode.NotFound)
             agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = FSharp.ATProto.Syntax.Did.parse "did:plc:me" |> Result.defaultWith failwith; Handle = FSharp.ATProto.Syntax.Handle.parse "me.bsky.social" |> Result.defaultWith failwith }
-            let facets = RichText.parse agent "Hello @alice.bsky.social #atproto" |> Async.AwaitTask |> Async.RunSynchronously
+            let facets = RichText.parse agent "Hello @my-handle.bsky.social #atproto" |> Async.AwaitTask |> Async.RunSynchronously
             Expect.equal facets.Length 2 "mention + hashtag"
     ]
 

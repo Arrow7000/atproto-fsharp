@@ -150,7 +150,7 @@ module Identity =
     /// Resolve a handle to its DID via <c>com.atproto.identity.resolveHandle</c>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="handle">The handle to resolve (e.g., <c>alice.bsky.social</c>).</param>
+    /// <param name="handle">The handle to resolve (e.g., <c>my-handle.bsky.social</c>).</param>
     /// <returns>
     /// <c>Ok</c> with the resolved <see cref="Did"/> on success, or <c>Error</c> with an <see cref="IdentityError"/>
     /// if the handle cannot be resolved.
@@ -168,7 +168,7 @@ module Identity =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="identifier">
-    /// A DID (starting with <c>did:</c>) or a handle (e.g., <c>alice.bsky.social</c>).
+    /// A DID (starting with <c>did:</c>) or a handle (e.g., <c>my-handle.bsky.social</c>).
     /// </param>
     /// <returns>
     /// <c>Ok</c> with the resolved <see cref="AtprotoIdentity"/>. If bidirectional verification
@@ -183,7 +183,7 @@ module Identity =
     /// </remarks>
     /// <example>
     /// <code>
-    /// let! identity = Identity.resolveIdentity agent "alice.bsky.social"
+    /// let! identity = Identity.resolveIdentity agent "my-handle.bsky.social"
     /// match identity with
     /// | Ok id -> printfn "DID: %s, Handle verified: %b" (Did.value id.Did) id.Handle.IsSome
     /// | Error msg -> printfn "Resolution failed: %A" msg

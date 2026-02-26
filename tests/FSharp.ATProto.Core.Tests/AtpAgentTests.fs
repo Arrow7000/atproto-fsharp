@@ -23,16 +23,16 @@ let loginTests =
                 Expect.stringContains (string req.RequestUri) "com.atproto.server.createSession" "calls createSession"
                 Expect.equal req.Method HttpMethod.Post "is POST"
                 TestHelpers.jsonResponse HttpStatusCode.OK
-                    {| accessJwt = "access1"; refreshJwt = "refresh1"; did = "did:plc:alice"; handle = "alice.bsky.social" |})
+                    {| accessJwt = "access1"; refreshJwt = "refresh1"; did = "did:plc:alice"; handle = "my-handle.bsky.social" |})
 
             let result =
-                AtpAgent.login "alice.bsky.social" "app-password" agent
+                AtpAgent.login "my-handle.bsky.social" "app-password" agent
                 |> Async.AwaitTask |> Async.RunSynchronously
 
             match result with
             | Ok session ->
                 Expect.equal (Did.value session.Did) "did:plc:alice" "did"
-                Expect.equal (Handle.value session.Handle) "alice.bsky.social" "handle"
+                Expect.equal (Handle.value session.Handle) "my-handle.bsky.social" "handle"
                 Expect.equal session.AccessJwt "access1" "access jwt"
                 Expect.isSome agent.Session "session stored on agent"
             | Error e -> failtest $"Expected Ok, got Error: {e}"
@@ -69,7 +69,7 @@ let refreshTests =
                 let uri = string req.RequestUri
                 if uri.Contains("refreshSession") then
                     TestHelpers.jsonResponse HttpStatusCode.OK
-                        {| accessJwt = "access2"; refreshJwt = "refresh2"; did = "did:plc:alice"; handle = "alice.bsky.social" |}
+                        {| accessJwt = "access2"; refreshJwt = "refresh2"; did = "did:plc:alice"; handle = "my-handle.bsky.social" |}
                 elif callCount = 1 then
                     TestHelpers.jsonResponse HttpStatusCode.Unauthorized
                         {| error = "ExpiredToken"; message = "Token expired" |}
@@ -77,7 +77,7 @@ let refreshTests =
                     TestHelpers.jsonResponse HttpStatusCode.OK
                         {| displayName = "Alice" |})
 
-            agent.Session <- Some { AccessJwt = "old"; RefreshJwt = "refresh1"; Did = parseDid "did:plc:alice"; Handle = parseHandle "alice.bsky.social" }
+            agent.Session <- Some { AccessJwt = "old"; RefreshJwt = "refresh1"; Did = parseDid "did:plc:alice"; Handle = parseHandle "my-handle.bsky.social" }
 
             let result =
                 Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile"

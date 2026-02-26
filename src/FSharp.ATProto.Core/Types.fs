@@ -38,7 +38,7 @@ type AtpSession =
       RefreshJwt: string
       /// <summary>The DID (Decentralized Identifier) of the authenticated user (e.g. "did:plc:xyz123").</summary>
       Did: Did
-      /// <summary>The handle of the authenticated user (e.g. "alice.bsky.social").</summary>
+      /// <summary>The handle of the authenticated user (e.g. "my-handle.bsky.social").</summary>
       Handle: Handle }
 
 /// <summary>
@@ -53,7 +53,7 @@ type AtpSession =
 /// <example>
 /// <code>
 /// let agent = AtpAgent.create "https://bsky.social"
-/// let! session = AtpAgent.login "alice.bsky.social" "app-password-here" agent
+/// let! session = AtpAgent.login "my-handle.bsky.social" "app-password-here" agent
 /// </code>
 /// </example>
 type AtpAgent =

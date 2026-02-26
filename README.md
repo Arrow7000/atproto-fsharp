@@ -19,12 +19,12 @@ open FSharp.ATProto.Bluesky
 
 task {
     // Log in
-    let! agent = Bluesky.login "https://bsky.social" "alice.bsky.social" "app-password"
+    let! agent = Bluesky.login "https://bsky.social" "my-handle.bsky.social" "app-password"
 
     match agent with
     | Ok agent ->
         // Post with auto-detected rich text (mentions, links, hashtags)
-        let! result = Bluesky.post agent "Hello from F#! @bob.bsky.social #atproto"
+        let! result = Bluesky.post agent "Hello from F#! @other-user.bsky.social #atproto"
         match result with
         | Ok postRef -> printfn "Posted: %s" (AtUri.value postRef.Uri)
         | Error e -> printfn "Failed: %A" e
@@ -71,7 +71,7 @@ let! result =
 
 ```fsharp
 // Detect mentions, links, hashtags
-let detected = RichText.detect "Hey @alice.bsky.social, check https://example.com #cool"
+let detected = RichText.detect "Hey @my-handle.bsky.social, check https://example.com #cool"
 
 // Resolve mentions to DIDs
 let! facets = RichText.resolve agent detected
@@ -84,7 +84,7 @@ let len = RichText.graphemeLength text  // 300 grapheme limit
 
 ```fsharp
 // Resolve and verify a handle bidirectionally
-let! identity = Identity.resolveIdentity agent "alice.bsky.social"
+let! identity = Identity.resolveIdentity agent "my-handle.bsky.social"
 match identity with
 | Ok id ->
     printfn "DID: %s" (Did.value id.Did)

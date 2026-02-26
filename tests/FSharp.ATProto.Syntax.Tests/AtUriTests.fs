@@ -30,8 +30,8 @@ let tests =
                 let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3k2la3b" |> Result.defaultWith failwith
                 Expect.equal (AtUri.authority uri) "did:plc:z72i7hdynmk6r22z27h6tvur" "should extract DID authority"
             testCase "extracts handle authority" <| fun () ->
-                let uri = AtUri.parse "at://alice.bsky.social/app.bsky.feed.post/3k2la3b" |> Result.defaultWith failwith
-                Expect.equal (AtUri.authority uri) "alice.bsky.social" "should extract handle authority"
+                let uri = AtUri.parse "at://my-handle.bsky.social/app.bsky.feed.post/3k2la3b" |> Result.defaultWith failwith
+                Expect.equal (AtUri.authority uri) "my-handle.bsky.social" "should extract handle authority"
             testCase "extracts authority from authority-only URI" <| fun () ->
                 let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur" |> Result.defaultWith failwith
                 Expect.equal (AtUri.authority uri) "did:plc:z72i7hdynmk6r22z27h6tvur" "should extract authority from authority-only URI"

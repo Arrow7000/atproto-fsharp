@@ -35,7 +35,7 @@ module QueryParams =
     /// <param name="record">An F# record whose fields map to query-string parameters.</param>
     /// <typeparam name="T">The record type. Must be an F# record.</typeparam>
     /// <returns>
-    /// A query string such as <c>"?actor=alice.bsky.social&amp;limit=50"</c>,
+    /// A query string such as <c>"?actor=my-handle.bsky.social&amp;limit=50"</c>,
     /// or an empty string if the record produces no parameters.
     /// </returns>
     /// <remarks>
@@ -50,8 +50,8 @@ module QueryParams =
     /// <example>
     /// <code>
     /// type Params = { Actor: string; Limit: int option }
-    /// QueryParams.toQueryString { Actor = "alice.bsky.social"; Limit = Some 25 }
-    /// // returns "?actor=alice.bsky.social&amp;limit=25"
+    /// QueryParams.toQueryString { Actor = "my-handle.bsky.social"; Limit = Some 25 }
+    /// // returns "?actor=my-handle.bsky.social&amp;limit=25"
     /// </code>
     /// </example>
     let toQueryString<'T> (record: 'T) : string =

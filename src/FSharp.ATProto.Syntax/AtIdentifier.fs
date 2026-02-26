@@ -29,7 +29,7 @@ module AtIdentifier =
     /// </summary>
     /// <param name="s">
     /// A string that is either a valid DID (e.g. <c>"did:plc:z72i7hdynmk6r22z27h6tvur"</c>)
-    /// or a valid handle (e.g. <c>"alice.bsky.social"</c>).
+    /// or a valid handle (e.g. <c>"my-handle.bsky.social"</c>).
     /// </param>
     /// <returns>
     /// <c>Ok</c> with an <see cref="AtIdentifier"/> wrapping either <c>AtDid</c> or <c>AtHandle</c>,

@@ -186,7 +186,7 @@ let followUserTests =
                     captured <- Some req
                     jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.graph.follow/abc123"; cid = "bafyreiabc123" |})
             agent.Session <- Some testSession
-            let result = Bluesky.followUser agent "alice.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.followUser agent "my-handle.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
             let body = captured.Value.Content.ReadAsStringAsync().Result
             Expect.stringContains body "did:plc:resolved" "resolved DID used as subject"
@@ -237,7 +237,7 @@ let blockUserTests =
                     captured <- Some req
                     jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.graph.block/abc123"; cid = "bafyreiabc123" |})
             agent.Session <- Some testSession
-            let result = Bluesky.blockUser agent "alice.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.blockUser agent "my-handle.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
             let body = captured.Value.Content.ReadAsStringAsync().Result
             Expect.stringContains body "did:plc:resolved" "resolved DID used as subject"
@@ -846,7 +846,7 @@ let private queryAgent (captureRequest: HttpRequestMessage -> unit) (responseBod
 
 /// Minimal JSON for a ProfileViewDetailed (only required fields)
 let private profileJson =
-    {| did = "did:plc:testuser"; handle = "alice.bsky.social"; displayName = "Alice" |}
+    {| did = "did:plc:testuser"; handle = "my-handle.bsky.social"; displayName = "Alice" |}
 
 /// Minimal JSON for a GetTimeline response
 let private timelineJson =
@@ -862,12 +862,12 @@ let getProfileTests =
         testCase "getProfile calls correct XRPC endpoint with actor param" <| fun _ ->
             let mutable captured = None
             let agent = queryAgent (fun req -> captured <- Some req) profileJson
-            let result = Bluesky.getProfile agent "alice.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.getProfile agent "my-handle.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
             let req = captured.Value
             Expect.equal req.Method HttpMethod.Get "GET method"
             Expect.stringContains (req.RequestUri.ToString()) "app.bsky.actor.getProfile" "correct endpoint"
-            Expect.stringContains (req.RequestUri.ToString()) "alice.bsky.social" "actor in query string"
+            Expect.stringContains (req.RequestUri.ToString()) "my-handle.bsky.social" "actor in query string"
 
         testCase "getProfile accepts DID string" <| fun _ ->
             let mutable captured = None
@@ -878,10 +878,10 @@ let getProfileTests =
 
         testCase "getProfile deserializes response" <| fun _ ->
             let agent = queryAgent (fun _ -> ()) profileJson
-            let result = Bluesky.getProfile agent "alice.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.getProfile agent "my-handle.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
             let profile = Expect.wantOk result "should succeed"
             Expect.equal (Did.value profile.Did) "did:plc:testuser" "did"
-            Expect.equal (Handle.value profile.Handle) "alice.bsky.social" "handle"
+            Expect.equal (Handle.value profile.Handle) "my-handle.bsky.social" "handle"
 
         testCase "getProfile returns error on failure" <| fun _ ->
             let agent = createMockAgent (fun _ ->
@@ -893,10 +893,10 @@ let getProfileTests =
         testCase "getProfile accepts Handle directly" <| fun _ ->
             let mutable captured = None
             let agent = queryAgent (fun req -> captured <- Some req) profileJson
-            let handle = Handle.parse "alice.bsky.social" |> Result.defaultWith failwith
+            let handle = Handle.parse "my-handle.bsky.social" |> Result.defaultWith failwith
             let result = Bluesky.getProfile agent handle |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
-            Expect.stringContains (captured.Value.RequestUri.ToString()) "alice.bsky.social" "handle value in query string"
+            Expect.stringContains (captured.Value.RequestUri.ToString()) "my-handle.bsky.social" "handle value in query string"
 
         testCase "getProfile accepts Did directly" <| fun _ ->
             let mutable captured = None
@@ -909,9 +909,9 @@ let getProfileTests =
         testCase "getProfile still accepts plain string" <| fun _ ->
             let mutable captured = None
             let agent = queryAgent (fun req -> captured <- Some req) profileJson
-            let result = Bluesky.getProfile agent "bob.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.getProfile agent "other-user.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
-            Expect.stringContains (captured.Value.RequestUri.ToString()) "bob.bsky.social" "string value in query string"
+            Expect.stringContains (captured.Value.RequestUri.ToString()) "other-user.bsky.social" "string value in query string"
     ]
 
 [<Tests>]
@@ -1134,7 +1134,7 @@ let paginateFollowersTests =
             let page1 = {| followers = ([||] : obj array); subject = subject; cursor = "page2" |}
             let page2 = {| followers = ([||] : obj array); subject = subject |}
             let agent = paginatingAgent page1 page2
-            let pages = Bluesky.paginateFollowers agent "alice.bsky.social" (Some 25L) |> collectPages
+            let pages = Bluesky.paginateFollowers agent "my-handle.bsky.social" (Some 25L) |> collectPages
             Expect.equal pages.Length 2 "exactly 2 pages"
             Expect.isOk pages.[0] "first page is Ok"
             Expect.isOk pages.[1] "second page is Ok"
@@ -1146,9 +1146,9 @@ let paginateFollowersTests =
                 captured.Add(req)
                 jsonResponse HttpStatusCode.OK {| followers = ([||] : obj array); subject = subject |})
             agent.Session <- Some testSession
-            let pages = Bluesky.paginateFollowers agent "alice.bsky.social" None |> collectPages
+            let pages = Bluesky.paginateFollowers agent "my-handle.bsky.social" None |> collectPages
             Expect.equal pages.Length 1 "single page"
-            Expect.stringContains (captured.[0].RequestUri.ToString()) "alice.bsky.social" "actor in query"
+            Expect.stringContains (captured.[0].RequestUri.ToString()) "my-handle.bsky.social" "actor in query"
     ]
 
 [<Tests>]

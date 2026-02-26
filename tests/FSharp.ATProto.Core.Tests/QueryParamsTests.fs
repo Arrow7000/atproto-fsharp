@@ -56,9 +56,9 @@ let tests =
             Expect.equal result "?actor=did%3Aplc%3Az72i7hdynmk6r22z27h6tvur" "Did field"
 
         testCase "serializes Handle field via ToString" <| fun () ->
-            let handle = Handle.parse "alice.bsky.social" |> Result.defaultWith failwith
+            let handle = Handle.parse "my-handle.bsky.social" |> Result.defaultWith failwith
             let result = QueryParams.toQueryString { HandleParams.Actor = handle }
-            Expect.equal result "?actor=alice.bsky.social" "Handle field"
+            Expect.equal result "?actor=my-handle.bsky.social" "Handle field"
 
         testCase "serializes AtUri field via ToString" <| fun () ->
             let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3k2la3b" |> Result.defaultWith failwith

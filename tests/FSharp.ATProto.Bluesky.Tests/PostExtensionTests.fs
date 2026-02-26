@@ -48,7 +48,7 @@ let private validPostJson =
     """{"$type":"app.bsky.feed.post","text":"Hello, world!","createdAt":"2026-01-01T00:00:00.000Z"}"""
 
 let private postWithFacetsJson =
-    """{"$type":"app.bsky.feed.post","text":"Hello @alice.bsky.social","createdAt":"2026-01-01T00:00:00.000Z","facets":[{"index":{"byteStart":6,"byteEnd":24},"features":[{"$type":"app.bsky.richtext.facet#mention","did":"did:plc:alice123"}]}]}"""
+    """{"$type":"app.bsky.feed.post","text":"Hello @my-handle.bsky.social","createdAt":"2026-01-01T00:00:00.000Z","facets":[{"index":{"byteStart":6,"byteEnd":28},"features":[{"$type":"app.bsky.richtext.facet#mention","did":"did:plc:alice123"}]}]}"""
 
 let private nonPostJson =
     """{"$type":"app.bsky.feed.like","subject":{"uri":"at://did:plc:x/app.bsky.feed.post/y","cid":"bafyreiabc123"},"createdAt":"2026-01-01T00:00:00.000Z"}"""
@@ -73,7 +73,7 @@ let postExtensionTests =
             Expect.equal pv.Facets.Length 1 "should have one facet"
             let facet = pv.Facets.[0]
             Expect.equal facet.Index.ByteStart 6L "byteStart"
-            Expect.equal facet.Index.ByteEnd 24L "byteEnd"
+            Expect.equal facet.Index.ByteEnd 28L "byteEnd"
 
         testCase "Facets returns empty list when no facets" <| fun _ ->
             let pv = makePostView validPostJson
