@@ -36,8 +36,12 @@ let main _ =
         // ─────────────────────────────────────────────────────────────
         section "1. Authentication"
 
-        let agent = AtpAgent.create "https://bsky.social"
-        let! loginResult = AtpAgent.login (env "BSKY_HANDLE") (env "BSKY_PASSWORD") agent
+        let agent = AtpAgent.create "https://bsky.social" // is agent basically the value containing the auth'd information so it needs to be passed to anything we do on bsky?
+        // is the reason it doesn't have its own methods because it's more FP-y? piping and so on? i s'ppose that makes sense. although not sure there's much to pipe here? 🤔
+        // hm yeah im not sure this makes so much sense. because both ways:
+        // - either: we *do* pipe things and that's the reason we have all the functions not on agent but on the Bluesky namespace... then we have to provide `agent` on every single line. which is not nice.
+        // or: we *don't* pipe things... but then why not put all the functions directly on agent? i mean i suppose in that case it really doesn't make that much difference either way..? hm.
+        let! loginResult = AtpAgent.login (env "BSKY_HANDLE") (env "BSKY_PASSWORD") agent // ah. so agent is *not* the thing that stores the session? or it is but we log in separately and that mutates the agent to make it contain auth stuff? if so why not make the login function return a thing and *that* thing is what we pass to every auth'd function? besides, is there any value to creating an agent separate from authenticating? if yes, what? if not, why not make one create/login function that returns the auth'd thing and that's the only thing. no need for a separate agent and login result.
 
         let session =
             match loginResult with
@@ -54,7 +58,7 @@ let main _ =
         section "2. Read Profiles"
 
         // Own profile via convenience method
-        let! ownProfile = Bluesky.getProfile agent (Handle.value session.Handle)
+        let! ownProfile = Bluesky.getProfile agent (Handle.value session.Handle) // could we make this take a Handle without stringifying?
 
         match ownProfile with
         | Ok p ->
@@ -69,7 +73,7 @@ let main _ =
         | Error e -> printfn "Own profile failed: %A" e
 
         // Another user's profile (raw XRPC query — equivalent to getProfile)
-        let! otherProfile = AppBskyActor.GetProfile.query agent { Actor = "bsky.app" }
+        let! otherProfile = AppBskyActor.GetProfile.query agent { Actor = "bsky.app" } // why do we need to pass in actor here? what does actor mean anyway? and don't we already know it should be a bsky login because that's what the agent is? oh wait i just saw that was https://bsky.social. ok so what's that then? are these atproto auth implementation details? are any of these to allow for other atproto (or pds, whatever that is?) servers?
 
         match otherProfile with
         | Ok p ->
@@ -94,7 +98,7 @@ let main _ =
         // ─────────────────────────────────────────────────────────────
         section "3. Timeline"
 
-        let! timelineResult = Bluesky.getTimeline agent (Some 10L) None
+        let! timelineResult = Bluesky.getTimeline agent (Some 10L) None // what is cursor? a nonce-like string? does it make sense to make a wrapped type for it or no?
 
         let timelineFeed =
             match timelineResult with
@@ -110,8 +114,9 @@ let main _ =
                         | _ -> ""
                     // Post text is in the raw record JSON
                     let text =
-                        match item.Post.Record.TryGetProperty("text") with
-                        | true, v -> v.GetString()
+                        match item.Post.Record.TryGetProperty("text") with // euhhhhh no come on this can't be the actual way we get a post's content is it? 🫠 can't posts always contain text? if not, what can posts be? does it make sense to make a DU for posts, so we can neatly separate the different types? or is the problem that posts are essentially big arbitrary bags of data? if so, what fields can they contain? even so tbh, text should be a real field on the post. either it has text, in which case great, or it doesn't, in which case it can return a "" or a None, depending on the semantics.
+                        // also, is the fact that this is so open-ended a bsky thing or an atproto thing? yeah, i suppose one thing we should address is that i don't have a clear picture of the atproto.. protocol. and what bsky layers on top of that. if that even is the right metaphor.
+                        | true, v -> v.GetString() // wait what. even when we get text we still have to stringify it? euw neuw.
                         | false, _ -> "(no text)"
 
                     let truncated = if text.Length > 60 then text.[..59] + "..." else text
@@ -119,6 +124,7 @@ let main _ =
                     // Access engagement counts
                     printfn
                         "    likes: %s, reposts: %s, replies: %s"
+                        // we can only get the counts of these, but not the contents themeslves? like the likers or reposters or replies, in a list? if we can get the counts why not the countees?
                         (item.Post.LikeCount |> Option.map string |> Option.defaultValue "?")
                         (item.Post.RepostCount |> Option.map string |> Option.defaultValue "?")
                         (item.Post.ReplyCount |> Option.map string |> Option.defaultValue "?")
@@ -140,7 +146,9 @@ let main _ =
 
         // 4a. Auto-detected rich text — mentions, links, and hashtags
         //     are detected and resolved to facets automatically
-        let! autoPost = Bluesky.post agent "Hello from F#! Visit https://atproto.com #atproto"
+        let! autoPost = Bluesky.post agent "Hello from F#! Visit https://atproto.com #atproto" // excellent, this is exactly the kind of simple, convenient function that i want! sure we can expose more low level stuff, but the simple use cases should have the simple names and simple types and APIs.
+        // is there any reason this returns a ref and not the post itself? even if there is a good reason, can we make the postref actually contain the post itself? if not, why not? hm is that because then we'd have to be able to get the other linked data, like poster, and then i'd ask why can't we get the poster's full posts list, and so on, and all of these things need to be fetched asynchronously one step at a time, and we want to be transparent about how we load data that needs to be fetched async?
+        // if so, fair enough. but i feel like since the above function creates a post, surely we should be able to at least include the actual post object itself here without needing the user to make a separate fetch? no? wdyt?
 
         let postRef =
             match autoPost with
@@ -163,9 +171,11 @@ let main _ =
         let linkStart = int64 (RichText.byteLength "Check ")
         let linkEnd = int64 (RichText.byteLength "Check example.com")
 
+        // can we/should we not use the .NET Uri type as underlying data here instead of a bare string? that should come with a whole bunch of functions and stuff already. and im fairly sure its guaranteed to be correct bc it stores all the parts of the uri in different fields internally. so guaranteed to have all the bits a uri needs to have.
         match Uri.parse "https://example.com" with
         | Ok linkUri ->
             let manualFacets: AppBskyRichtext.Facet.Facet list =
+                // ok whoa this is cool. so... the way rich posts work is that you have the text but then an annotation on ranges of characters, which "linkify" that text range? ngl that's pretty fucking cool. and also explains how @penny.haily.at always seems to mess up something i didn't realise was possible to mess up 😂
                 [ { Index =
                       { ByteStart = linkStart
                         ByteEnd = linkEnd }
@@ -187,7 +197,7 @@ let main _ =
                 agent
                 "Post with an image attached!"
                 [ { Data = dummyImage
-                    MimeType = "image/png"
+                    MimeType = "image/png" // hmm i don't love having to provide this manually. is it not possible to derive this from the byte array itself? hm. if not, how about some convenience functions that take... a stream? would that be better? i mean maybe more performant but prolly won't save you from needing to provide a mimetype. at the very least maybe we provide a DU of image mimetypes, so the user doesnt have to type it out as a bare string?
                     AltText = "A test image" } ]
 
         match imgPost with
@@ -210,29 +220,30 @@ let main _ =
         //     from the timeline or a thread view.
         if timelineFeed.Length > 0 then
             let parentPost = timelineFeed.[0].Post
+            // parentPost.Debug // what is this field?
 
             let parentRef: PostRef =
                 { Uri = parentPost.Uri
                   Cid = parentPost.Cid }
 
-            let! replyToResult = Bluesky.replyTo agent "Great post!" parentRef parentPost.Record
+            let! replyToResult = Bluesky.replyTo agent "Great post!" parentRef
 
             match replyToResult with
             | Ok r -> printfn "replyTo (auto-root): %s" (AtUri.value r.Uri)
             | Error e -> printfn "replyTo failed: %A" e
 
-        // 5b. reply to a top-level post — parent and root are the same
-        let! topLevelReply = Bluesky.reply agent "Replying to myself!" postRef postRef
+        // 5b. replyTo a top-level post — root is resolved automatically
+        let! topLevelReply = Bluesky.replyTo agent "Replying to myself!" postRef
 
         match topLevelReply with
         | Ok r -> printfn "Top-level reply: %s" (AtUri.value r.Uri)
         | Error e -> printfn "Top-level reply failed: %A" e
 
-        // 5c. reply to a nested reply — root is the original post,
-        //     parent is the direct reply we're responding to
+        // 5c. replyWithKnownRoot — when you already know the root and parent refs
+        //     (e.g., you're building a thread yourself and have both refs on hand)
         match topLevelReply with
         | Ok replyRef ->
-            let! nestedReply = Bluesky.reply agent "Nested reply!" replyRef postRef
+            let! nestedReply = Bluesky.replyWithKnownRoot agent "Nested reply!" replyRef postRef
 
             match nestedReply with
             | Ok r -> printfn "Nested reply: %s" (AtUri.value r.Uri)
@@ -253,7 +264,9 @@ let main _ =
         | Ok likeRef ->
             printfn "Liked: %s" (AtUri.value likeRef.Uri)
             // Unlike using the typed LikeRef
-            let! unlikeResult = Bluesky.unlike agent likeRef
+            let! unlikeResult = Bluesky.unlike agent likeRef // this is nice to have, feels symmetric that having the like event lets you also undo it. but surely there also has to be a way to unlike a post by just passing in the post (or post ref) itself, right?
+            // then i feel like it might be nice to have a return value that says whether anything actually happened – whether an unlike happened – or nothing happened because you hadn't liked the post to begin with. ooh, maybe *that* could return the (now deceased) like ref? which might have interesting data like when the like was actually carried out in the first place??
+            // ah wait, is the Error case here if the post hadn't been liked in the first place? what about if there was a lower level error? hm ok i suppose then we'd have had a failure at the Task level. hm ok fine i hear. but using a Result for an idempotent operation's "nothing happened" state feels wrong. feels like Error denotes an "oh its an error then i need to try again" sort of event. not a "cool, nvm, nothing to do" event.
 
             match unlikeResult with
             | Ok() -> printfn "Unliked successfully"
@@ -265,7 +278,7 @@ let main _ =
         // Same typed-ref pattern as like/unlike.
         // repost returns a RepostRef; pass to unrepost to undo.
         // ─────────────────────────────────────────────────────────────
-        section "7. Repost / Unrepost"
+        section "7. Repost / Unrepost" // same feedback from likes applies here
 
         let! repostResult = Bluesky.repost agent postRef
 
@@ -287,10 +300,12 @@ let main _ =
         //      automatically (convenient for user input)
         // Both return a FollowRef for undoing with unfollow.
         // ─────────────────────────────────────────────────────────────
-        section "8. Follow / Unfollow"
+        section "8. Follow / Unfollow" // same feedback from likes again
 
         // 8a. Follow by typed DID
-        let! followResult = Bluesky.follow agent session.Did
+        let! followResult = Bluesky.follow agent session.Did // in this example does session contain my own DID? if so... this will probably fail, right? lol.
+        // i assume there is a notion of a User or Account type, and those have a .Did field? which makes following people easy?
+        // btw are DIDs only for users? posts don't have DIDs? do those just have Uris?
 
         match followResult with
         | Ok followRef ->

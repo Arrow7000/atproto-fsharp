@@ -1,8 +1,8 @@
 ---
 title: Quickstart
-category: Overview
+category: Guides
 categoryindex: 1
-index: 2
+index: 1
 description: Get up and running with FSharp.ATProto in 5 minutes
 keywords: quickstart, tutorial, getting started, fsharp, atproto
 ---
@@ -13,7 +13,7 @@ Get from zero to posting on Bluesky in under 5 minutes.
 
 ## Prerequisites
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
 - A Bluesky account with an [App Password](https://bsky.app/settings/app-passwords) (do not use your main password)
 
 ## Create a Project
@@ -44,7 +44,7 @@ let main _ =
         | Ok session ->
             printfn "Logged in as %s (%s)" session.Handle session.Did
         | Error e ->
-            printfn "Login failed: %A" e.Message
+            printfn "Login failed: %A" e
             return 1
 
         return 0
@@ -64,11 +64,13 @@ dotnet run
 `Bluesky.post` automatically detects @mentions, links, and #hashtags in your text and creates the correct rich text facets:
 
 ```fsharp
+open FSharp.ATProto.Syntax
+
 let! postResult = Bluesky.post agent "Hello world from F#! #atproto"
 
 match postResult with
-| Ok post -> printfn "Posted! URI: %s" post.Uri
-| Error e -> printfn "Post failed: %A" e.Message
+| Ok post -> printfn "Posted! URI: %s" (AtUri.value post.Uri)
+| Error e -> printfn "Post failed: %A" e
 ```
 
 Every `@handle.domain` in the text is resolved to a DID via the API. Links and hashtags are detected by pattern. You don't need to compute byte offsets or construct facet objects yourself.
@@ -85,62 +87,55 @@ let! timelineResult =
 match timelineResult with
 | Ok timeline ->
     for item in timeline.Feed do
-        let author = item.Post.Author.Handle
+        let author = Handle.value item.Post.Author.Handle
         let text =
             item.Post.Record.GetProperty("text").GetString()
         printfn "@%s: %s" author text
 | Error e ->
-    printfn "Timeline failed: %A" e.Message
+    printfn "Timeline failed: %A" e
 ```
 
-All 228 XRPC endpoints on Bluesky are available as typed wrappers under their Lexicon namespace (`AppBskyFeed`, `AppBskyActor`, `ComAtprotoRepo`, etc.). Query endpoints use `.query`, procedure endpoints use `.call`.
+All 237 XRPC endpoints on Bluesky are available as typed wrappers under their Lexicon namespace (`AppBskyFeed`, `AppBskyActor`, `ComAtprotoRepo`, etc.). Query endpoints use `.query`, procedure endpoints use `.call`.
 
 ## Like a Post
-
-`like` takes a `PostRef` (returned by `post`, `reply`, or constructed from any post's URI + CID) and returns a `LikeRef`. Pass the `LikeRef` to `unlike` to undo:
 
 ```fsharp
 // Like the first post from the timeline
 match timelineResult with
 | Ok timeline when timeline.Feed.Length > 0 ->
     let first = timeline.Feed.[0].Post
-    let postRef = { PostRef.Uri = first.Uri; Cid = first.Cid }
-    let! likeResult = Bluesky.like agent postRef
+    let! likeResult = Bluesky.like agent first.Uri first.Cid
 
     match likeResult with
-    | Ok likeRef ->
-        printfn "Liked! %s" (AtUri.value likeRef.Uri)
-        // Undo the like
-        let! _ = Bluesky.unlike agent likeRef
-        ()
-    | Error e -> printfn "Like failed: %A" e.Message
+    | Ok likeUri -> printfn "Liked! %s" (AtUri.value likeUri)
+    | Error e -> printfn "Like failed: %A" e
 | _ -> ()
 ```
 
 ## Reply to a Post
 
-When replying, you need both a parent reference (the post you're replying to) and a root reference (the thread's top-level post). For a reply to a top-level post, both are the same:
+`Bluesky.replyTo` fetches the parent post to resolve the thread root automatically. You only need the `PostRef` of the post you are replying to:
 
 ```fsharp
-let parentRef = { PostRef.Uri = first.Uri; Cid = first.Cid }
+let parentRef : PostRef = { Uri = first.Uri; Cid = first.Cid }
 let! replyResult =
-    Bluesky.reply agent "Great post!" parentRef parentRef
+    Bluesky.replyTo agent "Great post!" parentRef
 
 match replyResult with
 | Ok r -> printfn "Replied: %s" (AtUri.value r.Uri)
-| Error e -> printfn "Reply failed: %A" e.Message
+| Error e -> printfn "Reply failed: %A" e
 ```
 
 ## Post with Images
 
-`Bluesky.postWithImages` handles blob uploading and embed construction. Pass a list of `(bytes, mimeType, altText)` tuples:
+`Bluesky.postWithImages` handles blob uploading and embed construction. Pass a list of `ImageUpload` records:
 
 ```fsharp
 let imageBytes = System.IO.File.ReadAllBytes("photo.jpg")
 
 let! result =
     Bluesky.postWithImages agent "Check out this photo!" [
-        (imageBytes, "image/jpeg", "A sunny landscape")
+        { Data = imageBytes; MimeType = "image/jpeg"; AltText = "A sunny landscape" }
     ]
 ```
 
@@ -151,6 +146,7 @@ Up to 4 images per post.
 Putting it all together:
 
 ```fsharp
+open FSharp.ATProto.Syntax
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 
@@ -164,7 +160,7 @@ let main _ =
         let! postResult = Bluesky.post agent "Hello from F#! #fsharp #atproto"
         let post =
             match postResult with
-            | Ok p -> printfn "Posted: %s" p.Uri; p
+            | Ok p -> printfn "Posted: %s" (AtUri.value p.Uri); p
             | Error e -> failwithf "Post failed: %A" e
 
         // Read timeline
@@ -176,12 +172,12 @@ let main _ =
         | Ok t ->
             printfn "Timeline (%d posts):" t.Feed.Length
             for item in t.Feed do
-                printfn "  @%s" item.Post.Author.Handle
+                printfn "  @%s" (Handle.value item.Post.Author.Handle)
         | Error e ->
-            printfn "Timeline: %A" e.Message
+            printfn "Timeline: %A" e
 
         // Like our own post
-        let! _ = Bluesky.like agent post
+        let! _ = Bluesky.like agent post.Uri post.Cid
 
         // Clean up
         let! _ = Bluesky.deleteRecord agent post.Uri
@@ -195,7 +191,12 @@ let main _ =
 ## What's Next
 
 - [Rich Text Guide](guides/rich-text.html) -- finer control over mention/link/hashtag detection
+- [Posts Guide](guides/posts.html) -- reading posts, threads, and search
+- [Social Actions Guide](guides/social.html) -- like, repost, follow, block
+- [Feeds Guide](guides/feeds.html) -- timelines and custom feeds
+- [Media Guide](guides/media.html) -- image uploads
 - [Chat / DM Guide](guides/chat.html) -- direct messaging
 - [Identity Guide](guides/identity.html) -- resolve handles and DIDs
+- [Profiles Guide](guides/profiles.html) -- fetch user profiles
 - [Pagination Guide](guides/pagination.html) -- iterate through large result sets
 - [API Reference](reference/index.html) -- full generated API documentation

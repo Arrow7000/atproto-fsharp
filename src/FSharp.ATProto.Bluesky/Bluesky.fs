@@ -11,7 +11,7 @@ open FSharp.ATProto.Syntax
 /// <summary>
 /// A reference to a specific version of a post record.
 /// Contains both the AT-URI (identifying the record) and the CID (identifying the exact version).
-/// Accepted by <c>like</c>, <c>repost</c>, and <c>reply</c>.
+/// Accepted by <c>like</c>, <c>repost</c>, and <c>replyTo</c>.
 /// </summary>
 type PostRef =
     { /// <summary>The AT-URI of the post record.</summary>
@@ -232,7 +232,9 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Create a reply to an existing post with automatic rich text detection.
+    /// Create a reply with explicit parent and root references.
+    /// Use this when you already know both the parent and root <see cref="PostRef"/>s.
+    /// For most cases, prefer <see cref="replyTo"/> which resolves the root automatically.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="text">The reply text. Mentions, links, and hashtags are auto-detected.</param>
@@ -245,7 +247,7 @@ module Bluesky =
     /// For a reply deeper in a thread, the root points to the original post
     /// while the parent points to the immediate post being replied to.
     /// </remarks>
-    let reply (agent: AtpAgent) (text: string) (parent: PostRef) (root: PostRef)
+    let replyWithKnownRoot (agent: AtpAgent) (text: string) (parent: PostRef) (root: PostRef)
         : Task<Result<PostRef, XrpcError>> =
         task {
             let! facets = RichText.parse agent text
@@ -261,42 +263,50 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Resolve the thread root from a parent post's record data, then create a reply.
-    /// This is the recommended way to reply: you only need the parent post's <see cref="PostRef"/>
-    /// and its raw record data (the <c>Record</c> field from a post view). The thread root is
-    /// resolved automatically.
+    /// Reply to a post. Fetches the parent to auto-resolve the thread root.
+    /// This is the recommended way to reply: you only need the parent post's <see cref="PostRef"/>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="text">The reply text. Mentions, links, and hashtags are auto-detected.</param>
     /// <param name="parentRef">A <see cref="PostRef"/> for the post being replied to.</param>
-    /// <param name="parentRecord">The raw post record JSON (from the post view's <c>Record</c> field).</param>
     /// <returns>A <see cref="PostRef"/> with the AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
     /// <remarks>
-    /// If <paramref name="parentRecord"/> contains a <c>reply</c> field, its <c>root</c> is used as the
-    /// thread root. Otherwise, the parent post itself is the root (top-level post).
-    /// For full control over both parent and root, use <see cref="reply"/> instead.
+    /// Fetches the parent post via <c>app.bsky.feed.getPosts</c> to determine the thread root.
+    /// If the parent has a <c>reply</c> field, its root is used. Otherwise, the parent itself is the root.
+    /// For full control over both parent and root, use <see cref="replyWithKnownRoot"/> instead.
     /// </remarks>
-    let replyTo (agent: AtpAgent) (text: string) (parentRef: PostRef) (parentRecord: JsonElement)
-        : Task<Result<PostRef, XrpcError>> =
-        match parentRecord.TryGetProperty("reply") with
-        | true, replyProp ->
-            try
-                let rootProp = replyProp.GetProperty("root")
-                let rootUri = rootProp.GetProperty("uri").GetString()
-                let rootCid = rootProp.GetProperty("cid").GetString()
-                match AtUri.parse rootUri, Cid.parse rootCid with
-                | Ok uri, Ok cid ->
-                    let root = { PostRef.Uri = uri; Cid = cid }
-                    reply agent text parentRef root
-                | Error msg, _ ->
-                    Task.FromResult(Error (toXrpcError (sprintf "Invalid root AT-URI in reply field: %s" msg)))
-                | _, Error msg ->
-                    Task.FromResult(Error (toXrpcError (sprintf "Invalid root CID in reply field: %s" msg)))
-            with ex ->
-                Task.FromResult(Error (toXrpcError (sprintf "Malformed reply field in parent record: %s" ex.Message)))
-        | false, _ ->
-            // Parent has no reply field, so it is a top-level post — use it as both parent and root
-            reply agent text parentRef parentRef
+    let replyTo (agent: AtpAgent) (text: string) (parentRef: PostRef) : Task<Result<PostRef, XrpcError>> =
+        task {
+            let! postsResult = AppBskyFeed.GetPosts.query agent { Uris = [ parentRef.Uri ] }
+
+            match postsResult with
+            | Error e -> return Error e
+            | Ok posts ->
+                match posts.Posts with
+                | [] -> return Error(toXrpcError "Parent post not found")
+                | parentPost :: _ ->
+                    // Check if parent has a reply field -> extract root
+                    match parentPost.Record.TryGetProperty("reply") with
+                    | true, replyProp ->
+                        try
+                            let rootProp = replyProp.GetProperty("root")
+                            let rootUri = rootProp.GetProperty("uri").GetString()
+                            let rootCid = rootProp.GetProperty("cid").GetString()
+
+                            match AtUri.parse rootUri, Cid.parse rootCid with
+                            | Ok uri, Ok cid ->
+                                let root = { PostRef.Uri = uri; Cid = cid }
+                                return! replyWithKnownRoot agent text parentRef root
+                            | Error msg, _ ->
+                                return Error(toXrpcError (sprintf "Invalid root AT-URI: %s" msg))
+                            | _, Error msg ->
+                                return Error(toXrpcError (sprintf "Invalid root CID: %s" msg))
+                        with ex ->
+                            return Error(toXrpcError (sprintf "Malformed reply field: %s" ex.Message))
+                    | false, _ ->
+                        // No reply field -> top-level post, use as both parent and root
+                        return! replyWithKnownRoot agent text parentRef parentRef
+        }
 
     /// <summary>
     /// Like a post or other record.
