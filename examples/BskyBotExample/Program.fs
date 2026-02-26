@@ -5,12 +5,14 @@
 // blocks, deletes, identity resolution, rich text processing, notifications,
 // threads, chat/DMs, pagination, blob upload, and error handling.
 //
-// To run:
+// To run (make this the last file in the .fsproj to use as entry point):
 //   export BSKY_HANDLE="yourhandle.bsky.social"
 //   export BSKY_PASSWORD="your-app-password"
 //   dotnet run --project examples/BskyBotExample
 //
 // NOTE: This performs real actions on the network. Use a test account!
+
+module Program
 
 open System
 open System.Text.Json
@@ -25,7 +27,6 @@ let env key =
 
 let section title = printfn "\n══════ %s ══════" title
 
-[<EntryPoint>]
 let main _ =
     task {
         // ─────────────────────────────────────────────────────────────

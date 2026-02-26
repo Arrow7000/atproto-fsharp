@@ -9,3 +9,5 @@ obj/
 output/
 .fsdocs/
 tmp/
+.env
+CLAUDE.md
