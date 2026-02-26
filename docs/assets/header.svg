@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" fill="none">
+  <!-- STYLE: Geometric / origami — sharp angular wings, flat colors, bold -->
+  <defs>
+    <linearGradient id="v5-tl" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00B4FF"/>
+      <stop offset="100%" stop-color="#0085FF"/>
+    </linearGradient>
+    <linearGradient id="v5-tr" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6C63FF"/>
+      <stop offset="100%" stop-color="#3D5AFE"/>
+    </linearGradient>
+    <linearGradient id="v5-bl" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#00B0FF"/>
+    </linearGradient>
+    <linearGradient id="v5-br" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#B388FF"/>
+      <stop offset="100%" stop-color="#7C4DFF"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(400, 105)">
+    <!-- Upper left wing — angular, crystalline -->
+    <polygon points="-8,-8 -45,-72 -105,-60 -110,-28 -80,8 -20,12" fill="url(#v5-tl)" opacity="0.9"/>
+    <!-- Facet lines -->
+    <line x1="-45" y1="-72" x2="-60" y2="-15" stroke="#FFF" stroke-width="0.8" opacity="0.2"/>
+    <line x1="-105" y1="-60" x2="-50" y2="-10" stroke="#FFF" stroke-width="0.6" opacity="0.15"/>
+    <!-- <| on left wing (pointing outward) -->
+    <g transform="translate(-72, -40)" opacity="0.3">
+      <rect x="16" y="0" width="3" height="16" rx="1" fill="#FFF"/>
+      <path d="M11,1 L3,8 L11,15" stroke="#FFF" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Upper right wing — angular, different proportions -->
+    <polygon points="8,-8 50,-78 100,-52 108,-18 75,12 20,12" fill="url(#v5-tr)" opacity="0.9"/>
+    <line x1="50" y1="-78" x2="60" y2="-10" stroke="#FFF" stroke-width="0.8" opacity="0.2"/>
+    <line x1="100" y1="-52" x2="52" y2="-5" stroke="#FFF" stroke-width="0.6" opacity="0.15"/>
+    <!-- |> on right wing (pointing outward) -->
+    <g transform="translate(52, -42)" opacity="0.3">
+      <rect x="0" y="0" width="3" height="16" rx="1" fill="#FFF"/>
+      <path d="M8,1 L16,8 L8,15" stroke="#FFF" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Lower left wing -->
+    <polygon points="-8,8 -52,25 -48,58 -20,62 -8,35" fill="url(#v5-bl)" opacity="0.8"/>
+    <!-- Lower right wing -->
+    <polygon points="8,8 48,28 50,60 24,64 8,35" fill="url(#v5-br)" opacity="0.8"/>
+
+    <!-- Body — simple rectangle with rounded ends -->
+    <rect x="-4" y="-12" width="8" height="48" rx="4" fill="#2255A4"/>
+
+    <!-- Head — hexagonal -->
+    <polygon points="0,-28 -8,-22 -8,-14 0,-8 8,-14 8,-22" fill="#1E4D8C"/>
+    <!-- Eyes — angular -->
+    <rect x="-6" y="-22" width="4" height="5" rx="1" fill="#FFF"/>
+    <rect x="2" y="-22" width="4" height="5" rx="1" fill="#FFF"/>
+    <rect x="-5" y="-21" width="2.5" height="3.5" rx="0.5" fill="#1B2836"/>
+    <rect x="3" y="-21" width="2.5" height="3.5" rx="0.5" fill="#1B2836"/>
+    <!-- Glints -->
+    <rect x="-4" y="-21.5" width="1" height="1" fill="#FFF" opacity="0.8"/>
+    <rect x="4.5" y="-21.5" width="1" height="1" fill="#FFF" opacity="0.8"/>
+    <!-- Tiny smile -->
+    <line x1="-2" y1="-13" x2="2" y2="-13" stroke="#FFF" stroke-width="0.8" opacity="0.4" stroke-linecap="round"/>
+
+    <!-- Antennae — straight with diamond tips -->
+    <line x1="-3" y1="-28" x2="-22" y2="-62" stroke="#1E4D8C" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="-22,-68 -17,-62 -22,-56 -27,-62" fill="#00E5FF"/>
+    <line x1="3" y1="-28" x2="25" y2="-60" stroke="#1E4D8C" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="25,-66 30,-60 25,-54 20,-60" fill="#B388FF"/>
+  </g>
+
+  <!-- Project name -->
+  <text x="400" y="235" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="38" font-weight="700" fill="#1B2836" letter-spacing="-0.5">
+    <tspan fill="#0085FF">F#</tspan><tspan fill="#1B2836">.</tspan><tspan fill="#1B2836">ATProto</tspan>
+  </text>
+  <text x="400" y="262" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="15" fill="#5B7083" letter-spacing="0.3">
+    Idiomatic F# for the AT Protocol
+  </text>
+</svg>

@@ -1,8 +1,21 @@
-# FSharp.ATProto
+<p align="center">
+  <img src="docs/assets/header.svg" alt="FSharp.ATProto" width="500"/>
+</p>
 
-A native, idiomatic F# library for the [AT Protocol](https://atproto.com) — the decentralized social networking protocol behind [Bluesky](https://bsky.app).
+<p align="center">
+  <a href="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml"><img src="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10">
+  <img src="https://img.shields.io/badge/tests-1%2C600%2B-brightgreen" alt="Tests: 1,600+">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
+</p>
 
-Built from the ground up in F#. No C# wrappers. Functional-first. If it compiles, it's correct.
+<p align="center">
+  A native, idiomatic F# library for the <a href="https://atproto.com">AT Protocol</a> — the decentralized social networking protocol behind <a href="https://bsky.app">Bluesky</a>.
+  <br/>
+  Built from the ground up in F#. No C# wrappers. Functional-first. If it compiles, it's correct.
+</p>
+
+---
 
 ## Features
 
