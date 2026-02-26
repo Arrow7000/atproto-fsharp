@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/header.svg" alt="FSharp.ATProto" width="1500"/>
+  <img src="docs/assets/header.svg" alt="FSharp.ATProto" width="480"/>
 </p>
 
 <p align="center">
