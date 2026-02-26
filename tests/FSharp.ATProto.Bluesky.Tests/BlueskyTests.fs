@@ -1069,3 +1069,112 @@ let loginTests =
                 |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isError result "login should fail"
     ]
+
+// ── Paginator helpers ──────────────────────────────────────────────
+
+/// Create a mock agent whose handler dispatches based on whether the request URL contains a cursor param
+let private paginatingAgent (page1: obj) (page2: obj) =
+    let agent = createMockAgent (fun req ->
+        let url = req.RequestUri.ToString()
+        if url.Contains("cursor=") then
+            jsonResponse HttpStatusCode.OK page2
+        else
+            jsonResponse HttpStatusCode.OK page1)
+    agent.Session <- Some testSession
+    agent
+
+/// Collect all pages from an IAsyncEnumerable into a list
+let private collectPages (pages: System.Collections.Generic.IAsyncEnumerable<'T>) : 'T list =
+    let result = System.Collections.Generic.List<'T>()
+    let enumerator = pages.GetAsyncEnumerator(System.Threading.CancellationToken.None)
+    let rec loop () =
+        async {
+            let! hasNext = enumerator.MoveNextAsync().AsTask() |> Async.AwaitTask
+            if hasNext then
+                result.Add(enumerator.Current)
+                return! loop ()
+        }
+    loop () |> Async.RunSynchronously
+    enumerator.DisposeAsync().AsTask() |> Async.AwaitTask |> Async.RunSynchronously
+    result |> Seq.toList
+
+[<Tests>]
+let paginateTimelineTests =
+    testList "Bluesky.paginateTimeline" [
+        testCase "returns pages and stops when no cursor" <| fun _ ->
+            let page1 = {| feed = ([||] : obj array); cursor = "page2" |}
+            let page2 = {| feed = ([||] : obj array) |}
+            let agent = paginatingAgent page1 page2
+            let pages = Bluesky.paginateTimeline agent (Some 10L) |> collectPages
+            Expect.equal pages.Length 2 "exactly 2 pages"
+            Expect.isOk pages.[0] "first page is Ok"
+            Expect.isOk pages.[1] "second page is Ok"
+
+        testCase "first page has cursor, second page has none" <| fun _ ->
+            let page1 = {| feed = ([||] : obj array); cursor = "page2" |}
+            let page2 = {| feed = ([||] : obj array) |}
+            let agent = paginatingAgent page1 page2
+            let pages = Bluesky.paginateTimeline agent None |> collectPages
+            let p1 = Expect.wantOk pages.[0] "page1 ok"
+            let p2 = Expect.wantOk pages.[1] "page2 ok"
+            Expect.equal p1.Cursor (Some "page2") "first page cursor"
+            Expect.equal p2.Cursor None "second page no cursor"
+
+        testCase "single page when server returns no cursor" <| fun _ ->
+            let agent = queryAgent (fun _ -> ()) {| feed = ([||] : obj array) |}
+            let pages = Bluesky.paginateTimeline agent None |> collectPages
+            Expect.equal pages.Length 1 "exactly 1 page"
+    ]
+
+[<Tests>]
+let paginateFollowersTests =
+    testList "Bluesky.paginateFollowers" [
+        testCase "returns pages and stops when no cursor" <| fun _ ->
+            let subject = {| did = "did:plc:testuser"; handle = "test.bsky.social" |}
+            let page1 = {| followers = ([||] : obj array); subject = subject; cursor = "page2" |}
+            let page2 = {| followers = ([||] : obj array); subject = subject |}
+            let agent = paginatingAgent page1 page2
+            let pages = Bluesky.paginateFollowers agent "alice.bsky.social" (Some 25L) |> collectPages
+            Expect.equal pages.Length 2 "exactly 2 pages"
+            Expect.isOk pages.[0] "first page is Ok"
+            Expect.isOk pages.[1] "second page is Ok"
+
+        testCase "passes actor parameter in requests" <| fun _ ->
+            let mutable captured = System.Collections.Generic.List<HttpRequestMessage>()
+            let subject = {| did = "did:plc:testuser"; handle = "test.bsky.social" |}
+            let agent = createMockAgent (fun req ->
+                captured.Add(req)
+                jsonResponse HttpStatusCode.OK {| followers = ([||] : obj array); subject = subject |})
+            agent.Session <- Some testSession
+            let pages = Bluesky.paginateFollowers agent "alice.bsky.social" None |> collectPages
+            Expect.equal pages.Length 1 "single page"
+            Expect.stringContains (captured.[0].RequestUri.ToString()) "alice.bsky.social" "actor in query"
+    ]
+
+[<Tests>]
+let paginateNotificationsTests =
+    testList "Bluesky.paginateNotifications" [
+        testCase "returns pages and stops when no cursor" <| fun _ ->
+            let page1 = {| notifications = ([||] : obj array); cursor = "page2" |}
+            let page2 = {| notifications = ([||] : obj array) |}
+            let agent = paginatingAgent page1 page2
+            let pages = Bluesky.paginateNotifications agent (Some 50L) |> collectPages
+            Expect.equal pages.Length 2 "exactly 2 pages"
+            Expect.isOk pages.[0] "first page is Ok"
+            Expect.isOk pages.[1] "second page is Ok"
+
+        testCase "first page has cursor, second page has none" <| fun _ ->
+            let page1 = {| notifications = ([||] : obj array); cursor = "notif-page2" |}
+            let page2 = {| notifications = ([||] : obj array) |}
+            let agent = paginatingAgent page1 page2
+            let pages = Bluesky.paginateNotifications agent None |> collectPages
+            let p1 = Expect.wantOk pages.[0] "page1 ok"
+            let p2 = Expect.wantOk pages.[1] "page2 ok"
+            Expect.equal p1.Cursor (Some "notif-page2") "first page cursor"
+            Expect.equal p2.Cursor None "second page no cursor"
+
+        testCase "single page when server returns no cursor" <| fun _ ->
+            let agent = queryAgent (fun _ -> ()) {| notifications = ([||] : obj array) |}
+            let pages = Bluesky.paginateNotifications agent None |> collectPages
+            Expect.equal pages.Length 1 "exactly 1 page"
+    ]

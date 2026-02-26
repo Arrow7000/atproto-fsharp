@@ -845,3 +845,65 @@ module Bluesky =
               Priority = None
               Reasons = None
               SeenAt = None }
+
+    // ── Pre-built paginators ───────────────────────────────────────────
+
+    /// <summary>
+    /// Paginate the home timeline. Returns an async enumerable of pages.
+    /// Each element is a <c>Result</c> containing one page of timeline posts.
+    /// Pagination stops automatically when the server returns no cursor.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="pageSize">Maximum number of posts per page (optional, pass <c>None</c> for server default).</param>
+    /// <returns>An <see cref="System.Collections.Generic.IAsyncEnumerable{T}"/> of paginated results.</returns>
+    let paginateTimeline (agent: AtpAgent) (pageSize: int64 option)
+        : System.Collections.Generic.IAsyncEnumerable<Result<AppBskyFeed.GetTimeline.Output, XrpcError>> =
+        Xrpc.paginate<AppBskyFeed.GetTimeline.Params, AppBskyFeed.GetTimeline.Output>
+            AppBskyFeed.GetTimeline.TypeId
+            { Algorithm = None
+              Cursor = None
+              Limit = pageSize }
+            (fun o -> o.Cursor)
+            (fun c p -> { p with Cursor = c })
+            agent
+
+    /// <summary>
+    /// Paginate followers for an actor. Returns an async enumerable of pages.
+    /// Each element is a <c>Result</c> containing one page of follower profiles.
+    /// Pagination stops automatically when the server returns no cursor.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">The actor identifier (handle or DID string) whose followers to list.</param>
+    /// <param name="pageSize">Maximum number of followers per page (optional, pass <c>None</c> for server default).</param>
+    /// <returns>An <see cref="System.Collections.Generic.IAsyncEnumerable{T}"/> of paginated results.</returns>
+    let paginateFollowers (agent: AtpAgent) (actor: string) (pageSize: int64 option)
+        : System.Collections.Generic.IAsyncEnumerable<Result<AppBskyGraph.GetFollowers.Output, XrpcError>> =
+        Xrpc.paginate<AppBskyGraph.GetFollowers.Params, AppBskyGraph.GetFollowers.Output>
+            AppBskyGraph.GetFollowers.TypeId
+            { Actor = actor
+              Cursor = None
+              Limit = pageSize }
+            (fun o -> o.Cursor)
+            (fun c p -> { p with Cursor = c })
+            agent
+
+    /// <summary>
+    /// Paginate notifications for the authenticated user. Returns an async enumerable of pages.
+    /// Each element is a <c>Result</c> containing one page of notifications.
+    /// Pagination stops automatically when the server returns no cursor.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="pageSize">Maximum number of notifications per page (optional, pass <c>None</c> for server default).</param>
+    /// <returns>An <see cref="System.Collections.Generic.IAsyncEnumerable{T}"/> of paginated results.</returns>
+    let paginateNotifications (agent: AtpAgent) (pageSize: int64 option)
+        : System.Collections.Generic.IAsyncEnumerable<Result<AppBskyNotification.ListNotifications.Output, XrpcError>> =
+        Xrpc.paginate<AppBskyNotification.ListNotifications.Params, AppBskyNotification.ListNotifications.Output>
+            AppBskyNotification.ListNotifications.TypeId
+            { Cursor = None
+              Limit = pageSize
+              Priority = None
+              Reasons = None
+              SeenAt = None }
+            (fun o -> o.Cursor)
+            (fun c p -> { p with Cursor = c })
+            agent
