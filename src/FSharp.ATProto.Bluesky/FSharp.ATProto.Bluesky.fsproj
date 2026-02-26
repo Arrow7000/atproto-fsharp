@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Generated/Generated.fs" />
+    <Compile Include="PostExtensions.fs" />
     <Compile Include="RichText.fs" />
     <Compile Include="Identity.fs" />
     <Compile Include="Bluesky.fs" />

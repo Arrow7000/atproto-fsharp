@@ -10,6 +10,7 @@
     <Compile Include="IdentityTests.fs" />
     <Compile Include="BlueskyTests.fs" />
     <Compile Include="ChatTests.fs" />
+    <Compile Include="PostExtensionTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>
