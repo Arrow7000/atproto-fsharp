@@ -9,6 +9,7 @@
     <Compile Include="RichTextTests.fs" />
     <Compile Include="IdentityTests.fs" />
     <Compile Include="BlueskyTests.fs" />
+    <Compile Include="ChatTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>
