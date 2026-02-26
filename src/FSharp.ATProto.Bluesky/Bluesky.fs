@@ -52,13 +52,39 @@ type BlockRef =
       Uri: AtUri }
 
 /// <summary>
+/// Supported image MIME types for blob upload.
+/// Use the named cases for common image types, or <c>Custom</c> for other MIME types.
+/// </summary>
+type ImageMime =
+    | Png
+    | Jpeg
+    | Gif
+    | Webp
+    | Custom of string
+
+/// <summary>
+/// Functions for working with <see cref="ImageMime"/> values.
+/// </summary>
+module ImageMime =
+    /// <summary>
+    /// Convert an <see cref="ImageMime"/> to its MIME type string representation.
+    /// </summary>
+    let toMimeString =
+        function
+        | Png -> "image/png"
+        | Jpeg -> "image/jpeg"
+        | Gif -> "image/gif"
+        | Webp -> "image/webp"
+        | Custom s -> s
+
+/// <summary>
 /// Image data for upload with a post.
 /// </summary>
 type ImageUpload =
     { /// <summary>The raw binary image data.</summary>
       Data: byte[]
-      /// <summary>The MIME type (e.g., <c>image/jpeg</c>, <c>image/png</c>).</summary>
-      MimeType: string
+      /// <summary>The MIME type for the image.</summary>
+      MimeType: ImageMime
       /// <summary>Alt text describing the image for accessibility.</summary>
       AltText: string }
 
@@ -665,7 +691,7 @@ module Bluesky =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="data">The raw binary content of the blob.</param>
-    /// <param name="mimeType">The MIME type of the blob (e.g., <c>image/jpeg</c>, <c>image/png</c>).</param>
+    /// <param name="mimeType">The MIME type of the blob (e.g., <see cref="ImageMime.Jpeg"/>, <see cref="ImageMime.Png"/>).</param>
     /// <returns>
     /// <c>Ok</c> with a <see cref="BlobRef"/> on success, or an <see cref="XrpcError"/>.
     /// The <see cref="BlobRef.Json"/> field contains the raw JSON for use in embed records,
@@ -676,13 +702,13 @@ module Bluesky =
     /// Use <see cref="BlobRef.Json"/> when constructing custom embed records, or use
     /// <see cref="postWithImages"/> for a higher-level API that handles blob references automatically.
     /// </remarks>
-    let uploadBlob (agent: AtpAgent) (data: byte[]) (mimeType: string)
+    let uploadBlob (agent: AtpAgent) (data: byte[]) (mimeType: ImageMime)
         : Task<Result<BlobRef, XrpcError>> =
         task {
             let url = System.Uri(agent.BaseUrl, sprintf "xrpc/%s" ComAtprotoRepo.UploadBlob.TypeId)
             let request = new HttpRequestMessage(HttpMethod.Post, url)
             request.Content <- new ByteArrayContent(data)
-            request.Content.Headers.ContentType <- MediaTypeHeaderValue(mimeType)
+            request.Content.Headers.ContentType <- MediaTypeHeaderValue(ImageMime.toMimeString mimeType)
             match agent.Session with
             | Some session ->
                 request.Headers.Authorization <-
@@ -704,7 +730,7 @@ module Bluesky =
                     return Error { StatusCode = int response.StatusCode; Error = None; Message = Some errorJson }
         }
 
-    let private uploadAllBlobs (agent: AtpAgent) (images: (byte[] * string * string) list)
+    let private uploadAllBlobs (agent: AtpAgent) (images: (byte[] * ImageMime * string) list)
         : Task<Result<(BlobRef * string) list, XrpcError>> =
         task {
             let mutable blobRefs : (BlobRef * string) list = []
@@ -738,7 +764,7 @@ module Bluesky =
     /// <code>
     /// let imageBytes = System.IO.File.ReadAllBytes("photo.jpg")
     /// let! result = Bluesky.postWithImages agent "Check this out!"
-    ///     [ { Data = imageBytes; MimeType = "image/jpeg"; AltText = "A photo" } ]
+    ///     [ { Data = imageBytes; MimeType = Jpeg; AltText = "A photo" } ]
     /// </code>
     /// </example>
     let postWithImages (agent: AtpAgent) (text: string) (images: ImageUpload list)

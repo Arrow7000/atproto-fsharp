@@ -692,7 +692,7 @@ let blobTests =
                 jsonResponse HttpStatusCode.OK (blobResponse "image/png" 100))
             agent.Session <- Some testSession
             let data = [| 0x89uy; 0x50uy; 0x4Euy; 0x47uy |] // PNG header bytes
-            let result = Bluesky.uploadBlob agent data "image/png" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.uploadBlob agent data Png |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
             let req = captured.Value
             Expect.equal (req.Content.Headers.ContentType.MediaType) "image/png" "content type"
@@ -702,7 +702,7 @@ let blobTests =
             let agent = createMockAgent (fun _ ->
                 jsonResponse HttpStatusCode.OK {| blob = {| ``$type`` = "blob"; ref = {| ``$link`` = "bafyreiabc123" |}; mimeType = "image/jpeg"; size = 54321 |} |})
             agent.Session <- Some testSession
-            let result = Bluesky.uploadBlob agent [| 0xFFuy; 0xD8uy |] "image/jpeg" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.uploadBlob agent [| 0xFFuy; 0xD8uy |] Jpeg |> Async.AwaitTask |> Async.RunSynchronously
             let blobRef = Expect.wantOk result "should succeed"
             Expect.equal (Cid.value blobRef.Ref) "bafyreiabc123" "ref CID"
             Expect.equal blobRef.MimeType "image/jpeg" "mime type"
@@ -712,7 +712,7 @@ let blobTests =
             let agent = createMockAgent (fun _ ->
                 jsonResponse HttpStatusCode.OK (blobResponse "image/png" 999))
             agent.Session <- Some testSession
-            let result = Bluesky.uploadBlob agent [| 0uy |] "image/png" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.uploadBlob agent [| 0uy |] Png |> Async.AwaitTask |> Async.RunSynchronously
             let blobRef = Expect.wantOk result "should succeed"
             let jsonStr = blobRef.Json.ToString()
             Expect.stringContains jsonStr "blob" "$type in raw JSON"
@@ -724,7 +724,7 @@ let blobTests =
                 captured <- Some req
                 jsonResponse HttpStatusCode.OK (blobResponse "image/jpeg" 50))
             agent.Session <- Some testSession
-            let result = Bluesky.uploadBlob agent [| 0xFFuy; 0xD8uy |] "image/jpeg" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.uploadBlob agent [| 0xFFuy; 0xD8uy |] Jpeg |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
             let req = captured.Value
             Expect.equal (req.Headers.Authorization.Scheme) "Bearer" "auth scheme"
@@ -734,7 +734,7 @@ let blobTests =
             let agent = createMockAgent (fun _ ->
                 jsonResponse HttpStatusCode.BadRequest {| error = "InvalidBlob"; message = "too large" |})
             agent.Session <- Some testSession
-            let result = Bluesky.uploadBlob agent [| 0uy |] "image/png" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.uploadBlob agent [| 0uy |] Png |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isError result "should fail"
 
         testCase "uploadBlob sends to correct XRPC endpoint" <| fun _ ->
@@ -743,7 +743,7 @@ let blobTests =
                 captured <- Some req
                 jsonResponse HttpStatusCode.OK (blobResponse "image/png" 10))
             agent.Session <- Some testSession
-            let result = Bluesky.uploadBlob agent [| 0uy |] "image/png" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.uploadBlob agent [| 0uy |] Png |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
             let req = captured.Value
             Expect.stringContains (req.RequestUri.ToString()) "com.atproto.repo.uploadBlob" "correct endpoint"
@@ -752,10 +752,29 @@ let blobTests =
             let agent = createMockAgent (fun _ ->
                 jsonResponse HttpStatusCode.OK {| unexpected = "data" |})
             agent.Session <- Some testSession
-            let result = Bluesky.uploadBlob agent [| 0uy |] "image/png" |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.uploadBlob agent [| 0uy |] Png |> Async.AwaitTask |> Async.RunSynchronously
             let err = Expect.wantError result "should fail when blob property missing"
             Expect.equal err.StatusCode 400 "status code"
             Expect.isSome err.Message "should have message"
+    ]
+
+[<Tests>]
+let imageMimeTests =
+    testList "ImageMime.toMimeString" [
+        testCase "Png converts to image/png" <| fun _ ->
+            Expect.equal (ImageMime.toMimeString Png) "image/png" "Png"
+
+        testCase "Jpeg converts to image/jpeg" <| fun _ ->
+            Expect.equal (ImageMime.toMimeString Jpeg) "image/jpeg" "Jpeg"
+
+        testCase "Gif converts to image/gif" <| fun _ ->
+            Expect.equal (ImageMime.toMimeString Gif) "image/gif" "Gif"
+
+        testCase "Webp converts to image/webp" <| fun _ ->
+            Expect.equal (ImageMime.toMimeString Webp) "image/webp" "Webp"
+
+        testCase "Custom passes through arbitrary string" <| fun _ ->
+            Expect.equal (ImageMime.toMimeString (Custom "video/mp4")) "video/mp4" "Custom"
     ]
 
 [<Tests>]
@@ -770,7 +789,7 @@ let imagePostTests =
                 else
                     jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.feed.post/abc"; cid = "bafyreiabc123" |})
             agent.Session <- Some testSession
-            let images = [ { Data = [| 0x89uy; 0x50uy |]; MimeType = "image/png"; AltText = "A test image" } ]
+            let images = [ { Data = [| 0x89uy; 0x50uy |]; MimeType = Png; AltText = "A test image" } ]
             let result = Bluesky.postWithImages agent "Check this out" images |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
             Expect.isGreaterThanOrEqual requestCount 2 "at least 2 requests (upload + create)"
@@ -785,7 +804,7 @@ let imagePostTests =
                 else
                     jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.feed.post/abc"; cid = "bafyreiabc123" |})
             agent.Session <- Some testSession
-            let images = [ { Data = [| 0x89uy |]; MimeType = "image/png"; AltText = "My image" } ]
+            let images = [ { Data = [| 0x89uy |]; MimeType = Png; AltText = "My image" } ]
             let result = Bluesky.postWithImages agent "Look at this" images |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
             Expect.stringContains lastBody "app.bsky.embed.images" "embed type in body"
@@ -798,7 +817,7 @@ let imagePostTests =
                 else
                     jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.feed.post/abc"; cid = "bafyreiabc123" |})
             agent.Session <- Some testSession
-            let images = [ { Data = [| 0x89uy |]; MimeType = "image/png"; AltText = "Test" } ]
+            let images = [ { Data = [| 0x89uy |]; MimeType = Png; AltText = "Test" } ]
             let result = Bluesky.postWithImages agent "Test" images |> Async.AwaitTask |> Async.RunSynchronously
             let postRef = Expect.wantOk result "should succeed"
             Expect.equal (AtUri.value postRef.Uri) "at://did:plc:testuser/app.bsky.feed.post/abc" "uri"
@@ -811,7 +830,7 @@ let imagePostTests =
                 else
                     jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.feed.post/abc"; cid = "bafyreiabc123" |})
             agent.Session <- Some testSession
-            let images = [ { Data = [| 0x89uy |]; MimeType = "image/png"; AltText = "fail" } ]
+            let images = [ { Data = [| 0x89uy |]; MimeType = Png; AltText = "fail" } ]
             let result = Bluesky.postWithImages agent "Should fail" images |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isError result "should fail when blob upload fails"
     ]
