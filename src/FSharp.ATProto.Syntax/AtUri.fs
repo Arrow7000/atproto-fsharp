@@ -10,7 +10,11 @@ namespace FSharp.ATProto.Syntax
 /// <remarks>
 /// See the AT Protocol specification: https://atproto.com/specs/at-uri-scheme
 /// </remarks>
-type AtUri = private AtUri of string
+type AtUri =
+    private
+    | AtUri of string
+
+    override this.ToString() = let (AtUri s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="AtUri"/> values.

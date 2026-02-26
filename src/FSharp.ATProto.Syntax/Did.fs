@@ -11,7 +11,11 @@ open System.Text.RegularExpressions
 /// See the AT Protocol specification: https://atproto.com/specs/did
 /// and the W3C DID specification: https://www.w3.org/TR/did-core/
 /// </remarks>
-type Did = private Did of string
+type Did =
+    private
+    | Did of string
+
+    override this.ToString() = let (Did s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Did"/> values.

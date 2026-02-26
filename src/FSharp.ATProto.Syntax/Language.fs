@@ -12,7 +12,11 @@ open System.Text.RegularExpressions
 /// optionally followed by hyphen-separated alphanumeric subtags.
 /// See https://www.rfc-editor.org/rfc/rfc5646.html for the full BCP 47 specification.
 /// </remarks>
-type Language = private Language of string
+type Language =
+    private
+    | Language of string
+
+    override this.ToString() = let (Language s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Language"/> values.

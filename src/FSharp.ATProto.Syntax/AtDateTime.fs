@@ -12,7 +12,11 @@ open System.Text.RegularExpressions
 /// seconds are required, and the offset <c>-00:00</c> is not allowed.
 /// See the AT Protocol specification: https://atproto.com/specs/lexicon#datetime
 /// </remarks>
-type AtDateTime = private AtDateTime of string
+type AtDateTime =
+    private
+    | AtDateTime of string
+
+    override this.ToString() = let (AtDateTime s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="AtDateTime"/> values.

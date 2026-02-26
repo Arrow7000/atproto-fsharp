@@ -12,7 +12,11 @@ open System.Text.RegularExpressions
 /// The first character is restricted to the range <c>[234567abcdefghij]</c> to ensure
 /// the encoded timestamp fits in a 64-bit integer.
 /// </remarks>
-type Tid = private Tid of string
+type Tid =
+    private
+    | Tid of string
+
+    override this.ToString() = let (Tid s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Tid"/> values.

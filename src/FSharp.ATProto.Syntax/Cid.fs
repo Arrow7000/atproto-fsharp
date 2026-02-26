@@ -12,7 +12,11 @@ open System.Text.RegularExpressions
 /// This type performs syntactic validation only (base-encoded alphanumeric string of 8-256 characters).
 /// See https://github.com/multiformats/cid for the CID specification.
 /// </remarks>
-type Cid = private Cid of string
+type Cid =
+    private
+    | Cid of string
+
+    override this.ToString() = let (Cid s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Cid"/> values.

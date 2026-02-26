@@ -11,7 +11,11 @@ open System.Text.RegularExpressions
 /// <remarks>
 /// See the AT Protocol specification: https://atproto.com/specs/record-key
 /// </remarks>
-type RecordKey = private RecordKey of string
+type RecordKey =
+    private
+    | RecordKey of string
+
+    override this.ToString() = let (RecordKey s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="RecordKey"/> values.

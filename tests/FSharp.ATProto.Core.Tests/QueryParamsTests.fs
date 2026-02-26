@@ -2,6 +2,7 @@ module QueryParamsTests
 
 open Expecto
 open FSharp.ATProto.Core
+open FSharp.ATProto.Syntax
 
 type SimpleParams = { Actor: string }
 type OptionalParams = { Limit: int64 option; Cursor: string option }
@@ -9,11 +10,20 @@ type ListParams = { Tag: string list }
 type BoolParams = { IncludeReplies: bool }
 type AllOptionalNone = { A: string option; B: int64 option }
 
+// Record types with typed Syntax identifiers
+type DidParams = { Actor: Did }
+type HandleParams = { Actor: Handle }
+type AtUriParams = { Uri: AtUri }
+type CidParams = { Cid: Cid }
+type NsidParams = { Collection: Nsid }
+type OptionalDidParams = { Actor: Did option }
+type DidListParams = { Actors: Did list }
+
 [<Tests>]
 let tests =
     testList "QueryParams" [
         testCase "serializes string field" <| fun () ->
-            let result = QueryParams.toQueryString { Actor = "did:plc:abc" }
+            let result = QueryParams.toQueryString { SimpleParams.Actor = "did:plc:abc" }
             Expect.equal result "?actor=did%3Aplc%3Aabc" "string field"
 
         testCase "serializes int64 field" <| fun () ->
@@ -39,4 +49,44 @@ let tests =
         testCase "combines multiple fields" <| fun () ->
             let result = QueryParams.toQueryString { Limit = Some 25L; Cursor = Some "abc123" }
             Expect.equal result "?limit=25&cursor=abc123" "multiple fields"
+
+        testCase "serializes Did field via ToString" <| fun () ->
+            let did = Did.parse "did:plc:z72i7hdynmk6r22z27h6tvur" |> Result.defaultWith failwith
+            let result = QueryParams.toQueryString { DidParams.Actor = did }
+            Expect.equal result "?actor=did%3Aplc%3Az72i7hdynmk6r22z27h6tvur" "Did field"
+
+        testCase "serializes Handle field via ToString" <| fun () ->
+            let handle = Handle.parse "alice.bsky.social" |> Result.defaultWith failwith
+            let result = QueryParams.toQueryString { HandleParams.Actor = handle }
+            Expect.equal result "?actor=alice.bsky.social" "Handle field"
+
+        testCase "serializes AtUri field via ToString" <| fun () ->
+            let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3k2la3b" |> Result.defaultWith failwith
+            let result = QueryParams.toQueryString { AtUriParams.Uri = uri }
+            Expect.equal result "?uri=at%3A%2F%2Fdid%3Aplc%3Az72i7hdynmk6r22z27h6tvur%2Fapp.bsky.feed.post%2F3k2la3b" "AtUri field"
+
+        testCase "serializes Cid field via ToString" <| fun () ->
+            let cid = Cid.parse "bafyreib2rxk3rybpej3j" |> Result.defaultWith failwith
+            let result = QueryParams.toQueryString { CidParams.Cid = cid }
+            Expect.equal result "?cid=bafyreib2rxk3rybpej3j" "Cid field"
+
+        testCase "serializes Nsid field via ToString" <| fun () ->
+            let nsid = Nsid.parse "app.bsky.feed.post" |> Result.defaultWith failwith
+            let result = QueryParams.toQueryString { NsidParams.Collection = nsid }
+            Expect.equal result "?collection=app.bsky.feed.post" "Nsid field"
+
+        testCase "serializes optional Did field" <| fun () ->
+            let did = Did.parse "did:plc:z72i7hdynmk6r22z27h6tvur" |> Result.defaultWith failwith
+            let result = QueryParams.toQueryString { OptionalDidParams.Actor = Some did }
+            Expect.equal result "?actor=did%3Aplc%3Az72i7hdynmk6r22z27h6tvur" "optional Did Some"
+
+        testCase "omits None Did field" <| fun () ->
+            let result = QueryParams.toQueryString { OptionalDidParams.Actor = None }
+            Expect.equal result "" "optional Did None"
+
+        testCase "serializes Did list as repeated params" <| fun () ->
+            let did1 = Did.parse "did:plc:abc123def456ghi" |> Result.defaultWith failwith
+            let did2 = Did.parse "did:web:example.com" |> Result.defaultWith failwith
+            let result = QueryParams.toQueryString { DidListParams.Actors = [ did1; did2 ] }
+            Expect.equal result "?actors=did%3Aplc%3Aabc123def456ghi&actors=did%3Aweb%3Aexample.com" "Did list"
     ]

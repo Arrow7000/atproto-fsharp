@@ -10,7 +10,11 @@ open System.Text.RegularExpressions
 /// <remarks>
 /// See the AT Protocol specification: https://atproto.com/specs/handle
 /// </remarks>
-type Handle = private Handle of string
+type Handle =
+    private
+    | Handle of string
+
+    override this.ToString() = let (Handle s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Handle"/> values.

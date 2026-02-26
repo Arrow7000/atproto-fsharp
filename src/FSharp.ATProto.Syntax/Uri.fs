@@ -13,7 +13,11 @@ open System.Text.RegularExpressions
 /// <c>https</c>, <c>dns</c>, <c>at</c>, <c>did</c>, and <c>content-type</c>.
 /// See https://www.rfc-editor.org/rfc/rfc3986 for the full URI specification.
 /// </remarks>
-type Uri = private Uri of string
+type Uri =
+    private
+    | Uri of string
+
+    override this.ToString() = let (Uri s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Uri"/> values.

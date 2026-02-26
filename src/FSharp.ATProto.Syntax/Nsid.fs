@@ -11,7 +11,11 @@ open System.Text.RegularExpressions
 /// <remarks>
 /// See the AT Protocol specification: https://atproto.com/specs/nsid
 /// </remarks>
-type Nsid = private Nsid of string
+type Nsid =
+    private
+    | Nsid of string
+
+    override this.ToString() = let (Nsid s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Nsid"/> values.
