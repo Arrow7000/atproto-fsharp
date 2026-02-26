@@ -19,12 +19,11 @@ open FSharp.ATProto.Bluesky
 open FSharp.ATProto.Syntax
 
 let env key =
-    match Environment.GetEnvironmentVariable(key) with
+    match Environment.GetEnvironmentVariable key with
     | null -> failwithf "Set %s environment variable" key
     | v -> v
 
-let section title =
-    printfn "\n══════ %s ══════" title
+let section title = printfn "\n══════ %s ══════" title
 
 [<EntryPoint>]
 let main _ =
@@ -45,8 +44,7 @@ let main _ =
             | Ok s ->
                 printfn "Logged in as @%s (%s)" (Handle.value s.Handle) (Did.value s.Did)
                 s
-            | Error e ->
-                failwithf "Login failed: %A" e
+            | Error e -> failwithf "Login failed: %A" e
 
         // ─────────────────────────────────────────────────────────────
         // 2. READ PROFILES
@@ -57,11 +55,14 @@ let main _ =
 
         // Own profile via convenience method
         let! ownProfile = Bluesky.getProfile agent (Handle.value session.Handle)
+
         match ownProfile with
         | Ok p ->
             printfn "Own profile: @%s (%s)" (Handle.value p.Handle) (Did.value p.Did)
             printfn "  Display name: %s" (p.DisplayName |> Option.defaultValue "(none)")
-            printfn "  Posts: %s, Followers: %s, Following: %s"
+
+            printfn
+                "  Posts: %s, Followers: %s, Following: %s"
                 (p.PostsCount |> Option.map string |> Option.defaultValue "?")
                 (p.FollowersCount |> Option.map string |> Option.defaultValue "?")
                 (p.FollowsCount |> Option.map string |> Option.defaultValue "?")
@@ -69,18 +70,19 @@ let main _ =
 
         // Another user's profile (raw XRPC query — equivalent to getProfile)
         let! otherProfile = AppBskyActor.GetProfile.query agent { Actor = "bsky.app" }
+
         match otherProfile with
         | Ok p ->
             printfn "Other profile: @%s" (Handle.value p.Handle)
-            printfn "  Bio: %s"
+
+            printfn
+                "  Bio: %s"
                 (p.Description
                  |> Option.defaultValue "(no bio)"
                  |> fun s -> if s.Length > 80 then s.[..79] + "..." else s)
             // Check viewer relationship state
             match p.Viewer with
-            | Some v ->
-                printfn "  Following: %b, Followed by: %b"
-                    v.Following.IsSome v.FollowedBy.IsSome
+            | Some v -> printfn "  Following: %b, Followed by: %b" v.Following.IsSome v.FollowedBy.IsSome
             | None -> ()
         | Error e -> printfn "Other profile failed: %A" e
 
@@ -93,35 +95,34 @@ let main _ =
         section "3. Timeline"
 
         let! timelineResult = Bluesky.getTimeline agent (Some 10L) None
+
         let timelineFeed =
             match timelineResult with
             | Ok tl ->
-                printfn "Timeline: %d posts (cursor: %s)"
-                    tl.Feed.Length
-                    (tl.Cursor |> Option.defaultValue "(end)")
+                printfn "Timeline: %d posts (cursor: %s)" tl.Feed.Length (tl.Cursor |> Option.defaultValue "(end)")
+
                 for item in tl.Feed do
                     // Check if this is a repost or pinned post
                     let prefix =
                         match item.Reason with
-                        | Some (AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonRepost _) ->
-                            "[repost] "
-                        | Some (AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin _) ->
-                            "[pinned] "
+                        | Some(AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonRepost _) -> "[repost] "
+                        | Some(AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin _) -> "[pinned] "
                         | _ -> ""
                     // Post text is in the raw record JSON
                     let text =
                         match item.Post.Record.TryGetProperty("text") with
                         | true, v -> v.GetString()
                         | false, _ -> "(no text)"
-                    let truncated =
-                        if text.Length > 60 then text.[..59] + "..." else text
-                    printfn "  %s@%s: %s" prefix
-                        (Handle.value item.Post.Author.Handle) truncated
+
+                    let truncated = if text.Length > 60 then text.[..59] + "..." else text
+                    printfn "  %s@%s: %s" prefix (Handle.value item.Post.Author.Handle) truncated
                     // Access engagement counts
-                    printfn "    likes: %s, reposts: %s, replies: %s"
+                    printfn
+                        "    likes: %s, reposts: %s, replies: %s"
                         (item.Post.LikeCount |> Option.map string |> Option.defaultValue "?")
                         (item.Post.RepostCount |> Option.map string |> Option.defaultValue "?")
                         (item.Post.ReplyCount |> Option.map string |> Option.defaultValue "?")
+
                 tl.Feed
             | Error e ->
                 printfn "Timeline failed: %A" e
@@ -139,8 +140,8 @@ let main _ =
 
         // 4a. Auto-detected rich text — mentions, links, and hashtags
         //     are detected and resolved to facets automatically
-        let! autoPost =
-            Bluesky.post agent "Hello from F#! Visit https://atproto.com #atproto"
+        let! autoPost = Bluesky.post agent "Hello from F#! Visit https://atproto.com #atproto"
+
         let postRef =
             match autoPost with
             | Ok p ->
@@ -150,8 +151,8 @@ let main _ =
 
         // 4b. Explicitly plain text — pass empty facets to skip detection.
         //     Useful when you know the text has no rich content.
-        let! plainPost =
-            Bluesky.postWithFacets agent "Just a plain text post, no detection." []
+        let! plainPost = Bluesky.postWithFacets agent "Just a plain text post, no detection." []
+
         match plainPost with
         | Ok p -> printfn "Plain text post: %s" (AtUri.value p.Uri)
         | Error e -> printfn "Plain post failed: %A" e
@@ -161,14 +162,17 @@ let main _ =
         let facetText = "Check example.com for details"
         let linkStart = int64 (RichText.byteLength "Check ")
         let linkEnd = int64 (RichText.byteLength "Check example.com")
+
         match Uri.parse "https://example.com" with
         | Ok linkUri ->
-            let manualFacets : AppBskyRichtext.Facet.Facet list =
-                [ { Index = { ByteStart = linkStart; ByteEnd = linkEnd }
-                    Features =
-                        [ AppBskyRichtext.Facet.FacetFeaturesItem.Link
-                            { Uri = linkUri } ] } ]
+            let manualFacets: AppBskyRichtext.Facet.Facet list =
+                [ { Index =
+                      { ByteStart = linkStart
+                        ByteEnd = linkEnd }
+                    Features = [ AppBskyRichtext.Facet.FacetFeaturesItem.Link { Uri = linkUri } ] } ]
+
             let! facetPost = Bluesky.postWithFacets agent facetText manualFacets
+
             match facetPost with
             | Ok p -> printfn "Manual facet post: %s" (AtUri.value p.Uri)
             | Error e -> printfn "Manual facet post failed: %A" e
@@ -177,10 +181,15 @@ let main _ =
         // 4d. Post with images — upload + embed in one call.
         //     Supports up to 4 images. Each needs data, MIME type, and alt text.
         let dummyImage = Array.create 100 0uy // replace with real image bytes
+
         let! imgPost =
-            Bluesky.postWithImages agent "Post with an image attached!" [
-                { Data = dummyImage; MimeType = "image/png"; AltText = "A test image" }
-            ]
+            Bluesky.postWithImages
+                agent
+                "Post with an image attached!"
+                [ { Data = dummyImage
+                    MimeType = "image/png"
+                    AltText = "A test image" } ]
+
         match imgPost with
         | Ok p -> printfn "Image post: %s" (AtUri.value p.Uri)
         | Error e -> printfn "Image post failed (expected with dummy data): %A" e
@@ -201,17 +210,20 @@ let main _ =
         //     from the timeline or a thread view.
         if timelineFeed.Length > 0 then
             let parentPost = timelineFeed.[0].Post
-            let parentRef : PostRef =
-                { Uri = parentPost.Uri; Cid = parentPost.Cid }
-            let! replyToResult =
-                Bluesky.replyTo agent "Great post!" parentRef parentPost.Record
+
+            let parentRef: PostRef =
+                { Uri = parentPost.Uri
+                  Cid = parentPost.Cid }
+
+            let! replyToResult = Bluesky.replyTo agent "Great post!" parentRef parentPost.Record
+
             match replyToResult with
             | Ok r -> printfn "replyTo (auto-root): %s" (AtUri.value r.Uri)
             | Error e -> printfn "replyTo failed: %A" e
 
         // 5b. reply to a top-level post — parent and root are the same
-        let! topLevelReply =
-            Bluesky.reply agent "Replying to myself!" postRef postRef
+        let! topLevelReply = Bluesky.reply agent "Replying to myself!" postRef postRef
+
         match topLevelReply with
         | Ok r -> printfn "Top-level reply: %s" (AtUri.value r.Uri)
         | Error e -> printfn "Top-level reply failed: %A" e
@@ -220,8 +232,8 @@ let main _ =
         //     parent is the direct reply we're responding to
         match topLevelReply with
         | Ok replyRef ->
-            let! nestedReply =
-                Bluesky.reply agent "Nested reply!" replyRef postRef
+            let! nestedReply = Bluesky.reply agent "Nested reply!" replyRef postRef
+
             match nestedReply with
             | Ok r -> printfn "Nested reply: %s" (AtUri.value r.Uri)
             | Error e -> printfn "Nested reply failed: %A" e
@@ -236,13 +248,15 @@ let main _ =
         section "6. Like / Unlike"
 
         let! likeResult = Bluesky.like agent postRef
+
         match likeResult with
         | Ok likeRef ->
             printfn "Liked: %s" (AtUri.value likeRef.Uri)
             // Unlike using the typed LikeRef
             let! unlikeResult = Bluesky.unlike agent likeRef
+
             match unlikeResult with
-            | Ok () -> printfn "Unliked successfully"
+            | Ok() -> printfn "Unliked successfully"
             | Error e -> printfn "Unlike failed: %A" e
         | Error e -> printfn "Like failed: %A" e
 
@@ -254,12 +268,14 @@ let main _ =
         section "7. Repost / Unrepost"
 
         let! repostResult = Bluesky.repost agent postRef
+
         match repostResult with
         | Ok repostRef ->
             printfn "Reposted: %s" (AtUri.value repostRef.Uri)
             let! unrepostResult = Bluesky.unrepost agent repostRef
+
             match unrepostResult with
-            | Ok () -> printfn "Unreposted successfully"
+            | Ok() -> printfn "Unreposted successfully"
             | Error e -> printfn "Unrepost failed: %A" e
         | Error e -> printfn "Repost failed: %A" e
 
@@ -275,18 +291,20 @@ let main _ =
 
         // 8a. Follow by typed DID
         let! followResult = Bluesky.follow agent session.Did
+
         match followResult with
         | Ok followRef ->
             printfn "Followed (by DID): %s" (AtUri.value followRef.Uri)
             let! unfollowResult = Bluesky.unfollow agent followRef
+
             match unfollowResult with
-            | Ok () -> printfn "Unfollowed successfully"
+            | Ok() -> printfn "Unfollowed successfully"
             | Error e -> printfn "Unfollow failed: %A" e
         | Error e -> printfn "Follow failed: %A" e
 
         // 8b. Follow by handle string (auto-resolves to DID)
-        let! followUserResult =
-            Bluesky.followUser agent (Handle.value session.Handle)
+        let! followUserResult = Bluesky.followUser agent (Handle.value session.Handle)
+
         match followUserResult with
         | Ok followRef ->
             printfn "Followed (by handle): %s" (AtUri.value followRef.Uri)
@@ -303,18 +321,20 @@ let main _ =
 
         // 9a. Block by typed DID (self-block as harmless demo)
         let! blockResult = Bluesky.block agent session.Did
+
         match blockResult with
         | Ok blockRef ->
             printfn "Blocked: %s" (AtUri.value blockRef.Uri)
             let! unblockResult = Bluesky.unblock agent blockRef
+
             match unblockResult with
-            | Ok () -> printfn "Unblocked successfully"
+            | Ok() -> printfn "Unblocked successfully"
             | Error e -> printfn "Unblock failed: %A" e
         | Error e -> printfn "Block failed: %A" e
 
         // 9b. Block by handle string (auto-resolves to DID)
-        let! blockUserResult =
-            Bluesky.blockUser agent (Handle.value session.Handle)
+        let! blockUserResult = Bluesky.blockUser agent (Handle.value session.Handle)
+
         match blockUserResult with
         | Ok blockRef ->
             printfn "Blocked (by handle): %s" (AtUri.value blockRef.Uri)
@@ -330,8 +350,9 @@ let main _ =
         section "10. Delete"
 
         let! deleteResult = Bluesky.deleteRecord agent postRef.Uri
+
         match deleteResult with
-        | Ok () -> printfn "Deleted post: %s" (AtUri.value postRef.Uri)
+        | Ok() -> printfn "Deleted post: %s" (AtUri.value postRef.Uri)
         | Error e -> printfn "Delete failed: %A" e
 
         // Clean up the plain text post too
@@ -349,34 +370,32 @@ let main _ =
         section "11. Identity Resolution"
 
         // Full identity resolution (handle → DID → DID doc → verify)
-        let! identityResult =
-            Identity.resolveIdentity agent (Handle.value session.Handle)
+        let! identityResult = Identity.resolveIdentity agent (Handle.value session.Handle)
+
         match identityResult with
         | Ok id ->
             printfn "Resolved identity:"
             printfn "  DID: %s" (Did.value id.Did)
-            printfn "  Handle: %s (verified: %b)"
-                (id.Handle |> Option.map Handle.value
-                 |> Option.defaultValue "(none)")
+
+            printfn
+                "  Handle: %s (verified: %b)"
+                (id.Handle |> Option.map Handle.value |> Option.defaultValue "(none)")
                 id.Handle.IsSome
-            printfn "  PDS: %s"
-                (id.PdsEndpoint |> Option.map Uri.value
-                 |> Option.defaultValue "(unknown)")
-            printfn "  Signing key: %s"
-                (id.SigningKey |> Option.defaultValue "(none)")
+
+            printfn "  PDS: %s" (id.PdsEndpoint |> Option.map Uri.value |> Option.defaultValue "(unknown)")
+            printfn "  Signing key: %s" (id.SigningKey |> Option.defaultValue "(none)")
         | Error e -> printfn "Identity resolution failed: %A" e
 
         // Resolve DID → identity (fetches DID document from PLC directory)
         let! didResult = Identity.resolveDid agent session.Did
+
         match didResult with
-        | Ok id ->
-            printfn "Resolved DID → PDS: %s"
-                (id.PdsEndpoint |> Option.map Uri.value
-                 |> Option.defaultValue "?")
+        | Ok id -> printfn "Resolved DID → PDS: %s" (id.PdsEndpoint |> Option.map Uri.value |> Option.defaultValue "?")
         | Error e -> printfn "resolveDid failed: %A" e
 
         // Resolve handle → DID only (lighter than full identity)
         let! handleResult = Identity.resolveHandle agent session.Handle
+
         match handleResult with
         | Ok did -> printfn "Handle → DID: %s" (Did.value did)
         | Error e -> printfn "resolveHandle failed: %A" e
@@ -384,13 +403,15 @@ let main _ =
         // Parse a DID document directly from JSON
         let sampleDoc =
             """{"id":"did:plc:ewvi7nxzyoun6zhxrhs64oiz","alsoKnownAs":["at://atproto.com"],"service":[{"id":"did:plc:ewvi7nxzyoun6zhxrhs64oiz#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://bsky.network"}]}"""
+
         let docElement = JsonSerializer.Deserialize<JsonElement>(sampleDoc)
+
         match Identity.parseDidDocument docElement with
         | Ok parsed ->
-            printfn "Parsed DID doc: %s (handle: %s)"
+            printfn
+                "Parsed DID doc: %s (handle: %s)"
                 (Did.value parsed.Did)
-                (parsed.Handle |> Option.map Handle.value
-                 |> Option.defaultValue "(none)")
+                (parsed.Handle |> Option.map Handle.value |> Option.defaultValue "(none)")
         | Error msg -> printfn "Parse failed: %s" msg
 
         // ─────────────────────────────────────────────────────────────
@@ -402,25 +423,21 @@ let main _ =
         // ─────────────────────────────────────────────────────────────
         section "12. Rich Text"
 
-        let sampleText =
-            "Hello @bsky.app! Visit https://atproto.com #decentralization"
+        let sampleText = "Hello @bsky.app! Visit https://atproto.com #decentralization"
 
         // Step 1: Detect facets (local only, no network calls)
         let detected = RichText.detect sampleText
         printfn "Detected %d facets in: \"%s\"" detected.Length sampleText
+
         for d in detected do
             match d with
-            | RichText.DetectedMention (s, e, h) ->
-                printfn "  Mention: @%s [byte %d..%d]" h s e
-            | RichText.DetectedLink (s, e, u) ->
-                printfn "  Link: %s [byte %d..%d]" u s e
-            | RichText.DetectedTag (s, e, t) ->
-                printfn "  Tag: #%s [byte %d..%d]" t s e
+            | RichText.DetectedMention(s, e, h) -> printfn "  Mention: @%s [byte %d..%d]" h s e
+            | RichText.DetectedLink(s, e, u) -> printfn "  Link: %s [byte %d..%d]" u s e
+            | RichText.DetectedTag(s, e, t) -> printfn "  Tag: #%s [byte %d..%d]" t s e
 
         // Step 2: Resolve facets (resolves mentions to DIDs via network)
         let! resolved = RichText.resolve agent detected
-        printfn "Resolved %d facets (unresolvable mentions dropped)"
-            resolved.Length
+        printfn "Resolved %d facets (unresolvable mentions dropped)" resolved.Length
 
         // Combined: detect + resolve in one step
         let! combined = RichText.parse agent sampleText
@@ -434,7 +451,9 @@ let main _ =
         // Emoji: grapheme length ≠ string length ≠ byte length
         let emojiText = "Hello 👨‍👩‍👧‍👦!"
         printfn "Emoji text: \"%s\"" emojiText
-        printfn "  %d graphemes, %d chars, %d bytes"
+
+        printfn
+            "  %d graphemes, %d chars, %d bytes"
             (RichText.graphemeLength emojiText)
             emojiText.Length
             (RichText.byteLength emojiText)
@@ -447,14 +466,13 @@ let main _ =
         section "13. Notifications"
 
         let! notifsResult = Bluesky.getNotifications agent (Some 10L) None
+
         match notifsResult with
         | Ok n ->
             printfn "Notifications: %d" n.Notifications.Length
+
             for notif in n.Notifications do
-                printfn "  [%s] from @%s (read: %b)"
-                    notif.Reason
-                    (Handle.value notif.Author.Handle)
-                    notif.IsRead
+                printfn "  [%s] from @%s (read: %b)" notif.Reason (Handle.value notif.Author.Handle) notif.IsRead
         | Error e -> printfn "Notifications failed: %A" e
 
         // ─────────────────────────────────────────────────────────────
@@ -467,8 +485,8 @@ let main _ =
 
         if timelineFeed.Length > 0 then
             let threadUri = timelineFeed.[0].Post.Uri
-            let! threadResult =
-                Bluesky.getPostThread agent threadUri (Some 6L) (Some 3L)
+            let! threadResult = Bluesky.getPostThread agent threadUri (Some 6L) (Some 3L)
+
             match threadResult with
             | Ok t ->
                 match t.Thread with
@@ -478,48 +496,42 @@ let main _ =
                         match tvp.Post.Record.TryGetProperty("text") with
                         | true, v -> v.GetString()
                         | false, _ -> "(no text)"
-                    printfn "Thread root: @%s — %s"
+
+                    printfn
+                        "Thread root: @%s — %s"
                         (Handle.value tvp.Post.Author.Handle)
-                        (if postText.Length > 50
-                         then postText.[..49] + "..."
-                         else postText)
+                        (if postText.Length > 50 then
+                             postText.[..49] + "..."
+                         else
+                             postText)
 
                     // Navigate parent chain (recursive)
                     match tvp.Parent with
-                    | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost parent) ->
-                        printfn "  Parent by @%s"
-                            (Handle.value parent.Post.Author.Handle)
-                    | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.NotFoundPost _) ->
+                    | Some(AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost parent) ->
+                        printfn "  Parent by @%s" (Handle.value parent.Post.Author.Handle)
+                    | Some(AppBskyFeed.Defs.ThreadViewPostParentUnion.NotFoundPost _) ->
                         printfn "  Parent not found (deleted?)"
-                    | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.BlockedPost _) ->
-                        printfn "  Parent blocked"
-                    | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.Unknown (tag, _)) ->
+                    | Some(AppBskyFeed.Defs.ThreadViewPostParentUnion.BlockedPost _) -> printfn "  Parent blocked"
+                    | Some(AppBskyFeed.Defs.ThreadViewPostParentUnion.Unknown(tag, _)) ->
                         printfn "  Parent unknown type: %s" tag
-                    | None ->
-                        printfn "  (top-level post, no parent)"
+                    | None -> printfn "  (top-level post, no parent)"
 
                     // Navigate replies (also recursive — same union type)
-                    let replyCount =
-                        tvp.Replies
-                        |> Option.map List.length
-                        |> Option.defaultValue 0
+                    let replyCount = tvp.Replies |> Option.map List.length |> Option.defaultValue 0
                     printfn "  Replies: %d" replyCount
+
                     match tvp.Replies with
                     | Some replies ->
                         for r in replies |> List.truncate 3 do
                             match r with
                             | AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost rtvp ->
-                                printfn "    @%s replied"
-                                    (Handle.value rtvp.Post.Author.Handle)
+                                printfn "    @%s replied" (Handle.value rtvp.Post.Author.Handle)
                             | _ -> printfn "    (non-post reply node)"
                     | None -> ()
 
-                | AppBskyFeed.GetPostThread.OutputThreadUnion.NotFoundPost _ ->
-                    printfn "Thread not found"
-                | AppBskyFeed.GetPostThread.OutputThreadUnion.BlockedPost _ ->
-                    printfn "Thread blocked"
-                | AppBskyFeed.GetPostThread.OutputThreadUnion.Unknown (tag, _) ->
-                    printfn "Unknown thread type: %s" tag
+                | AppBskyFeed.GetPostThread.OutputThreadUnion.NotFoundPost _ -> printfn "Thread not found"
+                | AppBskyFeed.GetPostThread.OutputThreadUnion.BlockedPost _ -> printfn "Thread blocked"
+                | AppBskyFeed.GetPostThread.OutputThreadUnion.Unknown(tag, _) -> printfn "Unknown thread type: %s" tag
             | Error e -> printfn "Thread failed: %A" e
         else
             printfn "(no timeline posts to fetch thread for)"
@@ -535,34 +547,36 @@ let main _ =
 
         // List conversations
         let! convosResult = Chat.listConvos agent (Some 10L) None
+
         match convosResult with
         | Ok cs ->
             printfn "Conversations: %d" cs.Convos.Length
+
             for c in cs.Convos do
                 let members =
-                    c.Members
-                    |> List.map (fun m -> Handle.value m.Handle)
-                    |> String.concat ", "
-                printfn "  %s (members: %s, unread: %d, muted: %b)"
-                    c.Id members c.UnreadCount c.Muted
+                    c.Members |> List.map (fun m -> Handle.value m.Handle) |> String.concat ", "
+
+                printfn "  %s (members: %s, unread: %d, muted: %b)" c.Id members c.UnreadCount c.Muted
         | Error e -> printfn "List convos failed: %A" e
 
         // Get or create a conversation with specific members
         let! convoResult = Chat.getConvoForMembers agent [ session.Did ]
+
         match convoResult with
         | Ok c ->
             let convo = c.Convo
             printfn "Convo: %s (members: %d)" convo.Id convo.Members.Length
 
             // Send a plain text message
-            let! msgResult =
-                Chat.sendMessage agent convo.Id "Hello from the F# ATProto bot!"
+            let! msgResult = Chat.sendMessage agent convo.Id "Hello from the F# ATProto bot!"
+
             match msgResult with
             | Ok m ->
                 printfn "Sent: \"%s\" (id: %s)" m.Text m.Id
 
                 // Delete the message (for self only — others still see it)
                 let! delResult = Chat.deleteMessage agent convo.Id m.Id
+
                 match delResult with
                 | Ok d -> printfn "Deleted message: %s" d.Id
                 | Error e -> printfn "Delete message failed: %A" e
@@ -570,43 +584,49 @@ let main _ =
 
             // Get messages in the conversation
             let! msgsResult = Chat.getMessages agent convo.Id (Some 5L) None
+
             match msgsResult with
             | Ok ms ->
                 printfn "Messages: %d" ms.Messages.Length
+
                 for m in ms.Messages do
                     match m with
                     | ChatBskyConvo.GetMessages.OutputMessagesItem.MessageView mv ->
-                        printfn "  [%s] %s"
+                        printfn
+                            "  [%s] %s"
                             (Did.value mv.Sender.Did)
-                            (if mv.Text.Length > 40
-                             then mv.Text.[..39] + "..."
-                             else mv.Text)
+                            (if mv.Text.Length > 40 then
+                                 mv.Text.[..39] + "..."
+                             else
+                                 mv.Text)
                     | ChatBskyConvo.GetMessages.OutputMessagesItem.DeletedMessageView dv ->
                         printfn "  [deleted by %s]" (Did.value dv.Sender.Did)
-                    | ChatBskyConvo.GetMessages.OutputMessagesItem.Unknown (tag, _) ->
-                        printfn "  [unknown: %s]" tag
+                    | ChatBskyConvo.GetMessages.OutputMessagesItem.Unknown(tag, _) -> printfn "  [unknown: %s]" tag
             | Error e -> printfn "Get messages failed: %A" e
 
             // Mark conversation as read
             let! readResult = Chat.markRead agent convo.Id
+
             match readResult with
-            | Ok r ->
-                printfn "Marked read: unread=%d" r.Convo.UnreadCount
+            | Ok r -> printfn "Marked read: unread=%d" r.Convo.UnreadCount
             | Error e -> printfn "Mark read failed: %A" e
 
             // Mark ALL conversations as read
             let! markAllResult = Chat.markAllRead agent
+
             match markAllResult with
             | Ok _ -> printfn "Marked all read"
             | Error e -> printfn "Mark all read failed: %A" e
 
             // Mute / unmute a conversation
             let! muteResult = Chat.muteConvo agent convo.Id
+
             match muteResult with
             | Ok r -> printfn "Muted: %b" r.Convo.Muted
             | Error e -> printfn "Mute failed: %A" e
 
             let! unmuteResult = Chat.unmuteConvo agent convo.Id
+
             match unmuteResult with
             | Ok r -> printfn "Unmuted: %b" r.Convo.Muted
             | Error e -> printfn "Unmute failed: %A" e
@@ -616,20 +636,22 @@ let main _ =
             let dmText = "Check out https://atproto.com!"
             let! dmFacets = RichText.parse agent dmText
             let chatAgent = AtpAgent.withChatProxy agent
+
             let! richDm =
-                ChatBskyConvo.SendMessage.call chatAgent
+                ChatBskyConvo.SendMessage.call
+                    chatAgent
                     { ConvoId = convo.Id
                       Message =
                         { Text = dmText
-                          Facets =
-                            if dmFacets.IsEmpty then None
-                            else Some dmFacets
+                          Facets = if dmFacets.IsEmpty then None else Some dmFacets
                           Embed = None } }
+
             match richDm with
             | Ok m ->
-                printfn "Rich DM: \"%s\" (facets: %d)" m.Text
-                    (m.Facets |> Option.map List.length
-                     |> Option.defaultValue 0)
+                printfn
+                    "Rich DM: \"%s\" (facets: %d)"
+                    m.Text
+                    (m.Facets |> Option.map List.length |> Option.defaultValue 0)
             | Error e -> printfn "Rich DM failed: %A" e
 
         | Error e -> printfn "Get convo failed: %A" e
@@ -643,11 +665,13 @@ let main _ =
 
         // Paginate the timeline (first 3 pages of 5 posts each)
         printfn "Paginated timeline:"
+
         let timelinePages =
-            Xrpc.paginate<AppBskyFeed.GetTimeline.Params,
-                           AppBskyFeed.GetTimeline.Output>
+            Xrpc.paginate<AppBskyFeed.GetTimeline.Params, AppBskyFeed.GetTimeline.Output>
                 AppBskyFeed.GetTimeline.TypeId
-                { Algorithm = None; Cursor = None; Limit = Some 5L }
+                { Algorithm = None
+                  Cursor = None
+                  Limit = Some 5L }
                 (fun o -> o.Cursor)
                 (fun c p -> { p with Cursor = c })
                 agent
@@ -655,15 +679,20 @@ let main _ =
         let mutable pageNum = 0
         let enumerator = timelinePages.GetAsyncEnumerator()
         let mutable hasMore = true
+
         while hasMore && pageNum < 3 do
             let! moved = enumerator.MoveNextAsync()
             hasMore <- moved
+
             if hasMore then
                 match enumerator.Current with
                 | Ok page ->
                     pageNum <- pageNum + 1
-                    printfn "  Page %d: %d posts (cursor: %s)"
-                        pageNum page.Feed.Length
+
+                    printfn
+                        "  Page %d: %d posts (cursor: %s)"
+                        pageNum
+                        page.Feed.Length
                         (page.Cursor |> Option.defaultValue "(end)")
                 | Error e ->
                     printfn "  Page error: %A" e
@@ -671,9 +700,9 @@ let main _ =
 
         // Paginate followers
         printfn "Paginated followers:"
+
         let followerPages =
-            Xrpc.paginate<AppBskyGraph.GetFollowers.Params,
-                           AppBskyGraph.GetFollowers.Output>
+            Xrpc.paginate<AppBskyGraph.GetFollowers.Params, AppBskyGraph.GetFollowers.Output>
                 AppBskyGraph.GetFollowers.TypeId
                 { Actor = Handle.value session.Handle
                   Cursor = None
@@ -684,13 +713,14 @@ let main _ =
 
         let followerEnum = followerPages.GetAsyncEnumerator()
         let! hasFirst = followerEnum.MoveNextAsync()
+
         if hasFirst then
             match followerEnum.Current with
             | Ok page ->
                 printfn "  First page: %d followers" page.Followers.Length
+
                 for f in page.Followers |> List.truncate 5 do
-                    printfn "    @%s (%s)"
-                        (Handle.value f.Handle) (Did.value f.Did)
+                    printfn "    @%s (%s)" (Handle.value f.Handle) (Did.value f.Did)
             | Error e -> printfn "  Followers error: %A" e
 
         // ─────────────────────────────────────────────────────────────
@@ -705,28 +735,28 @@ let main _ =
         // Low-level: upload a blob and inspect the BlobRef
         let imageBytes = Array.create 100 0uy // replace with real data
         let! blobResult = Bluesky.uploadBlob agent imageBytes "image/png"
+
         match blobResult with
         | Ok blob ->
             printfn "Uploaded blob:"
             printfn "  CID: %s" (Cid.value blob.Ref)
             printfn "  Size: %d bytes, MIME: %s" blob.Size blob.MimeType
             // blob.Json is the raw JSON to embed in a post record
-            printfn "  JSON: %s"
-                (blob.Json.ToString()
-                 |> fun s -> if s.Length > 80 then s.[..79] + "..." else s)
-        | Error e ->
-            printfn "Upload failed (expected with dummy data): %A" e
+            printfn "  JSON: %s" (blob.Json.ToString() |> fun s -> if s.Length > 80 then s.[..79] + "..." else s)
+        | Error e -> printfn "Upload failed (expected with dummy data): %A" e
 
         // High-level: postWithImages handles upload + embed automatically
         let! multiImgPost =
-            Bluesky.postWithImages agent "Photo dump! #photography" [
-                { Data = imageBytes
-                  MimeType = "image/jpeg"
-                  AltText = "First photo" }
-                { Data = imageBytes
-                  MimeType = "image/jpeg"
-                  AltText = "Second photo" }
-            ]
+            Bluesky.postWithImages
+                agent
+                "Photo dump! #photography"
+                [ { Data = imageBytes
+                    MimeType = "image/jpeg"
+                    AltText = "First photo" }
+                  { Data = imageBytes
+                    MimeType = "image/jpeg"
+                    AltText = "Second photo" } ]
+
         match multiImgPost with
         | Ok p -> printfn "Multi-image post: %s" (AtUri.value p.Uri)
         | Error e -> printfn "Multi-image post failed (expected): %A" e
@@ -741,8 +771,8 @@ let main _ =
         section "18. Error Handling"
 
         // XRPC errors: status code + optional error name + message
-        let! badProfile =
-            Bluesky.getProfile agent "this-handle-does-not-exist.invalid"
+        let! badProfile = Bluesky.getProfile agent "this-handle-does-not-exist.invalid"
+
         match badProfile with
         | Ok _ -> printfn "Unexpectedly succeeded"
         | Error e ->
@@ -752,27 +782,21 @@ let main _ =
             printfn "  Message: %s" (e.Message |> Option.defaultValue "(none)")
 
         // Identity errors: either an XrpcError or a DocumentParseError
-        let! badIdentity =
-            Identity.resolveIdentity agent "nonexistent.invalid"
+        let! badIdentity = Identity.resolveIdentity agent "nonexistent.invalid"
+
         match badIdentity with
         | Ok _ -> printfn "Unexpectedly succeeded"
-        | Error (IdentityError.XrpcError xe) ->
-            printfn "Identity XRPC error: %d — %s"
-                xe.StatusCode
-                (xe.Message |> Option.defaultValue "(none)")
-        | Error (IdentityError.DocumentParseError msg) ->
-            printfn "Identity parse error: %s" msg
+        | Error(IdentityError.XrpcError xe) ->
+            printfn "Identity XRPC error: %d — %s" xe.StatusCode (xe.Message |> Option.defaultValue "(none)")
+        | Error(IdentityError.DocumentParseError msg) -> printfn "Identity parse error: %s" msg
 
         // Composing with Result.map / Result.bind
         let! postCount =
             task {
-                let! profile =
-                    Bluesky.getProfile agent (Handle.value session.Handle)
-                return
-                    profile
-                    |> Result.map (fun p ->
-                        p.PostsCount |> Option.defaultValue 0L)
+                let! profile = Bluesky.getProfile agent (Handle.value session.Handle)
+                return profile |> Result.map (fun p -> p.PostsCount |> Option.defaultValue 0L)
             }
+
         match postCount with
         | Ok n -> printfn "You have %d posts" n
         | Error e -> printfn "Couldn't get post count: %A" e
