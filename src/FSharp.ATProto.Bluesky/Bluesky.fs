@@ -77,6 +77,28 @@ type BlobRef =
       Size: int64 }
 
 /// <summary>
+/// Result of an undo operation. <c>Undone</c> means the record was deleted;
+/// <c>WasNotPresent</c> means there was nothing to undo (e.g., the post was not liked).
+/// </summary>
+type UndoResult =
+    | Undone
+    | WasNotPresent
+
+/// <summary>
+/// Witness type enabling SRTP-based overloading for undo operations.
+/// Allows the generic <c>Bluesky.undo</c> function to accept any ref type
+/// (<see cref="LikeRef"/>, <see cref="RepostRef"/>, <see cref="FollowRef"/>, <see cref="BlockRef"/>).
+/// This type is an implementation detail and should not be used directly.
+/// </summary>
+[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type UndoWitness =
+    | UndoWitness
+    static member UndoUri(UndoWitness, r: LikeRef) = r.Uri
+    static member UndoUri(UndoWitness, r: RepostRef) = r.Uri
+    static member UndoUri(UndoWitness, r: FollowRef) = r.Uri
+    static member UndoUri(UndoWitness, r: BlockRef) = r.Uri
+
+/// <summary>
 /// Witness type enabling SRTP-based overloading for actor parameters.
 /// Allows functions like <c>getProfile</c> to accept <see cref="Handle"/>, <see cref="Did"/>, or <c>string</c> directly.
 /// This type is an implementation detail and should not be used directly.
@@ -507,6 +529,135 @@ module Bluesky =
     let unblock (agent: AtpAgent) (blockRef: BlockRef)
         : Task<Result<unit, XrpcError>> =
         deleteRecord agent blockRef.Uri
+
+    // ── Typed undo functions (returning UndoResult) ────────────────────
+
+    /// <summary>
+    /// Undo a like by deleting the like record. Returns <see cref="UndoResult.Undone"/> on success.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="likeRef">The <see cref="LikeRef"/> returned by <see cref="like"/>.</param>
+    /// <returns><c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let undoLike (agent: AtpAgent) (likeRef: LikeRef) : Task<Result<UndoResult, XrpcError>> =
+        task {
+            let! result = deleteRecord agent likeRef.Uri
+            return result |> Result.map (fun () -> Undone)
+        }
+
+    /// <summary>
+    /// Undo a repost by deleting the repost record. Returns <see cref="UndoResult.Undone"/> on success.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="repostRef">The <see cref="RepostRef"/> returned by <see cref="repost"/>.</param>
+    /// <returns><c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let undoRepost (agent: AtpAgent) (repostRef: RepostRef) : Task<Result<UndoResult, XrpcError>> =
+        task {
+            let! result = deleteRecord agent repostRef.Uri
+            return result |> Result.map (fun () -> Undone)
+        }
+
+    /// <summary>
+    /// Undo a follow by deleting the follow record. Returns <see cref="UndoResult.Undone"/> on success.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="followRef">The <see cref="FollowRef"/> returned by <see cref="follow"/>.</param>
+    /// <returns><c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let undoFollow (agent: AtpAgent) (followRef: FollowRef) : Task<Result<UndoResult, XrpcError>> =
+        task {
+            let! result = deleteRecord agent followRef.Uri
+            return result |> Result.map (fun () -> Undone)
+        }
+
+    /// <summary>
+    /// Undo a block by deleting the block record. Returns <see cref="UndoResult.Undone"/> on success.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="blockRef">The <see cref="BlockRef"/> returned by <see cref="block"/>.</param>
+    /// <returns><c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let undoBlock (agent: AtpAgent) (blockRef: BlockRef) : Task<Result<UndoResult, XrpcError>> =
+        task {
+            let! result = deleteRecord agent blockRef.Uri
+            return result |> Result.map (fun () -> Undone)
+        }
+
+    /// <summary>
+    /// Generic undo: delete any ref type (<see cref="LikeRef"/>, <see cref="RepostRef"/>,
+    /// <see cref="FollowRef"/>, or <see cref="BlockRef"/>). Dispatches to the correct typed
+    /// undo function via SRTP.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="ref">Any ref type with an AT-URI (LikeRef, RepostRef, FollowRef, or BlockRef).</param>
+    /// <returns><c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.</returns>
+    /// <example>
+    /// <code>
+    /// let! likeRef = Bluesky.like agent postRef
+    /// let! result = Bluesky.undo agent likeRef  // works with any ref type
+    /// </code>
+    /// </example>
+    let inline undo (agent: AtpAgent) (ref: ^a) : Task<Result<UndoResult, XrpcError>> =
+        let uri = ((^a or UndoWitness) : (static member UndoUri : UndoWitness * ^a -> AtUri) (UndoWitness, ref))
+        task {
+            let! result = deleteRecord agent uri
+            return result |> Result.map (fun () -> Undone)
+        }
+
+    // ── Target-based undo ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Unlike a post by its <see cref="PostRef"/>, without needing the original <see cref="LikeRef"/>.
+    /// Fetches the post to find the current user's like URI from the viewer state,
+    /// then deletes it.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="postRef">The post to unlike.</param>
+    /// <returns>
+    /// <c>Ok Undone</c> if the like was found and deleted,
+    /// <c>Ok WasNotPresent</c> if the post was not liked by the current user,
+    /// or an <see cref="XrpcError"/> on failure.
+    /// </returns>
+    let unlikePost (agent: AtpAgent) (postRef: PostRef) : Task<Result<UndoResult, XrpcError>> =
+        task {
+            let! postsResult = AppBskyFeed.GetPosts.query agent { Uris = [ postRef.Uri ] }
+            match postsResult with
+            | Error e -> return Error e
+            | Ok posts ->
+                match posts.Posts with
+                | [] -> return Ok WasNotPresent
+                | post :: _ ->
+                    match post.Viewer |> Option.bind (fun v -> v.Like) with
+                    | Some likeUri ->
+                        let! result = deleteRecord agent likeUri
+                        return result |> Result.map (fun () -> Undone)
+                    | None -> return Ok WasNotPresent
+        }
+
+    /// <summary>
+    /// Un-repost a post by its <see cref="PostRef"/>, without needing the original <see cref="RepostRef"/>.
+    /// Fetches the post to find the current user's repost URI from the viewer state,
+    /// then deletes it.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="postRef">The post to un-repost.</param>
+    /// <returns>
+    /// <c>Ok Undone</c> if the repost was found and deleted,
+    /// <c>Ok WasNotPresent</c> if the post was not reposted by the current user,
+    /// or an <see cref="XrpcError"/> on failure.
+    /// </returns>
+    let unrepostPost (agent: AtpAgent) (postRef: PostRef) : Task<Result<UndoResult, XrpcError>> =
+        task {
+            let! postsResult = AppBskyFeed.GetPosts.query agent { Uris = [ postRef.Uri ] }
+            match postsResult with
+            | Error e -> return Error e
+            | Ok posts ->
+                match posts.Posts with
+                | [] -> return Ok WasNotPresent
+                | post :: _ ->
+                    match post.Viewer |> Option.bind (fun v -> v.Repost) with
+                    | Some repostUri ->
+                        let! result = deleteRecord agent repostUri
+                        return result |> Result.map (fun () -> Undone)
+                    | None -> return Ok WasNotPresent
+        }
 
     /// <summary>
     /// Upload a blob (image, video, or other binary data) to the PDS.

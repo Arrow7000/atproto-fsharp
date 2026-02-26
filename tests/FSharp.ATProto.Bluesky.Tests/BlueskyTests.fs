@@ -312,6 +312,195 @@ let undoTests =
     ]
 
 [<Tests>]
+let undoResultTests =
+    testList "Bluesky.undo (UndoResult)" [
+        testCase "undoLike returns Undone on successful delete" <| fun _ ->
+            let mutable captured = None
+            let agent = deleteRecordAgent (fun req -> captured <- Some req)
+            let likeRef = { LikeRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.like/abc123" }
+            let result = Bluesky.undoLike agent likeRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult Undone "should be Undone"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            Expect.stringContains body "app.bsky.feed.like" "collection"
+            Expect.stringContains body "abc123" "rkey"
+
+        testCase "undoRepost returns Undone on successful delete" <| fun _ ->
+            let agent = deleteRecordAgent (fun _ -> ())
+            let repostRef = { RepostRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.repost/def456" }
+            let result = Bluesky.undoRepost agent repostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult Undone "should be Undone"
+
+        testCase "undoFollow returns Undone on successful delete" <| fun _ ->
+            let agent = deleteRecordAgent (fun _ -> ())
+            let followRef = { FollowRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.graph.follow/ghi789" }
+            let result = Bluesky.undoFollow agent followRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult Undone "should be Undone"
+
+        testCase "undoBlock returns Undone on successful delete" <| fun _ ->
+            let agent = deleteRecordAgent (fun _ -> ())
+            let blockRef = { BlockRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.graph.block/jkl012" }
+            let result = Bluesky.undoBlock agent blockRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult Undone "should be Undone"
+
+        testCase "SRTP undo works with LikeRef" <| fun _ ->
+            let agent = deleteRecordAgent (fun _ -> ())
+            let likeRef = { LikeRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.like/srtp1" }
+            let result = Bluesky.undo agent likeRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult Undone "should be Undone"
+
+        testCase "SRTP undo works with FollowRef" <| fun _ ->
+            let agent = deleteRecordAgent (fun _ -> ())
+            let followRef = { FollowRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.graph.follow/srtp2" }
+            let result = Bluesky.undo agent followRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult Undone "should be Undone"
+
+        testCase "SRTP undo works with RepostRef" <| fun _ ->
+            let agent = deleteRecordAgent (fun _ -> ())
+            let repostRef = { RepostRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.repost/srtp3" }
+            let result = Bluesky.undo agent repostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult Undone "should be Undone"
+
+        testCase "SRTP undo works with BlockRef" <| fun _ ->
+            let agent = deleteRecordAgent (fun _ -> ())
+            let blockRef = { BlockRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.graph.block/srtp4" }
+            let result = Bluesky.undo agent blockRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult Undone "should be Undone"
+    ]
+
+/// Creates a mock agent that handles both getPosts (GET) and deleteRecord (POST) requests.
+/// The viewerState is used in the PostView response for getPosts.
+let private unlikeMockAgent (viewerLike: string option) (viewerRepost: string option) (captureDelete: HttpRequestMessage -> unit) =
+    let agent = createMockAgent (fun req ->
+        let path = req.RequestUri.AbsolutePath
+        let query = req.RequestUri.Query
+        if path.Contains("app.bsky.feed.getPosts") || query.Contains("app.bsky.feed.getPosts") then
+            jsonResponse HttpStatusCode.OK
+                {| posts = [|
+                    {| uri = "at://did:plc:other/app.bsky.feed.post/abc"
+                       cid = "bafyreiabc"
+                       author = {| did = "did:plc:other"; handle = "other.test"; displayName = "Other" |}
+                       record = {| text = "Hello"; createdAt = "2026-01-01T00:00:00Z" |}
+                       indexedAt = "2026-01-01T00:00:00Z"
+                       viewer =
+                        {| like = viewerLike |> Option.defaultValue null
+                           repost = viewerRepost |> Option.defaultValue null |} |} |] |}
+        elif path.Contains("com.atproto.repo.deleteRecord") then
+            captureDelete req
+            jsonResponse HttpStatusCode.OK {| |}
+        else
+            jsonResponse HttpStatusCode.NotFound {| error = "NotFound" |})
+    agent.Session <- Some testSession
+    agent
+
+/// Creates a mock agent that returns an empty posts array for getPosts.
+let private emptyPostsMockAgent () =
+    let agent = createMockAgent (fun req ->
+        let path = req.RequestUri.AbsolutePath
+        let query = req.RequestUri.Query
+        if path.Contains("app.bsky.feed.getPosts") || query.Contains("app.bsky.feed.getPosts") then
+            jsonResponse HttpStatusCode.OK {| posts = [||] |}
+        else
+            jsonResponse HttpStatusCode.NotFound {| error = "NotFound" |})
+    agent.Session <- Some testSession
+    agent
+
+/// Creates a mock agent that returns a post with no viewer state for getPosts.
+let private noViewerMockAgent () =
+    let agent = createMockAgent (fun req ->
+        let path = req.RequestUri.AbsolutePath
+        let query = req.RequestUri.Query
+        if path.Contains("app.bsky.feed.getPosts") || query.Contains("app.bsky.feed.getPosts") then
+            jsonResponse HttpStatusCode.OK
+                {| posts = [|
+                    {| uri = "at://did:plc:other/app.bsky.feed.post/abc"
+                       cid = "bafyreiabc"
+                       author = {| did = "did:plc:other"; handle = "other.test"; displayName = "Other" |}
+                       record = {| text = "Hello"; createdAt = "2026-01-01T00:00:00Z" |}
+                       indexedAt = "2026-01-01T00:00:00Z" |} |] |}
+        else
+            jsonResponse HttpStatusCode.NotFound {| error = "NotFound" |})
+    agent.Session <- Some testSession
+    agent
+
+[<Tests>]
+let unlikePostTests =
+    testList "Bluesky.unlikePost" [
+        testCase "unlikePost returns Undone when post has viewer.like set" <| fun _ ->
+            let mutable captured = None
+            let agent = unlikeMockAgent
+                            (Some "at://did:plc:testuser/app.bsky.feed.like/mylike1")
+                            None
+                            (fun req -> captured <- Some req)
+            let result = Bluesky.unlikePost agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult Undone "should be Undone"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            Expect.stringContains body "app.bsky.feed.like" "deletes like collection"
+            Expect.stringContains body "mylike1" "deletes correct rkey"
+
+        testCase "unlikePost returns WasNotPresent when post has no viewer.like" <| fun _ ->
+            let agent = unlikeMockAgent None None (fun _ -> ())
+            let result = Bluesky.unlikePost agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult WasNotPresent "should be WasNotPresent"
+
+        testCase "unlikePost returns WasNotPresent when post not found" <| fun _ ->
+            let agent = emptyPostsMockAgent ()
+            let result = Bluesky.unlikePost agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult WasNotPresent "should be WasNotPresent when post not found"
+
+        testCase "unlikePost returns WasNotPresent when viewer state is absent" <| fun _ ->
+            let agent = noViewerMockAgent ()
+            let result = Bluesky.unlikePost agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult WasNotPresent "should be WasNotPresent when no viewer"
+    ]
+
+[<Tests>]
+let unrepostPostTests =
+    testList "Bluesky.unrepostPost" [
+        testCase "unrepostPost returns Undone when post has viewer.repost set" <| fun _ ->
+            let mutable captured = None
+            let agent = unlikeMockAgent
+                            None
+                            (Some "at://did:plc:testuser/app.bsky.feed.repost/myrepost1")
+                            (fun req -> captured <- Some req)
+            let result = Bluesky.unrepostPost agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult Undone "should be Undone"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            Expect.stringContains body "app.bsky.feed.repost" "deletes repost collection"
+            Expect.stringContains body "myrepost1" "deletes correct rkey"
+
+        testCase "unrepostPost returns WasNotPresent when post has no viewer.repost" <| fun _ ->
+            let agent = unlikeMockAgent None None (fun _ -> ())
+            let result = Bluesky.unrepostPost agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult WasNotPresent "should be WasNotPresent"
+
+        testCase "unrepostPost returns WasNotPresent when post not found" <| fun _ ->
+            let agent = emptyPostsMockAgent ()
+            let result = Bluesky.unrepostPost agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult WasNotPresent "should be WasNotPresent when post not found"
+
+        testCase "unrepostPost returns WasNotPresent when viewer state is absent" <| fun _ ->
+            let agent = noViewerMockAgent ()
+            let result = Bluesky.unrepostPost agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let undoResult = Expect.wantOk result "should succeed"
+            Expect.equal undoResult WasNotPresent "should be WasNotPresent when no viewer"
+    ]
+
+[<Tests>]
 let deleteTests =
     testList "Bluesky.deleteRecord" [
         testCase "deleteRecord parses AT-URI and sends correct request" <| fun _ ->
