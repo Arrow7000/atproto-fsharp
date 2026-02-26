@@ -69,7 +69,22 @@
     <polygon points="25,-66 30,-60 25,-54 20,-60" fill="#B388FF"/>
   </g>
 
-  <!-- Project name -->
+  <!-- Text glow for dark mode visibility -->
+  <defs>
+    <filter id="text-glow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Project name — white glow behind for dark mode -->
+  <text x="400" y="235" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="38" font-weight="700" fill="white" letter-spacing="-0.5" opacity="0.9" filter="url(#text-glow)">F#.ATProto</text>
+  <text x="400" y="262" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="15" fill="white" letter-spacing="0.3" opacity="0.7" filter="url(#text-glow)">Idiomatic F# for the AT Protocol</text>
+
+  <!-- Project name — visible text on top -->
   <text x="400" y="235" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="38" font-weight="700" fill="#1B2836" letter-spacing="-0.5">
     <tspan fill="#0085FF">F#</tspan><tspan fill="#1B2836">.</tspan><tspan fill="#1B2836">ATProto</tspan>
   </text>
