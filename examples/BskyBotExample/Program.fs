@@ -38,7 +38,7 @@ let main _ =
         let session =
             match loginResult with
             | Ok s ->
-                printfn "Logged in as %s (%s)" s.Handle s.Did
+                printfn "Logged in as %s (%s)" (Handle.value s.Handle) (Did.value s.Did)
                 s
             | Error e ->
                 failwithf "Login failed: %A" e
@@ -93,8 +93,7 @@ let main _ =
         // ---------------------------------------------------------------
         // Use Identity.resolveIdentity (shown below) to resolve a handle to
         // a DID first if needed.
-        let sessionDid = Did.parse session.Did |> Result.defaultWith failwith
-        let! followResult = Bluesky.follow agent sessionDid // following ourselves as demo
+        let! followResult = Bluesky.follow agent session.Did // following ourselves as demo
 
         match followResult with
         | Ok followUri -> printfn "Followed: %s" (AtUri.value followUri)
@@ -188,7 +187,7 @@ let main _ =
         // ---------------------------------------------------------------
         let! feedResult =
             AppBskyFeed.GetAuthorFeed.query agent
-                { Actor = session.Handle
+                { Actor = Handle.value session.Handle
                   Cursor = None
                   Filter = None
                   IncludePins = None
@@ -207,7 +206,7 @@ let main _ =
         // ---------------------------------------------------------------
         let! profileResult =
             AppBskyActor.GetProfile.query agent
-                { Actor = session.Handle }
+                { Actor = Handle.value session.Handle }
 
         match profileResult with
         | Ok p ->
@@ -223,13 +222,13 @@ let main _ =
         // ---------------------------------------------------------------
         // 14. Resolve identity (handle <-> DID with bidirectional verification)
         // ---------------------------------------------------------------
-        let! identityResult = Identity.resolveIdentity agent session.Handle
+        let! identityResult = Identity.resolveIdentity agent (Handle.value session.Handle)
 
         match identityResult with
         | Ok id ->
-            printfn "Identity: %s" id.Did
-            printfn "  Handle: %s" (id.Handle |> Option.defaultValue "(unverified)")
-            printfn "  PDS: %s" (id.PdsEndpoint |> Option.defaultValue "(unknown)")
+            printfn "Identity: %s" (Did.value id.Did)
+            printfn "  Handle: %s" (id.Handle |> Option.map Handle.value |> Option.defaultValue "(unverified)")
+            printfn "  PDS: %s" (id.PdsEndpoint |> Option.map Uri.value |> Option.defaultValue "(unknown)")
         | Error e ->
             printfn "Identity resolution failed: %A" e
 
@@ -278,7 +277,7 @@ let main _ =
         // 16. Get or create a conversation
         // ---------------------------------------------------------------
         // Pass a list of member DIDs. Using our own DID as a demo (self-chat).
-        let! convoResult = Chat.getConvoForMembers chatAgent [ sessionDid ]
+        let! convoResult = Chat.getConvoForMembers chatAgent [ session.Did ]
 
         let convo =
             match convoResult with

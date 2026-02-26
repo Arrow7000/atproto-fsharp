@@ -25,11 +25,11 @@ module Identity =
     /// </summary>
     type AtprotoIdentity =
         { /// <summary>The decentralized identifier (e.g., <c>did:plc:z72i7hdynmk6r22z27h6tvur</c>).</summary>
-          Did: string
+          Did: Did
           /// <summary>The handle claimed in the DID document's <c>alsoKnownAs</c> field, if present and verified.</summary>
-          Handle: string option
+          Handle: Handle option
           /// <summary>The PDS (Personal Data Server) endpoint URL from the DID document's service entries.</summary>
-          PdsEndpoint: string option
+          PdsEndpoint: Uri option
           /// <summary>The atproto signing key in multibase encoding from the DID document's verification methods.</summary>
           SigningKey: string option }
 
@@ -91,11 +91,20 @@ module Identity =
     let parseDidDocument (doc: JsonElement) : Result<AtprotoIdentity, string> =
         match tryGetString doc "id" with
         | None -> Error "DID document missing 'id' field"
-        | Some did ->
-            Ok { Did = did
-                 Handle = extractHandle doc
-                 PdsEndpoint = extractPdsEndpoint doc
-                 SigningKey = extractSigningKey doc }
+        | Some didStr ->
+            match Did.parse didStr with
+            | Error e -> Error (sprintf "Invalid DID in document: %s" e)
+            | Ok did ->
+                let handle =
+                    extractHandle doc
+                    |> Option.bind (fun h -> Handle.parse h |> Result.toOption)
+                let pdsEndpoint =
+                    extractPdsEndpoint doc
+                    |> Option.bind (fun ep -> Uri.parse ep |> Result.toOption)
+                Ok { Did = did
+                     Handle = handle
+                     PdsEndpoint = pdsEndpoint
+                     SigningKey = extractSigningKey doc }
 
     let private plcDirectoryUrl = "https://plc.directory"
 
@@ -176,7 +185,7 @@ module Identity =
     /// <code>
     /// let! identity = Identity.resolveIdentity agent "alice.bsky.social"
     /// match identity with
-    /// | Ok id -> printfn "DID: %s, Handle verified: %b" id.Did id.Handle.IsSome
+    /// | Ok id -> printfn "DID: %s, Handle verified: %b" (Did.value id.Did) id.Handle.IsSome
     /// | Error msg -> printfn "Resolution failed: %A" msg
     /// </code>
     /// </example>
@@ -194,15 +203,10 @@ module Identity =
                         match id.Handle with
                         | None -> return Ok id
                         | Some handle ->
-                            match Handle.parse handle with
-                            | Error _ ->
-                                // DID doc contains an invalid handle; clear it
-                                return Ok { id with Handle = None }
-                            | Ok handleTyped ->
-                                let! reverseResult = resolveHandle agent handleTyped
-                                match reverseResult with
-                                | Ok reverseDid when Did.value reverseDid = identifier -> return Ok id
-                                | _ -> return Ok { id with Handle = None }
+                            let! reverseResult = resolveHandle agent handle
+                            match reverseResult with
+                            | Ok reverseDid when reverseDid = did -> return Ok id
+                            | _ -> return Ok { id with Handle = None }
             else
                 // identifier is a handle
                 match Handle.parse identifier with
@@ -217,6 +221,6 @@ module Identity =
                         | Error e -> return Error e
                         | Ok id ->
                             // Bidirectional: check DID doc's handle matches
-                            if id.Handle = Some identifier then return Ok id
+                            if id.Handle = Some handleTyped then return Ok id
                             else return Ok { id with Handle = None }
         }

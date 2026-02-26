@@ -2,6 +2,7 @@ namespace FSharp.ATProto.Core
 
 open System
 open System.Net.Http
+open FSharp.ATProto.Syntax
 
 /// <summary>
 /// Represents an error response from an XRPC endpoint.
@@ -36,9 +37,9 @@ type AtpSession =
       /// <summary>The longer-lived JWT used to refresh the session when the access token expires.</summary>
       RefreshJwt: string
       /// <summary>The DID (Decentralized Identifier) of the authenticated user (e.g. "did:plc:xyz123").</summary>
-      Did: string
+      Did: Did
       /// <summary>The handle of the authenticated user (e.g. "alice.bsky.social").</summary>
-      Handle: string }
+      Handle: Handle }
 
 /// <summary>
 /// Client agent for communicating with an AT Protocol Personal Data Server (PDS).
@@ -59,7 +60,7 @@ type AtpAgent =
     { /// <summary>The <see cref="System.Net.Http.HttpClient"/> used for all HTTP requests to the PDS.</summary>
       HttpClient: HttpClient
       /// <summary>The base URL of the PDS, always ending with a trailing slash (e.g. "https://bsky.social/").</summary>
-      BaseUrl: Uri
+      BaseUrl: System.Uri
       /// <summary>
       /// The current authenticated session, or <c>None</c> if not logged in.
       /// This field is mutable and is updated automatically by <see cref="AtpAgent.login"/>

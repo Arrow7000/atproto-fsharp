@@ -6,6 +6,7 @@ open System.Text.Json
 open System.Text.Json.Serialization
 open Expecto
 open FSharp.ATProto.Core
+open FSharp.ATProto.Syntax
 
 // Test types
 type TestParams = { Actor: string }
@@ -98,7 +99,7 @@ let queryTests =
                     capturedRequest <- Some req
                     TestHelpers.jsonResponse HttpStatusCode.OK
                         {| displayName = "A"; followersCount = 0 |})
-                  with Session = Some { AccessJwt = "tok123"; RefreshJwt = "ref"; Did = "did:plc:x"; Handle = "a.bsky.social" } }
+                  with Session = Some { AccessJwt = "tok123"; RefreshJwt = "ref"; Did = Did.parse "did:plc:x" |> Result.defaultWith failwith; Handle = Handle.parse "a.bsky.social" |> Result.defaultWith failwith } }
 
             Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile"
                 { Actor = "a" } agent

@@ -30,6 +30,20 @@ type ImageUpload =
       AltText: string }
 
 /// <summary>
+/// A reference to an uploaded blob, as returned by <c>com.atproto.repo.uploadBlob</c>.
+/// Contains both the raw JSON (for passing back to the API in embeds) and typed convenience fields.
+/// </summary>
+type BlobRef =
+    { /// <summary>The raw JSON element for the blob object. Pass this directly in embed records.</summary>
+      Json: JsonElement
+      /// <summary>The content-addressed link (CID) of the blob.</summary>
+      Ref: Cid
+      /// <summary>The MIME type of the blob (e.g., <c>image/jpeg</c>).</summary>
+      MimeType: string
+      /// <summary>The size of the blob in bytes.</summary>
+      Size: int64 }
+
+/// <summary>
 /// High-level convenience methods for common Bluesky operations:
 /// posting, replying, liking, reposting, following, blocking, uploading blobs, and deleting records.
 /// All methods require an authenticated <see cref="AtpAgent"/>.
@@ -42,13 +56,27 @@ module Bluesky =
     let private notLoggedInError : XrpcError =
         { StatusCode = 401; Error = Some "NotLoggedIn"; Message = Some "No active session" }
 
-    let private sessionDid (agent: AtpAgent) : Result<string, XrpcError> =
+    let private sessionDid (agent: AtpAgent) : Result<Did, XrpcError> =
         match agent.Session with
         | Some s -> Ok s.Did
         | None -> Error notLoggedInError
 
     let private toXrpcError (msg: string) : XrpcError =
         { StatusCode = 400; Error = Some "InvalidRequest"; Message = Some msg }
+
+    let private parseBlobRef (blob: JsonElement) : Result<BlobRef, XrpcError> =
+        try
+            let link =
+                blob.GetProperty("ref").GetProperty("$link").GetString()
+            let mimeType = blob.GetProperty("mimeType").GetString()
+            let size = blob.GetProperty("size").GetInt64()
+            match Cid.parse link with
+            | Ok cid ->
+                Ok { Json = blob; Ref = cid; MimeType = mimeType; Size = size }
+            | Error msg ->
+                Error (toXrpcError (sprintf "Invalid blob ref CID: %s" msg))
+        with ex ->
+            Error (toXrpcError (sprintf "Failed to parse blob reference: %s" ex.Message))
 
     let private createRecord (agent: AtpAgent) (collection: string) (record: obj)
         : Task<Result<ComAtprotoRepo.CreateRecord.Output, XrpcError>> =
@@ -60,7 +88,7 @@ module Bluesky =
             | Ok nsid ->
                 let recordElement = JsonSerializer.SerializeToElement(record, Json.options)
                 ComAtprotoRepo.CreateRecord.call agent
-                    { Repo = did
+                    { Repo = Did.value did
                       Collection = nsid
                       Record = recordElement
                       Rkey = None
@@ -251,22 +279,23 @@ module Bluesky =
 
     /// <summary>
     /// Upload a blob (image, video, or other binary data) to the PDS.
-    /// Returns the blob reference needed to embed the blob in a record.
+    /// Returns a typed <see cref="BlobRef"/> containing the blob reference needed to embed the blob in a record.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="data">The raw binary content of the blob.</param>
     /// <param name="mimeType">The MIME type of the blob (e.g., <c>image/jpeg</c>, <c>image/png</c>).</param>
     /// <returns>
-    /// <c>Ok</c> with a <see cref="JsonElement"/> containing the blob reference on success,
-    /// or an <see cref="XrpcError"/>. The blob reference can be used in embed records.
+    /// <c>Ok</c> with a <see cref="BlobRef"/> on success, or an <see cref="XrpcError"/>.
+    /// The <see cref="BlobRef.Json"/> field contains the raw JSON for use in embed records,
+    /// while <see cref="BlobRef.Ref"/>, <see cref="BlobRef.MimeType"/>, and <see cref="BlobRef.Size"/>
+    /// provide typed access to individual fields.
     /// </returns>
     /// <remarks>
-    /// The returned blob reference is a JSON object with <c>$type: "blob"</c>, <c>ref</c>, <c>mimeType</c>,
-    /// and <c>size</c> fields. Pass it as the <c>image</c> field in an <c>app.bsky.embed.images</c> embed,
-    /// or use <see cref="postWithImages"/> for a higher-level API.
+    /// Use <see cref="BlobRef.Json"/> when constructing custom embed records, or use
+    /// <see cref="postWithImages"/> for a higher-level API that handles blob references automatically.
     /// </remarks>
     let uploadBlob (agent: AtpAgent) (data: byte[]) (mimeType: string)
-        : Task<Result<JsonElement, XrpcError>> =
+        : Task<Result<BlobRef, XrpcError>> =
         task {
             let url = System.Uri(agent.BaseUrl, sprintf "xrpc/%s" ComAtprotoRepo.UploadBlob.TypeId)
             let request = new HttpRequestMessage(HttpMethod.Post, url)
@@ -282,7 +311,7 @@ module Bluesky =
                 let! json = response.Content.ReadAsStringAsync()
                 let doc = JsonSerializer.Deserialize<JsonElement>(json)
                 match doc.TryGetProperty("blob") with
-                | true, blob -> return Ok blob
+                | true, blob -> return parseBlobRef blob
                 | false, _ -> return Error (toXrpcError "Response missing 'blob' property")
             else
                 let! errorJson = response.Content.ReadAsStringAsync()
@@ -294,14 +323,14 @@ module Bluesky =
         }
 
     let private uploadAllBlobs (agent: AtpAgent) (images: (byte[] * string * string) list)
-        : Task<Result<(JsonElement * string) list, XrpcError>> =
+        : Task<Result<(BlobRef * string) list, XrpcError>> =
         task {
-            let mutable blobRefs : (JsonElement * string) list = []
+            let mutable blobRefs : (BlobRef * string) list = []
             let mutable error : XrpcError option = None
             for (data, mimeType, altText) in images do
                 if error.IsNone then
                     match! uploadBlob agent data mimeType with
-                    | Ok blob -> blobRefs <- blobRefs @ [ (blob, altText) ]
+                    | Ok blobRef -> blobRefs <- blobRefs @ [ (blobRef, altText) ]
                     | Error e -> error <- Some e
             match error with
             | Some e -> return Error e
@@ -339,8 +368,8 @@ module Bluesky =
                 let! facets = RichText.parse agent text
                 let embed =
                     {| ``$type`` = "app.bsky.embed.images"
-                       images = blobRefs |> List.map (fun (blob, alt) ->
-                        {| alt = alt; image = blob |}) |}
+                       images = blobRefs |> List.map (fun (blobRef, alt) ->
+                        {| alt = alt; image = blobRef.Json |}) |}
                 let record =
                     {| ``$type`` = AppBskyFeed.Post.TypeId
                        text = text

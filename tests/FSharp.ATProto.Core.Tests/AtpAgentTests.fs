@@ -6,6 +6,10 @@ open System.Text.Json
 open System.Text.Json.Serialization
 open Expecto
 open FSharp.ATProto.Core
+open FSharp.ATProto.Syntax
+
+let private parseDid s = Did.parse s |> Result.defaultWith failwith
+let private parseHandle s = Handle.parse s |> Result.defaultWith failwith
 
 let makeAgent (handler: HttpRequestMessage -> HttpResponseMessage) =
     let client = new HttpClient(new TestHelpers.MockHandler(handler))
@@ -27,8 +31,8 @@ let loginTests =
 
             match result with
             | Ok session ->
-                Expect.equal session.Did "did:plc:alice" "did"
-                Expect.equal session.Handle "alice.bsky.social" "handle"
+                Expect.equal (Did.value session.Did) "did:plc:alice" "did"
+                Expect.equal (Handle.value session.Handle) "alice.bsky.social" "handle"
                 Expect.equal session.AccessJwt "access1" "access jwt"
                 Expect.isSome agent.Session "session stored on agent"
             | Error e -> failtest $"Expected Ok, got Error: {e}"
@@ -73,7 +77,7 @@ let refreshTests =
                     TestHelpers.jsonResponse HttpStatusCode.OK
                         {| displayName = "Alice" |})
 
-            agent.Session <- Some { AccessJwt = "old"; RefreshJwt = "refresh1"; Did = "did:plc:alice"; Handle = "alice.bsky.social" }
+            agent.Session <- Some { AccessJwt = "old"; RefreshJwt = "refresh1"; Did = parseDid "did:plc:alice"; Handle = parseHandle "alice.bsky.social" }
 
             let result =
                 Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile"
@@ -110,7 +114,7 @@ let refreshTests =
                     TestHelpers.jsonResponse HttpStatusCode.Unauthorized
                         {| error = "ExpiredToken"; message = "Token expired" |})
 
-            agent.Session <- Some { AccessJwt = "old"; RefreshJwt = "oldref"; Did = "did:plc:x"; Handle = "x" }
+            agent.Session <- Some { AccessJwt = "old"; RefreshJwt = "oldref"; Did = parseDid "did:plc:x"; Handle = parseHandle "x.test" }
 
             let result =
                 Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile"

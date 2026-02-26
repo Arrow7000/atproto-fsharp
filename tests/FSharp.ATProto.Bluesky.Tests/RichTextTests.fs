@@ -121,7 +121,7 @@ let resolveTests =
                     jsonResponse HttpStatusCode.OK {| did = "did:plc:abc123" |}
                 else
                     emptyResponse HttpStatusCode.NotFound)
-            agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = "did:plc:me"; Handle = "me.bsky.social" }
+            agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = FSharp.ATProto.Syntax.Did.parse "did:plc:me" |> Result.defaultWith failwith; Handle = FSharp.ATProto.Syntax.Handle.parse "me.bsky.social" |> Result.defaultWith failwith }
             let detected = [ RichText.DetectedMention(0, 18, "alice.bsky.social") ]
             let facets = RichText.resolve agent detected |> Async.AwaitTask |> Async.RunSynchronously
             Expect.equal facets.Length 1 "one facet"
@@ -131,7 +131,7 @@ let resolveTests =
         testCase "drops mention when handle resolution fails" <| fun _ ->
             let agent = createMockAgent (fun _ ->
                 jsonResponse HttpStatusCode.BadRequest {| error = "HandleNotFound"; message = "not found" |})
-            agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = "did:plc:me"; Handle = "me.bsky.social" }
+            agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = FSharp.ATProto.Syntax.Did.parse "did:plc:me" |> Result.defaultWith failwith; Handle = FSharp.ATProto.Syntax.Handle.parse "me.bsky.social" |> Result.defaultWith failwith }
             let detected = [ RichText.DetectedMention(0, 18, "alice.bsky.social") ]
             let facets = RichText.resolve agent detected |> Async.AwaitTask |> Async.RunSynchronously
             Expect.equal facets.Length 0 "mention dropped on failure"
@@ -151,7 +151,7 @@ let resolveTests =
                     jsonResponse HttpStatusCode.OK {| did = "did:plc:abc123" |}
                 else
                     emptyResponse HttpStatusCode.NotFound)
-            agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = "did:plc:me"; Handle = "me.bsky.social" }
+            agent.Session <- Some { AccessJwt = "test"; RefreshJwt = "test"; Did = FSharp.ATProto.Syntax.Did.parse "did:plc:me" |> Result.defaultWith failwith; Handle = FSharp.ATProto.Syntax.Handle.parse "me.bsky.social" |> Result.defaultWith failwith }
             let facets = RichText.parse agent "Hello @alice.bsky.social #atproto" |> Async.AwaitTask |> Async.RunSynchronously
             Expect.equal facets.Length 2 "mention + hashtag"
     ]

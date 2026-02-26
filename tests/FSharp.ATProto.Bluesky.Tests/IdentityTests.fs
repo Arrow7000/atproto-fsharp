@@ -11,6 +11,9 @@ open TestHelpers
 let private parseJson (json: string) =
     JsonSerializer.Deserialize<JsonElement>(json)
 
+let private parseDid' s = Did.parse s |> Result.defaultWith failwith
+let private parseHandle' s = Handle.parse s |> Result.defaultWith failwith
+
 [<Tests>]
 let parseTests =
     testList "Identity.parseDidDocument" [
@@ -32,16 +35,16 @@ let parseTests =
             }"""
             let result = Identity.parseDidDocument doc
             let identity = Expect.wantOk result "should parse"
-            Expect.equal identity.Did "did:plc:z72i7hdynmk6r22z27h6tvur" "did"
-            Expect.equal identity.Handle (Some "bsky.app") "handle"
-            Expect.equal identity.PdsEndpoint (Some "https://puffball.us-east.host.bsky.network") "pds"
+            Expect.equal (Did.value identity.Did) "did:plc:z72i7hdynmk6r22z27h6tvur" "did"
+            Expect.equal (identity.Handle |> Option.map Handle.value) (Some "bsky.app") "handle"
+            Expect.equal (identity.PdsEndpoint |> Option.map Uri.value) (Some "https://puffball.us-east.host.bsky.network") "pds"
             Expect.equal identity.SigningKey (Some "zQ3shQo6TF2moaqMTrUZEM1jeuYRQXeHEx4evX9751y2qPqRA") "key"
 
         testCase "handles missing optional fields" <| fun _ ->
             let doc = parseJson """{"id": "did:plc:test123"}"""
             let result = Identity.parseDidDocument doc
             let identity = Expect.wantOk result "should parse"
-            Expect.equal identity.Did "did:plc:test123" "did"
+            Expect.equal (Did.value identity.Did) "did:plc:test123" "did"
             Expect.isNone identity.Handle "no handle"
             Expect.isNone identity.PdsEndpoint "no pds"
             Expect.isNone identity.SigningKey "no key"
@@ -52,7 +55,7 @@ let parseTests =
                 "alsoKnownAs": ["https://other.example", "at://alice.example.com"]
             }"""
             let identity = Identity.parseDidDocument doc |> Result.defaultWith failwith
-            Expect.equal identity.Handle (Some "alice.example.com") "extracts handle from at:// entry"
+            Expect.equal (identity.Handle |> Option.map Handle.value) (Some "alice.example.com") "extracts handle from at:// entry"
 
         testCase "finds atproto service by fragment id" <| fun _ ->
             let doc = parseJson """{
@@ -63,7 +66,7 @@ let parseTests =
                 ]
             }"""
             let identity = Identity.parseDidDocument doc |> Result.defaultWith failwith
-            Expect.equal identity.PdsEndpoint (Some "https://my.pds.com") "finds correct service"
+            Expect.equal (identity.PdsEndpoint |> Option.map Uri.value) (Some "https://my.pds.com") "finds correct service"
 
         testCase "finds verification method by #atproto suffix" <| fun _ ->
             let doc = parseJson """{
@@ -101,9 +104,9 @@ let resolveTests =
             let did = Did.parse "did:plc:abc123" |> Result.defaultWith failwith
             let result = Identity.resolveDid agent did |> Async.AwaitTask |> Async.RunSynchronously
             let identity = Expect.wantOk result "should resolve"
-            Expect.equal identity.Did "did:plc:abc123" "did"
-            Expect.equal identity.Handle (Some "alice.example.com") "handle"
-            Expect.equal identity.PdsEndpoint (Some "https://pds.example.com") "pds"
+            Expect.equal (Did.value identity.Did) "did:plc:abc123" "did"
+            Expect.equal (identity.Handle |> Option.map Handle.value) (Some "alice.example.com") "handle"
+            Expect.equal (identity.PdsEndpoint |> Option.map Uri.value) (Some "https://pds.example.com") "pds"
 
         testCase "resolveDid resolves did:web via .well-known" <| fun _ ->
             let webDidDoc = """{"id": "did:web:bob.example.com", "alsoKnownAs": ["at://bob.example.com"]}"""
@@ -115,7 +118,7 @@ let resolveTests =
             let did = Did.parse "did:web:bob.example.com" |> Result.defaultWith failwith
             let result = Identity.resolveDid agent did |> Async.AwaitTask |> Async.RunSynchronously
             let identity = Expect.wantOk result "should resolve"
-            Expect.equal identity.Did "did:web:bob.example.com" "did"
+            Expect.equal (Did.value identity.Did) "did:web:bob.example.com" "did"
 
         testCase "resolveDid returns error for unsupported method" <| fun _ ->
             let agent = createMockAgent (fun _ -> emptyResponse HttpStatusCode.NotFound)
@@ -129,7 +132,7 @@ let resolveTests =
                     jsonResponse HttpStatusCode.OK {| did = "did:plc:abc123" |}
                 else
                     emptyResponse HttpStatusCode.NotFound)
-            agent.Session <- Some { AccessJwt = "t"; RefreshJwt = "t"; Did = "did:plc:me"; Handle = "me.test" }
+            agent.Session <- Some { AccessJwt = "t"; RefreshJwt = "t"; Did = parseDid' "did:plc:me"; Handle = parseHandle' "me.test" }
             let handle = Handle.parse "alice.example.com" |> Result.defaultWith failwith
             let result = Identity.resolveHandle agent handle |> Async.AwaitTask |> Async.RunSynchronously
             let did = Expect.wantOk result "should resolve"
@@ -143,11 +146,11 @@ let resolveTests =
                     jsonResponse HttpStatusCode.OK (JsonSerializer.Deserialize<JsonElement>(plcDidDoc))
                 else
                     emptyResponse HttpStatusCode.NotFound)
-            agent.Session <- Some { AccessJwt = "t"; RefreshJwt = "t"; Did = "did:plc:me"; Handle = "me.test" }
+            agent.Session <- Some { AccessJwt = "t"; RefreshJwt = "t"; Did = parseDid' "did:plc:me"; Handle = parseHandle' "me.test" }
             let result = Identity.resolveIdentity agent "alice.example.com" |> Async.AwaitTask |> Async.RunSynchronously
             let identity = Expect.wantOk result "should resolve"
-            Expect.equal identity.Did "did:plc:abc123" "did"
-            Expect.equal identity.Handle (Some "alice.example.com") "verified handle"
+            Expect.equal (Did.value identity.Did) "did:plc:abc123" "did"
+            Expect.equal (identity.Handle |> Option.map Handle.value) (Some "alice.example.com") "verified handle"
 
         testCase "resolveIdentity clears handle when bidirectional check fails" <| fun _ ->
             // resolveHandle returns did:plc:abc123, but DID doc says handle is "other.com"
@@ -159,7 +162,7 @@ let resolveTests =
                     jsonResponse HttpStatusCode.OK (JsonSerializer.Deserialize<JsonElement>(mismatchDoc))
                 else
                     emptyResponse HttpStatusCode.NotFound)
-            agent.Session <- Some { AccessJwt = "t"; RefreshJwt = "t"; Did = "did:plc:me"; Handle = "me.test" }
+            agent.Session <- Some { AccessJwt = "t"; RefreshJwt = "t"; Did = parseDid' "did:plc:me"; Handle = parseHandle' "me.test" }
             let result = Identity.resolveIdentity agent "alice.example.com" |> Async.AwaitTask |> Async.RunSynchronously
             let identity = Expect.wantOk result "should resolve but with no handle"
             Expect.isNone identity.Handle "handle cleared due to mismatch"

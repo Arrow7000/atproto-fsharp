@@ -5,10 +5,11 @@ open System.Net
 open System.Net.Http
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
+open FSharp.ATProto.Syntax
 open TestHelpers
 
 let private testSession =
-    { AccessJwt = "test-jwt"; RefreshJwt = "test-refresh"; Did = "did:plc:testuser"; Handle = "test.bsky.social" }
+    { AccessJwt = "test-jwt"; RefreshJwt = "test-refresh"; Did = Did.parse "did:plc:testuser" |> Result.defaultWith failwith; Handle = Handle.parse "test.bsky.social" |> Result.defaultWith failwith }
 
 /// Creates a mock agent with session set and a request-capture callback.
 /// The mock returns a valid chat.bsky.convo.sendMessage-style MessageView response.
