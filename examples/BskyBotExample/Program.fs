@@ -30,35 +30,34 @@ let main _ =
     task {
         // ─────────────────────────────────────────────────────────────
         // 1. AUTHENTICATION
-        // Create an agent pointing at a PDS, then log in with an app
-        // password. The session is stored on the agent and used for
-        // all subsequent authenticated requests automatically.
+        // Bluesky.login creates an agent, authenticates, and returns
+        // the authenticated agent in one step. The session is stored
+        // on the agent and used for all subsequent requests.
         // ─────────────────────────────────────────────────────────────
         section "1. Authentication"
 
-        let agent = AtpAgent.create "https://bsky.social" // is agent basically the value containing the auth'd information so it needs to be passed to anything we do on bsky?
-        // is the reason it doesn't have its own methods because it's more FP-y? piping and so on? i s'ppose that makes sense. although not sure there's much to pipe here? 🤔
-        // hm yeah im not sure this makes so much sense. because both ways:
-        // - either: we *do* pipe things and that's the reason we have all the functions not on agent but on the Bluesky namespace... then we have to provide `agent` on every single line. which is not nice.
-        // or: we *don't* pipe things... but then why not put all the functions directly on agent? i mean i suppose in that case it really doesn't make that much difference either way..? hm.
-        let! loginResult = AtpAgent.login (env "BSKY_HANDLE") (env "BSKY_PASSWORD") agent // ah. so agent is *not* the thing that stores the session? or it is but we log in separately and that mutates the agent to make it contain auth stuff? if so why not make the login function return a thing and *that* thing is what we pass to every auth'd function? besides, is there any value to creating an agent separate from authenticating? if yes, what? if not, why not make one create/login function that returns the auth'd thing and that's the only thing. no need for a separate agent and login result.
+        let! loginResult = Bluesky.login "https://bsky.social" (env "BSKY_HANDLE") (env "BSKY_PASSWORD")
 
-        let session =
+        let agent =
             match loginResult with
-            | Ok s ->
-                printfn "Logged in as @%s (%s)" (Handle.value s.Handle) (Did.value s.Did)
-                s
+            | Ok a ->
+                let session = a.Session.Value
+                printfn "Logged in as @%s (%s)" (Handle.value session.Handle) (Did.value session.Did)
+                a
             | Error e -> failwithf "Login failed: %A" e
+
+        let session = agent.Session.Value
 
         // ─────────────────────────────────────────────────────────────
         // 2. READ PROFILES
         // getProfile returns a ProfileViewDetailed with stats, bio,
-        // avatar, banner, and viewer relationship state.
+        // avatar, banner, and viewer relationship state. It accepts
+        // a Handle, Did, or string directly.
         // ─────────────────────────────────────────────────────────────
         section "2. Read Profiles"
 
-        // Own profile via convenience method
-        let! ownProfile = Bluesky.getProfile agent (Handle.value session.Handle) // could we make this take a Handle without stringifying?
+        // Own profile — pass the typed Handle directly
+        let! ownProfile = Bluesky.getProfile agent session.Handle
 
         match ownProfile with
         | Ok p ->
@@ -73,7 +72,7 @@ let main _ =
         | Error e -> printfn "Own profile failed: %A" e
 
         // Another user's profile (raw XRPC query — equivalent to getProfile)
-        let! otherProfile = AppBskyActor.GetProfile.query agent { Actor = "bsky.app" } // why do we need to pass in actor here? what does actor mean anyway? and don't we already know it should be a bsky login because that's what the agent is? oh wait i just saw that was https://bsky.social. ok so what's that then? are these atproto auth implementation details? are any of these to allow for other atproto (or pds, whatever that is?) servers?
+        let! otherProfile = AppBskyActor.GetProfile.query agent { Actor = "bsky.app" }
 
         match otherProfile with
         | Ok p ->
@@ -95,10 +94,11 @@ let main _ =
         // Fetch the home timeline and iterate posts. Each FeedViewPost
         // wraps a PostView with optional reply context and reason
         // (e.g. ReasonRepost when it appears because someone reposted).
+        // Use the .Text extension property to read post content.
         // ─────────────────────────────────────────────────────────────
         section "3. Timeline"
 
-        let! timelineResult = Bluesky.getTimeline agent (Some 10L) None // what is cursor? a nonce-like string? does it make sense to make a wrapped type for it or no?
+        let! timelineResult = Bluesky.getTimeline agent (Some 10L) None
 
         let timelineFeed =
             match timelineResult with
@@ -112,19 +112,13 @@ let main _ =
                         | Some(AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonRepost _) -> "[repost] "
                         | Some(AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin _) -> "[pinned] "
                         | _ -> ""
-                    // Post text is in the raw record JSON
-                    let text =
-                        match item.Post.Record.TryGetProperty("text") with // euhhhhh no come on this can't be the actual way we get a post's content is it? 🫠 can't posts always contain text? if not, what can posts be? does it make sense to make a DU for posts, so we can neatly separate the different types? or is the problem that posts are essentially big arbitrary bags of data? if so, what fields can they contain? even so tbh, text should be a real field on the post. either it has text, in which case great, or it doesn't, in which case it can return a "" or a None, depending on the semantics.
-                        // also, is the fact that this is so open-ended a bsky thing or an atproto thing? yeah, i suppose one thing we should address is that i don't have a clear picture of the atproto.. protocol. and what bsky layers on top of that. if that even is the right metaphor.
-                        | true, v -> v.GetString() // wait what. even when we get text we still have to stringify it? euw neuw.
-                        | false, _ -> "(no text)"
-
+                    // Post text via the .Text extension property
+                    let text = item.Post.Text
                     let truncated = if text.Length > 60 then text.[..59] + "..." else text
                     printfn "  %s@%s: %s" prefix (Handle.value item.Post.Author.Handle) truncated
                     // Access engagement counts
                     printfn
                         "    likes: %s, reposts: %s, replies: %s"
-                        // we can only get the counts of these, but not the contents themeslves? like the likers or reposters or replies, in a list? if we can get the counts why not the countees?
                         (item.Post.LikeCount |> Option.map string |> Option.defaultValue "?")
                         (item.Post.RepostCount |> Option.map string |> Option.defaultValue "?")
                         (item.Post.ReplyCount |> Option.map string |> Option.defaultValue "?")
@@ -140,15 +134,13 @@ let main _ =
         //   a) Auto-detected rich text (mentions/links/tags resolved)
         //   b) Explicitly plain text (no detection via postWithFacets)
         //   c) Pre-built facets (manual byte offsets for full control)
-        //   d) With images attached
+        //   d) With images attached (using the ImageMime DU)
         // ─────────────────────────────────────────────────────────────
         section "4. Posting"
 
         // 4a. Auto-detected rich text — mentions, links, and hashtags
         //     are detected and resolved to facets automatically
-        let! autoPost = Bluesky.post agent "Hello from F#! Visit https://atproto.com #atproto" // excellent, this is exactly the kind of simple, convenient function that i want! sure we can expose more low level stuff, but the simple use cases should have the simple names and simple types and APIs.
-        // is there any reason this returns a ref and not the post itself? even if there is a good reason, can we make the postref actually contain the post itself? if not, why not? hm is that because then we'd have to be able to get the other linked data, like poster, and then i'd ask why can't we get the poster's full posts list, and so on, and all of these things need to be fetched asynchronously one step at a time, and we want to be transparent about how we load data that needs to be fetched async?
-        // if so, fair enough. but i feel like since the above function creates a post, surely we should be able to at least include the actual post object itself here without needing the user to make a separate fetch? no? wdyt?
+        let! autoPost = Bluesky.post agent "Hello from F#! Visit https://atproto.com #atproto"
 
         let postRef =
             match autoPost with
@@ -171,11 +163,9 @@ let main _ =
         let linkStart = int64 (RichText.byteLength "Check ")
         let linkEnd = int64 (RichText.byteLength "Check example.com")
 
-        // can we/should we not use the .NET Uri type as underlying data here instead of a bare string? that should come with a whole bunch of functions and stuff already. and im fairly sure its guaranteed to be correct bc it stores all the parts of the uri in different fields internally. so guaranteed to have all the bits a uri needs to have.
         match Uri.parse "https://example.com" with
         | Ok linkUri ->
             let manualFacets: AppBskyRichtext.Facet.Facet list =
-                // ok whoa this is cool. so... the way rich posts work is that you have the text but then an annotation on ranges of characters, which "linkify" that text range? ngl that's pretty fucking cool. and also explains how @penny.haily.at always seems to mess up something i didn't realise was possible to mess up 😂
                 [ { Index =
                       { ByteStart = linkStart
                         ByteEnd = linkEnd }
@@ -189,7 +179,7 @@ let main _ =
         | Error _ -> printfn "Skipped manual facet post (URI parse error)"
 
         // 4d. Post with images — upload + embed in one call.
-        //     Supports up to 4 images. Each needs data, MIME type, and alt text.
+        //     Supports up to 4 images. Each needs data, MIME type (as ImageMime DU), and alt text.
         let dummyImage = Array.create 100 0uy // replace with real image bytes
 
         let! imgPost =
@@ -197,7 +187,7 @@ let main _ =
                 agent
                 "Post with an image attached!"
                 [ { Data = dummyImage
-                    MimeType = "image/png" // hmm i don't love having to provide this manually. is it not possible to derive this from the byte array itself? hm. if not, how about some convenience functions that take... a stream? would that be better? i mean maybe more performant but prolly won't save you from needing to provide a mimetype. at the very least maybe we provide a DU of image mimetypes, so the user doesnt have to type it out as a bare string?
+                    MimeType = Png
                     AltText = "A test image" } ]
 
         match imgPost with
@@ -206,21 +196,18 @@ let main _ =
 
         // ─────────────────────────────────────────────────────────────
         // 5. REPLYING
-        // Three ways to reply:
+        // Two ways to reply:
         //   a) replyTo — auto-resolves the thread root from the parent
-        //      record (recommended for most cases)
-        //   b) reply with same parent/root (top-level reply)
-        //   c) reply with different parent/root (nested in thread)
+        //      (recommended for most cases)
+        //   b) replyWithKnownRoot — when you already have both the
+        //      parent and root refs on hand
         // ─────────────────────────────────────────────────────────────
         section "5. Replying"
 
-        // 5a. replyTo — pass the parent ref + its raw record JSON.
-        //     The library resolves the thread root automatically.
-        //     This is the recommended approach when replying to a post
-        //     from the timeline or a thread view.
+        // 5a. replyTo — pass the parent ref. The library fetches the
+        //     parent post and resolves the thread root automatically.
         if timelineFeed.Length > 0 then
             let parentPost = timelineFeed.[0].Post
-            // parentPost.Debug // what is this field?
 
             let parentRef: PostRef =
                 { Uri = parentPost.Uri
@@ -252,9 +239,10 @@ let main _ =
 
         // ─────────────────────────────────────────────────────────────
         // 6. LIKE / UNLIKE
-        // like returns a typed LikeRef — the compiler prevents you
-        // from accidentally passing a LikeRef where a RepostRef or
-        // FollowRef is expected. Pass the LikeRef to unlike to undo.
+        // like returns a typed LikeRef. The generic undo function
+        // accepts any ref type (LikeRef, RepostRef, FollowRef, BlockRef)
+        // and returns an UndoResult (Undone | WasNotPresent).
+        // You can also use unlikePost to unlike by target post.
         // ─────────────────────────────────────────────────────────────
         section "6. Like / Unlike"
 
@@ -263,32 +251,32 @@ let main _ =
         match likeResult with
         | Ok likeRef ->
             printfn "Liked: %s" (AtUri.value likeRef.Uri)
-            // Unlike using the typed LikeRef
-            let! unlikeResult = Bluesky.unlike agent likeRef // this is nice to have, feels symmetric that having the like event lets you also undo it. but surely there also has to be a way to unlike a post by just passing in the post (or post ref) itself, right?
-            // then i feel like it might be nice to have a return value that says whether anything actually happened – whether an unlike happened – or nothing happened because you hadn't liked the post to begin with. ooh, maybe *that* could return the (now deceased) like ref? which might have interesting data like when the like was actually carried out in the first place??
-            // ah wait, is the Error case here if the post hadn't been liked in the first place? what about if there was a lower level error? hm ok i suppose then we'd have had a failure at the Task level. hm ok fine i hear. but using a Result for an idempotent operation's "nothing happened" state feels wrong. feels like Error denotes an "oh its an error then i need to try again" sort of event. not a "cool, nvm, nothing to do" event.
+            // Undo using the generic undo function
+            let! undoResult = Bluesky.undo agent likeRef
 
-            match unlikeResult with
-            | Ok() -> printfn "Unliked successfully"
+            match undoResult with
+            | Ok Undone -> printfn "Unliked successfully"
+            | Ok WasNotPresent -> printfn "Was not liked"
             | Error e -> printfn "Unlike failed: %A" e
         | Error e -> printfn "Like failed: %A" e
 
         // ─────────────────────────────────────────────────────────────
         // 7. REPOST / UNREPOST
         // Same typed-ref pattern as like/unlike.
-        // repost returns a RepostRef; pass to unrepost to undo.
+        // repost returns a RepostRef; undo removes it.
         // ─────────────────────────────────────────────────────────────
-        section "7. Repost / Unrepost" // same feedback from likes applies here
+        section "7. Repost / Unrepost"
 
         let! repostResult = Bluesky.repost agent postRef
 
         match repostResult with
         | Ok repostRef ->
             printfn "Reposted: %s" (AtUri.value repostRef.Uri)
-            let! unrepostResult = Bluesky.unrepost agent repostRef
+            let! undoResult = Bluesky.undo agent repostRef
 
-            match unrepostResult with
-            | Ok() -> printfn "Unreposted successfully"
+            match undoResult with
+            | Ok Undone -> printfn "Unreposted successfully"
+            | Ok WasNotPresent -> printfn "Was not reposted"
             | Error e -> printfn "Unrepost failed: %A" e
         | Error e -> printfn "Repost failed: %A" e
 
@@ -298,22 +286,21 @@ let main _ =
         //   a) follow — takes a typed Did (type-safe)
         //   b) followUser — takes a string (handle or DID), resolves
         //      automatically (convenient for user input)
-        // Both return a FollowRef for undoing with unfollow.
+        // Both return a FollowRef. Use undo to unfollow.
         // ─────────────────────────────────────────────────────────────
-        section "8. Follow / Unfollow" // same feedback from likes again
+        section "8. Follow / Unfollow"
 
         // 8a. Follow by typed DID
-        let! followResult = Bluesky.follow agent session.Did // in this example does session contain my own DID? if so... this will probably fail, right? lol.
-        // i assume there is a notion of a User or Account type, and those have a .Did field? which makes following people easy?
-        // btw are DIDs only for users? posts don't have DIDs? do those just have Uris?
+        let! followResult = Bluesky.follow agent session.Did
 
         match followResult with
         | Ok followRef ->
             printfn "Followed (by DID): %s" (AtUri.value followRef.Uri)
-            let! unfollowResult = Bluesky.unfollow agent followRef
+            let! undoResult = Bluesky.undo agent followRef
 
-            match unfollowResult with
-            | Ok() -> printfn "Unfollowed successfully"
+            match undoResult with
+            | Ok Undone -> printfn "Unfollowed successfully"
+            | Ok WasNotPresent -> printfn "Was not following"
             | Error e -> printfn "Unfollow failed: %A" e
         | Error e -> printfn "Follow failed: %A" e
 
@@ -323,14 +310,14 @@ let main _ =
         match followUserResult with
         | Ok followRef ->
             printfn "Followed (by handle): %s" (AtUri.value followRef.Uri)
-            let! _ = Bluesky.unfollow agent followRef
+            let! _ = Bluesky.undo agent followRef
             printfn "Unfollowed"
         | Error e -> printfn "followUser failed: %A" e
 
         // ─────────────────────────────────────────────────────────────
         // 9. BLOCK / UNBLOCK
         // Same pattern as follow: block takes a typed Did, blockUser
-        // takes a string. Both return a BlockRef for unblock.
+        // takes a string. Both return a BlockRef. Use undo to unblock.
         // ─────────────────────────────────────────────────────────────
         section "9. Block / Unblock"
 
@@ -340,10 +327,11 @@ let main _ =
         match blockResult with
         | Ok blockRef ->
             printfn "Blocked: %s" (AtUri.value blockRef.Uri)
-            let! unblockResult = Bluesky.unblock agent blockRef
+            let! undoResult = Bluesky.undo agent blockRef
 
-            match unblockResult with
-            | Ok() -> printfn "Unblocked successfully"
+            match undoResult with
+            | Ok Undone -> printfn "Unblocked successfully"
+            | Ok WasNotPresent -> printfn "Was not blocked"
             | Error e -> printfn "Unblock failed: %A" e
         | Error e -> printfn "Block failed: %A" e
 
@@ -353,7 +341,7 @@ let main _ =
         match blockUserResult with
         | Ok blockRef ->
             printfn "Blocked (by handle): %s" (AtUri.value blockRef.Uri)
-            let! _ = Bluesky.unblock agent blockRef
+            let! _ = Bluesky.undo agent blockRef
             printfn "Unblocked"
         | Error e -> printfn "blockUser failed: %A" e
 
@@ -379,12 +367,12 @@ let main _ =
 
         // ─────────────────────────────────────────────────────────────
         // 11. IDENTITY RESOLUTION
-        // Resolve handles ↔ DIDs with bidirectional verification.
+        // Resolve handles <-> DIDs with bidirectional verification.
         // Supports did:plc (PLC directory) and did:web (.well-known).
         // ─────────────────────────────────────────────────────────────
         section "11. Identity Resolution"
 
-        // Full identity resolution (handle → DID → DID doc → verify)
+        // Full identity resolution (handle -> DID -> DID doc -> verify)
         let! identityResult = Identity.resolveIdentity agent (Handle.value session.Handle)
 
         match identityResult with
@@ -401,18 +389,18 @@ let main _ =
             printfn "  Signing key: %s" (id.SigningKey |> Option.defaultValue "(none)")
         | Error e -> printfn "Identity resolution failed: %A" e
 
-        // Resolve DID → identity (fetches DID document from PLC directory)
+        // Resolve DID -> identity (fetches DID document from PLC directory)
         let! didResult = Identity.resolveDid agent session.Did
 
         match didResult with
-        | Ok id -> printfn "Resolved DID → PDS: %s" (id.PdsEndpoint |> Option.map Uri.value |> Option.defaultValue "?")
+        | Ok id -> printfn "Resolved DID -> PDS: %s" (id.PdsEndpoint |> Option.map Uri.value |> Option.defaultValue "?")
         | Error e -> printfn "resolveDid failed: %A" e
 
-        // Resolve handle → DID only (lighter than full identity)
+        // Resolve handle -> DID only (lighter than full identity)
         let! handleResult = Identity.resolveHandle agent session.Handle
 
         match handleResult with
-        | Ok did -> printfn "Handle → DID: %s" (Did.value did)
+        | Ok did -> printfn "Handle -> DID: %s" (Did.value did)
         | Error e -> printfn "resolveHandle failed: %A" e
 
         // Parse a DID document directly from JSON
@@ -463,7 +451,7 @@ let main _ =
         let bytes = RichText.byteLength sampleText
         printfn "Text length: %d graphemes, %d UTF-8 bytes" graphemes bytes
 
-        // Emoji: grapheme length ≠ string length ≠ byte length
+        // Emoji: grapheme length differs from string length and byte length
         let emojiText = "Hello 👨‍👩‍👧‍👦!"
         printfn "Emoji text: \"%s\"" emojiText
 
@@ -495,6 +483,7 @@ let main _ =
         // Fetch a thread by AT-URI. The response is a recursive
         // structure: ThreadViewPost has a Parent (up the chain) and
         // Replies (down), each as a ThreadViewPostParentUnion.
+        // Use the .Text extension property to read post content.
         // ─────────────────────────────────────────────────────────────
         section "14. Post Thread"
 
@@ -506,11 +495,8 @@ let main _ =
             | Ok t ->
                 match t.Thread with
                 | AppBskyFeed.GetPostThread.OutputThreadUnion.ThreadViewPost tvp ->
-                    // Access the post content
-                    let postText =
-                        match tvp.Post.Record.TryGetProperty("text") with
-                        | true, v -> v.GetString()
-                        | false, _ -> "(no text)"
+                    // Access the post content via the .Text extension property
+                    let postText = tvp.Post.Text
 
                     printfn
                         "Thread root: @%s — %s"
@@ -673,23 +659,16 @@ let main _ =
 
         // ─────────────────────────────────────────────────────────────
         // 16. PAGINATION
-        // Xrpc.paginate wraps any cursor-based XRPC query into an
+        // Pre-built paginators wrap cursor-based XRPC queries into
         // IAsyncEnumerable that lazily fetches one page at a time.
+        // For custom queries, use Xrpc.paginate directly.
         // ─────────────────────────────────────────────────────────────
         section "16. Pagination"
 
         // Paginate the timeline (first 3 pages of 5 posts each)
         printfn "Paginated timeline:"
 
-        let timelinePages =
-            Xrpc.paginate<AppBskyFeed.GetTimeline.Params, AppBskyFeed.GetTimeline.Output>
-                AppBskyFeed.GetTimeline.TypeId
-                { Algorithm = None
-                  Cursor = None
-                  Limit = Some 5L }
-                (fun o -> o.Cursor)
-                (fun c p -> { p with Cursor = c })
-                agent
+        let timelinePages = Bluesky.paginateTimeline agent (Some 5L)
 
         let mutable pageNum = 0
         let enumerator = timelinePages.GetAsyncEnumerator()
@@ -716,15 +695,7 @@ let main _ =
         // Paginate followers
         printfn "Paginated followers:"
 
-        let followerPages =
-            Xrpc.paginate<AppBskyGraph.GetFollowers.Params, AppBskyGraph.GetFollowers.Output>
-                AppBskyGraph.GetFollowers.TypeId
-                { Actor = Handle.value session.Handle
-                  Cursor = None
-                  Limit = Some 10L }
-                (fun o -> o.Cursor)
-                (fun c p -> { p with Cursor = c })
-                agent
+        let followerPages = Bluesky.paginateFollowers agent (Handle.value session.Handle) (Some 10L)
 
         let followerEnum = followerPages.GetAsyncEnumerator()
         let! hasFirst = followerEnum.MoveNextAsync()
@@ -749,7 +720,7 @@ let main _ =
 
         // Low-level: upload a blob and inspect the BlobRef
         let imageBytes = Array.create 100 0uy // replace with real data
-        let! blobResult = Bluesky.uploadBlob agent imageBytes "image/png"
+        let! blobResult = Bluesky.uploadBlob agent imageBytes Png
 
         match blobResult with
         | Ok blob ->
@@ -766,10 +737,10 @@ let main _ =
                 agent
                 "Photo dump! #photography"
                 [ { Data = imageBytes
-                    MimeType = "image/jpeg"
+                    MimeType = Jpeg
                     AltText = "First photo" }
                   { Data = imageBytes
-                    MimeType = "image/jpeg"
+                    MimeType = Jpeg
                     AltText = "Second photo" } ]
 
         match multiImgPost with
@@ -808,7 +779,7 @@ let main _ =
         // Composing with Result.map / Result.bind
         let! postCount =
             task {
-                let! profile = Bluesky.getProfile agent (Handle.value session.Handle)
+                let! profile = Bluesky.getProfile agent session.Handle
                 return profile |> Result.map (fun p -> p.PostsCount |> Option.defaultValue 0L)
             }
 
