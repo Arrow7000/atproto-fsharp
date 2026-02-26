@@ -23,6 +23,36 @@ module AtUri =
     /// <returns>The full AT-URI string (e.g. <c>"at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3k2la3b"</c>).</returns>
     let value (AtUri s) = s
 
+    /// Split the path portion of a validated AT-URI into its segments.
+    let private segments (AtUri s) =
+        s.Substring(5).Split('/', 3)
+
+    /// <summary>
+    /// Extract the authority segment (DID or handle) from an AT-URI.
+    /// </summary>
+    /// <param name="atUri">The AT-URI to extract the authority from.</param>
+    /// <returns>The authority string (e.g. <c>"did:plc:z72i7hdynmk6r22z27h6tvur"</c> or <c>"alice.bsky.social"</c>).</returns>
+    let authority atUri =
+        (segments atUri).[0]
+
+    /// <summary>
+    /// Extract the collection NSID segment from an AT-URI, if present.
+    /// </summary>
+    /// <param name="atUri">The AT-URI to extract the collection from.</param>
+    /// <returns><c>Some</c> with the collection NSID string (e.g. <c>"app.bsky.feed.post"</c>), or <c>None</c> if the AT-URI has no collection segment.</returns>
+    let collection atUri =
+        let parts = segments atUri
+        if parts.Length >= 2 then Some parts.[1] else None
+
+    /// <summary>
+    /// Extract the record key segment from an AT-URI, if present.
+    /// </summary>
+    /// <param name="atUri">The AT-URI to extract the record key from.</param>
+    /// <returns><c>Some</c> with the record key string (e.g. <c>"3k2la3b"</c>), or <c>None</c> if the AT-URI has no record key segment.</returns>
+    let rkey atUri =
+        let parts = segments atUri
+        if parts.Length >= 3 then Some parts.[2] else None
+
     /// <summary>
     /// Parse and validate an AT-URI string.
     /// </summary>

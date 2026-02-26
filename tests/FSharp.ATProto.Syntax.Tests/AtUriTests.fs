@@ -25,4 +25,43 @@ let tests =
                     let parsed = AtUri.parse c |> Result.defaultWith failwith
                     Expect.equal (AtUri.value parsed) c "roundtrip should preserve value"
         ]
+        testList "authority accessor" [
+            testCase "extracts DID authority" <| fun () ->
+                let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3k2la3b" |> Result.defaultWith failwith
+                Expect.equal (AtUri.authority uri) "did:plc:z72i7hdynmk6r22z27h6tvur" "should extract DID authority"
+            testCase "extracts handle authority" <| fun () ->
+                let uri = AtUri.parse "at://alice.bsky.social/app.bsky.feed.post/3k2la3b" |> Result.defaultWith failwith
+                Expect.equal (AtUri.authority uri) "alice.bsky.social" "should extract handle authority"
+            testCase "extracts authority from authority-only URI" <| fun () ->
+                let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur" |> Result.defaultWith failwith
+                Expect.equal (AtUri.authority uri) "did:plc:z72i7hdynmk6r22z27h6tvur" "should extract authority from authority-only URI"
+            testCase "extracts authority from authority+collection URI" <| fun () ->
+                let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post" |> Result.defaultWith failwith
+                Expect.equal (AtUri.authority uri) "did:plc:z72i7hdynmk6r22z27h6tvur" "should extract authority from authority+collection URI"
+        ]
+        testList "collection accessor" [
+            testCase "extracts collection from full URI" <| fun () ->
+                let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3k2la3b" |> Result.defaultWith failwith
+                Expect.equal (AtUri.collection uri) (Some "app.bsky.feed.post") "should extract collection"
+            testCase "extracts collection from authority+collection URI" <| fun () ->
+                let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post" |> Result.defaultWith failwith
+                Expect.equal (AtUri.collection uri) (Some "app.bsky.feed.post") "should extract collection"
+            testCase "returns None for authority-only URI" <| fun () ->
+                let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur" |> Result.defaultWith failwith
+                Expect.equal (AtUri.collection uri) None "should return None for authority-only URI"
+        ]
+        testList "rkey accessor" [
+            testCase "extracts rkey from full URI" <| fun () ->
+                let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3k2la3b" |> Result.defaultWith failwith
+                Expect.equal (AtUri.rkey uri) (Some "3k2la3b") "should extract rkey"
+            testCase "returns None for authority+collection URI" <| fun () ->
+                let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post" |> Result.defaultWith failwith
+                Expect.equal (AtUri.rkey uri) None "should return None for authority+collection URI"
+            testCase "returns None for authority-only URI" <| fun () ->
+                let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur" |> Result.defaultWith failwith
+                Expect.equal (AtUri.rkey uri) None "should return None for authority-only URI"
+            testCase "extracts rkey with special characters" <| fun () ->
+                let uri = AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/self" |> Result.defaultWith failwith
+                Expect.equal (AtUri.rkey uri) (Some "self") "should extract 'self' rkey"
+        ]
     ]
