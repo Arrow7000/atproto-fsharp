@@ -523,10 +523,10 @@ module Bluesky =
     /// Get the authenticated user's home timeline.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="limit">Maximum number of posts to return (optional).</param>
-    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <param name="limit">Maximum number of posts to return (optional, pass <c>None</c> for server default).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional, pass <c>None</c> to start from the beginning).</param>
     /// <returns>A feed of posts with an optional cursor for pagination, or an <see cref="XrpcError"/>.</returns>
-    let getTimeline (agent: AtpAgent) (?limit: int64) (?cursor: string)
+    let getTimeline (agent: AtpAgent) (limit: int64 option) (cursor: string option)
         : Task<Result<AppBskyFeed.GetTimeline.Output, XrpcError>> =
         AppBskyFeed.GetTimeline.query agent
             { Algorithm = None
@@ -538,10 +538,10 @@ module Bluesky =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="uri">The AT-URI of the post (e.g., <c>at://did:plc:.../app.bsky.feed.post/...</c>).</param>
-    /// <param name="depth">How many levels of replies to include (optional).</param>
-    /// <param name="parentHeight">How many levels of parent context to include (optional).</param>
+    /// <param name="depth">How many levels of replies to include (optional, pass <c>None</c> for server default).</param>
+    /// <param name="parentHeight">How many levels of parent context to include (optional, pass <c>None</c> for server default).</param>
     /// <returns>The thread view on success, or an <see cref="XrpcError"/>.</returns>
-    let getPostThread (agent: AtpAgent) (uri: AtUri) (?depth: int64) (?parentHeight: int64)
+    let getPostThread (agent: AtpAgent) (uri: AtUri) (depth: int64 option) (parentHeight: int64 option)
         : Task<Result<AppBskyFeed.GetPostThread.Output, XrpcError>> =
         AppBskyFeed.GetPostThread.query agent
             { Depth = depth
@@ -552,10 +552,10 @@ module Bluesky =
     /// List notifications for the authenticated user.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="limit">Maximum number of notifications to return (optional).</param>
-    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <param name="limit">Maximum number of notifications to return (optional, pass <c>None</c> for server default).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional, pass <c>None</c> to start from the beginning).</param>
     /// <returns>A list of notifications with an optional cursor for pagination, or an <see cref="XrpcError"/>.</returns>
-    let getNotifications (agent: AtpAgent) (?limit: int64) (?cursor: string)
+    let getNotifications (agent: AtpAgent) (limit: int64 option) (cursor: string option)
         : Task<Result<AppBskyNotification.ListNotifications.Output, XrpcError>> =
         AppBskyNotification.ListNotifications.query agent
             { Cursor = cursor

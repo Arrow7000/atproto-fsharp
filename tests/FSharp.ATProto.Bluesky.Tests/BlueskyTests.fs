@@ -501,3 +501,184 @@ let imagePostTests =
             let result = Bluesky.postWithImages agent "Should fail" images |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isError result "should fail when blob upload fails"
     ]
+
+// ── Read convenience method helpers ─────────────────────────────────
+
+let private queryAgent (captureRequest: HttpRequestMessage -> unit) (responseBody: obj) =
+    let agent = createMockAgent (fun req ->
+        captureRequest req
+        jsonResponse HttpStatusCode.OK responseBody)
+    agent.Session <- Some testSession
+    agent
+
+/// Minimal JSON for a ProfileViewDetailed (only required fields)
+let private profileJson =
+    {| did = "did:plc:testuser"; handle = "alice.bsky.social"; displayName = "Alice" |}
+
+/// Minimal JSON for a GetTimeline response
+let private timelineJson =
+    {| feed = ([||] : obj array); cursor = "cursor123" |}
+
+/// Minimal JSON for a ListNotifications response
+let private notificationsJson =
+    {| notifications = ([||] : obj array); cursor = "notif-cursor" |}
+
+[<Tests>]
+let getProfileTests =
+    testList "Bluesky.getProfile" [
+        testCase "getProfile calls correct XRPC endpoint with actor param" <| fun _ ->
+            let mutable captured = None
+            let agent = queryAgent (fun req -> captured <- Some req) profileJson
+            let result = Bluesky.getProfile agent "alice.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let req = captured.Value
+            Expect.equal req.Method HttpMethod.Get "GET method"
+            Expect.stringContains (req.RequestUri.ToString()) "app.bsky.actor.getProfile" "correct endpoint"
+            Expect.stringContains (req.RequestUri.ToString()) "alice.bsky.social" "actor in query string"
+
+        testCase "getProfile accepts DID string" <| fun _ ->
+            let mutable captured = None
+            let agent = queryAgent (fun req -> captured <- Some req) profileJson
+            let result = Bluesky.getProfile agent "did:plc:testuser" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            Expect.stringContains (captured.Value.RequestUri.ToString()) "did%3Aplc%3Atestuser" "DID in query string (URL-encoded)"
+
+        testCase "getProfile deserializes response" <| fun _ ->
+            let agent = queryAgent (fun _ -> ()) profileJson
+            let result = Bluesky.getProfile agent "alice.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            let profile = Expect.wantOk result "should succeed"
+            Expect.equal (Did.value profile.Did) "did:plc:testuser" "did"
+            Expect.equal (Handle.value profile.Handle) "alice.bsky.social" "handle"
+
+        testCase "getProfile returns error on failure" <| fun _ ->
+            let agent = createMockAgent (fun _ ->
+                jsonResponse HttpStatusCode.BadRequest {| error = "InvalidRequest"; message = "Invalid actor" |})
+            agent.Session <- Some testSession
+            let result = Bluesky.getProfile agent "nonexistent" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isError result "should fail"
+    ]
+
+[<Tests>]
+let getTimelineTests =
+    testList "Bluesky.getTimeline" [
+        testCase "getTimeline calls correct XRPC endpoint" <| fun _ ->
+            let mutable captured = None
+            let agent = queryAgent (fun req -> captured <- Some req) timelineJson
+            let result = Bluesky.getTimeline agent None None |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let req = captured.Value
+            Expect.equal req.Method HttpMethod.Get "GET method"
+            Expect.stringContains (req.RequestUri.ToString()) "app.bsky.feed.getTimeline" "correct endpoint"
+
+        testCase "getTimeline passes limit and cursor params" <| fun _ ->
+            let mutable captured = None
+            let agent = queryAgent (fun req -> captured <- Some req) timelineJson
+            let result = Bluesky.getTimeline agent (Some 25L) (Some "abc") |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let url = captured.Value.RequestUri.ToString()
+            Expect.stringContains url "limit=25" "limit in query"
+            Expect.stringContains url "cursor=abc" "cursor in query"
+
+        testCase "getTimeline omits None params from query string" <| fun _ ->
+            let mutable captured = None
+            let agent = queryAgent (fun req -> captured <- Some req) timelineJson
+            let result = Bluesky.getTimeline agent None None |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let url = captured.Value.RequestUri.ToString()
+            Expect.isFalse (url.Contains("limit")) "no limit in query"
+            Expect.isFalse (url.Contains("cursor")) "no cursor in query"
+
+        testCase "getTimeline deserializes cursor from response" <| fun _ ->
+            let agent = queryAgent (fun _ -> ()) timelineJson
+            let result = Bluesky.getTimeline agent None None |> Async.AwaitTask |> Async.RunSynchronously
+            let output = Expect.wantOk result "should succeed"
+            Expect.equal output.Cursor (Some "cursor123") "cursor"
+            Expect.equal output.Feed [] "empty feed"
+    ]
+
+[<Tests>]
+let getPostThreadTests =
+    testList "Bluesky.getPostThread" [
+        testCase "getPostThread calls correct XRPC endpoint with uri param" <| fun _ ->
+            let mutable captured = None
+            // Use error response to verify request properties without needing valid response JSON
+            let agent = createMockAgent (fun req ->
+                captured <- Some req
+                jsonResponse HttpStatusCode.BadRequest {| error = "Test"; message = "mock" |})
+            agent.Session <- Some testSession
+            let uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/abc123"
+            let _result = Bluesky.getPostThread agent uri None None |> Async.AwaitTask |> Async.RunSynchronously
+            let req = captured.Value
+            Expect.equal req.Method HttpMethod.Get "GET method"
+            Expect.stringContains (req.RequestUri.ToString()) "app.bsky.feed.getPostThread" "correct endpoint"
+
+        testCase "getPostThread passes depth and parentHeight params" <| fun _ ->
+            let mutable captured = None
+            let agent = createMockAgent (fun req ->
+                captured <- Some req
+                jsonResponse HttpStatusCode.BadRequest {| error = "Test"; message = "mock" |})
+            agent.Session <- Some testSession
+            let uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/abc123"
+            let _result = Bluesky.getPostThread agent uri (Some 6L) (Some 80L) |> Async.AwaitTask |> Async.RunSynchronously
+            let url = captured.Value.RequestUri.ToString()
+            Expect.stringContains url "depth=6" "depth in query"
+            Expect.stringContains url "parentHeight=80" "parentHeight in query"
+
+        testCase "getPostThread omits None optional params" <| fun _ ->
+            let mutable captured = None
+            let agent = createMockAgent (fun req ->
+                captured <- Some req
+                jsonResponse HttpStatusCode.BadRequest {| error = "Test"; message = "mock" |})
+            agent.Session <- Some testSession
+            let uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/abc123"
+            let _result = Bluesky.getPostThread agent uri None None |> Async.AwaitTask |> Async.RunSynchronously
+            let url = captured.Value.RequestUri.ToString()
+            Expect.isFalse (url.Contains("depth")) "no depth in query"
+            Expect.isFalse (url.Contains("parentHeight")) "no parentHeight in query"
+
+        testCase "getPostThread returns error on failure" <| fun _ ->
+            let agent = createMockAgent (fun _ ->
+                jsonResponse HttpStatusCode.NotFound {| error = "NotFound"; message = "Post not found" |})
+            agent.Session <- Some testSession
+            let uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/missing"
+            let result = Bluesky.getPostThread agent uri None None |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isError result "should fail"
+    ]
+
+[<Tests>]
+let getNotificationsTests =
+    testList "Bluesky.getNotifications" [
+        testCase "getNotifications calls correct XRPC endpoint" <| fun _ ->
+            let mutable captured = None
+            let agent = queryAgent (fun req -> captured <- Some req) notificationsJson
+            let result = Bluesky.getNotifications agent None None |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let req = captured.Value
+            Expect.equal req.Method HttpMethod.Get "GET method"
+            Expect.stringContains (req.RequestUri.ToString()) "app.bsky.notification.listNotifications" "correct endpoint"
+
+        testCase "getNotifications passes limit and cursor params" <| fun _ ->
+            let mutable captured = None
+            let agent = queryAgent (fun req -> captured <- Some req) notificationsJson
+            let result = Bluesky.getNotifications agent (Some 50L) (Some "notif-abc") |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let url = captured.Value.RequestUri.ToString()
+            Expect.stringContains url "limit=50" "limit in query"
+            Expect.stringContains url "cursor=notif-abc" "cursor in query"
+
+        testCase "getNotifications omits None params from query string" <| fun _ ->
+            let mutable captured = None
+            let agent = queryAgent (fun req -> captured <- Some req) notificationsJson
+            let result = Bluesky.getNotifications agent None None |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let url = captured.Value.RequestUri.ToString()
+            Expect.isFalse (url.Contains("limit")) "no limit in query"
+            Expect.isFalse (url.Contains("cursor")) "no cursor in query"
+
+        testCase "getNotifications deserializes cursor from response" <| fun _ ->
+            let agent = queryAgent (fun _ -> ()) notificationsJson
+            let result = Bluesky.getNotifications agent None None |> Async.AwaitTask |> Async.RunSynchronously
+            let output = Expect.wantOk result "should succeed"
+            Expect.equal output.Cursor (Some "notif-cursor") "cursor"
+            Expect.equal output.Notifications [] "empty notifications"
+    ]
