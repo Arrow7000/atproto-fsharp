@@ -70,10 +70,10 @@
   </g>
 
   <!-- Project name — white stroke outline for dark mode visibility -->
-  <text x="400" y="235" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="38" font-weight="700" fill="#1B2836" letter-spacing="-0.5" stroke="#FFFFFF40" stroke-width="8" stroke-linejoin="round" paint-order="stroke">
-    <tspan fill="#0085FF" stroke="#FFFFFF40">F#</tspan><tspan fill="#1B2836">.</tspan><tspan fill="#1B2836">ATProto</tspan>
+  <text x="400" y="235" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="38" font-weight="700" letter-spacing="-0.5">
+    <tspan fill="#0085FF">F#</tspan><tspan fill="#4A6785">.</tspan><tspan fill="#4A6785">ATProto</tspan>
   </text>
-  <text x="400" y="262" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="15" fill="#5B7083" letter-spacing="0.3" stroke="#FFFFFF35" stroke-width="6" stroke-linejoin="round" paint-order="stroke">
+  <text x="400" y="262" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="15" fill="#7088A0" letter-spacing="0.3">
     Idiomatic F# for the AT Protocol
   </text>
 </svg>
