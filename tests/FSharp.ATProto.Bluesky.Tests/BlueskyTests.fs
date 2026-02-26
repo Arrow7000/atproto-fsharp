@@ -166,6 +166,108 @@ let followTests =
     ]
 
 [<Tests>]
+let followUserTests =
+    testList "Bluesky.followUser" [
+        testCase "followUser with DID string passes through without resolution" <| fun _ ->
+            let mutable captured = None
+            let agent = createRecordAgent (fun req -> captured <- Some req)
+            let result = Bluesky.followUser agent "did:plc:other" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            Expect.stringContains body "app.bsky.graph.follow" "follow collection"
+            Expect.stringContains body "did:plc:other" "subject DID"
+
+        testCase "followUser with handle resolves to DID first" <| fun _ ->
+            let mutable captured = None
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.PathAndQuery.Contains("resolveHandle") then
+                    jsonResponse HttpStatusCode.OK {| did = "did:plc:resolved" |}
+                else
+                    captured <- Some req
+                    jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.graph.follow/abc123"; cid = "bafyreiabc123" |})
+            agent.Session <- Some testSession
+            let result = Bluesky.followUser agent "alice.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            Expect.stringContains body "did:plc:resolved" "resolved DID used as subject"
+            Expect.stringContains body "app.bsky.graph.follow" "follow collection"
+
+        testCase "followUser returns error for invalid identifier" <| fun _ ->
+            let agent = createRecordAgent (fun _ -> ())
+            let result = Bluesky.followUser agent "not a valid handle or did" |> Async.AwaitTask |> Async.RunSynchronously
+            let err = Expect.wantError result "should fail for invalid identifier"
+            Expect.equal err.StatusCode 400 "status code"
+            Expect.isSome err.Message "should have error message"
+
+        testCase "followUser returns error when handle resolution fails" <| fun _ ->
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.PathAndQuery.Contains("resolveHandle") then
+                    jsonResponse HttpStatusCode.BadRequest {| error = "HandleNotFound"; message = "handle not found" |}
+                else
+                    jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.graph.follow/abc123"; cid = "bafyreiabc123" |})
+            agent.Session <- Some testSession
+            let result = Bluesky.followUser agent "nonexistent.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isError result "should fail when handle resolution fails"
+
+        testCase "followUser returns FollowRef on success" <| fun _ ->
+            let agent = createRecordAgent (fun _ -> ())
+            let result = Bluesky.followUser agent "did:plc:other" |> Async.AwaitTask |> Async.RunSynchronously
+            let followRef = Expect.wantOk result "should succeed"
+            Expect.equal (AtUri.value followRef.Uri) "at://did:plc:testuser/app.bsky.feed.post/abc123" "returns uri"
+    ]
+
+[<Tests>]
+let blockUserTests =
+    testList "Bluesky.blockUser" [
+        testCase "blockUser with DID string passes through without resolution" <| fun _ ->
+            let mutable captured = None
+            let agent = createRecordAgent (fun req -> captured <- Some req)
+            let result = Bluesky.blockUser agent "did:plc:other" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            Expect.stringContains body "app.bsky.graph.block" "block collection"
+            Expect.stringContains body "did:plc:other" "subject DID"
+
+        testCase "blockUser with handle resolves to DID first" <| fun _ ->
+            let mutable captured = None
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.PathAndQuery.Contains("resolveHandle") then
+                    jsonResponse HttpStatusCode.OK {| did = "did:plc:resolved" |}
+                else
+                    captured <- Some req
+                    jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.graph.block/abc123"; cid = "bafyreiabc123" |})
+            agent.Session <- Some testSession
+            let result = Bluesky.blockUser agent "alice.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            Expect.stringContains body "did:plc:resolved" "resolved DID used as subject"
+            Expect.stringContains body "app.bsky.graph.block" "block collection"
+
+        testCase "blockUser returns error for invalid identifier" <| fun _ ->
+            let agent = createRecordAgent (fun _ -> ())
+            let result = Bluesky.blockUser agent "not a valid handle or did" |> Async.AwaitTask |> Async.RunSynchronously
+            let err = Expect.wantError result "should fail for invalid identifier"
+            Expect.equal err.StatusCode 400 "status code"
+            Expect.isSome err.Message "should have error message"
+
+        testCase "blockUser returns error when handle resolution fails" <| fun _ ->
+            let agent = createMockAgent (fun req ->
+                if req.RequestUri.PathAndQuery.Contains("resolveHandle") then
+                    jsonResponse HttpStatusCode.BadRequest {| error = "HandleNotFound"; message = "handle not found" |}
+                else
+                    jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:testuser/app.bsky.graph.block/abc123"; cid = "bafyreiabc123" |})
+            agent.Session <- Some testSession
+            let result = Bluesky.blockUser agent "nonexistent.bsky.social" |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isError result "should fail when handle resolution fails"
+
+        testCase "blockUser returns BlockRef on success" <| fun _ ->
+            let agent = createRecordAgent (fun _ -> ())
+            let result = Bluesky.blockUser agent "did:plc:other" |> Async.AwaitTask |> Async.RunSynchronously
+            let blockRef = Expect.wantOk result "should succeed"
+            Expect.equal (AtUri.value blockRef.Uri) "at://did:plc:testuser/app.bsky.feed.post/abc123" "returns uri"
+    ]
+
+[<Tests>]
 let undoTests =
     testList "Bluesky.undo" [
         testCase "unlike delegates to deleteRecord with LikeRef uri" <| fun _ ->

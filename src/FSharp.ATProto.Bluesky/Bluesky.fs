@@ -273,6 +273,62 @@ module Bluesky =
         }
 
     /// <summary>
+    /// Resolve a string identifier (DID or handle) to a <see cref="Did"/>.
+    /// If the string starts with <c>did:</c>, it is parsed directly.
+    /// Otherwise, it is treated as a handle and resolved via <c>com.atproto.identity.resolveHandle</c>.
+    /// </summary>
+    let private resolveIdentifier (agent: AtpAgent) (identifier: string)
+        : Task<Result<Did, XrpcError>> =
+        task {
+            if identifier.StartsWith("did:") then
+                match Did.parse identifier with
+                | Ok did -> return Ok did
+                | Error msg -> return Error (toXrpcError (sprintf "Invalid DID: %s" msg))
+            else
+                match Handle.parse identifier with
+                | Error msg -> return Error (toXrpcError (sprintf "Invalid handle: %s" msg))
+                | Ok handle ->
+                    let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handle }
+                    return result |> Result.map (fun output -> output.Did)
+        }
+
+    /// <summary>
+    /// Follow a user by DID string or handle. If the identifier starts with <c>did:</c>,
+    /// it is parsed as a DID directly. Otherwise, the handle is resolved to a DID first.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="identifier">A DID string (e.g., <c>did:plc:abc123</c>) or handle (e.g., <c>alice.bsky.social</c>).</param>
+    /// <returns>A <see cref="FollowRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>FollowRef</c> to <see cref="unfollow"/> to undo.</returns>
+    /// <remarks>
+    /// For type-safe usage when you already have a <see cref="Did"/>, use <see cref="follow"/> instead.
+    /// </remarks>
+    let followUser (agent: AtpAgent) (identifier: string)
+        : Task<Result<FollowRef, XrpcError>> =
+        task {
+            match! resolveIdentifier agent identifier with
+            | Error e -> return Error e
+            | Ok did -> return! follow agent did
+        }
+
+    /// <summary>
+    /// Block a user by DID string or handle. If the identifier starts with <c>did:</c>,
+    /// it is parsed as a DID directly. Otherwise, the handle is resolved to a DID first.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="identifier">A DID string (e.g., <c>did:plc:abc123</c>) or handle (e.g., <c>alice.bsky.social</c>).</param>
+    /// <returns>A <see cref="BlockRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>BlockRef</c> to <see cref="unblock"/> to undo.</returns>
+    /// <remarks>
+    /// For type-safe usage when you already have a <see cref="Did"/>, use <see cref="block"/> instead.
+    /// </remarks>
+    let blockUser (agent: AtpAgent) (identifier: string)
+        : Task<Result<BlockRef, XrpcError>> =
+        task {
+            match! resolveIdentifier agent identifier with
+            | Error e -> return Error e
+            | Ok did -> return! block agent did
+        }
+
+    /// <summary>
     /// Delete a record by its AT-URI.
     /// Can be used to unlike, un-repost, unfollow, unblock, or delete a post.
     /// </summary>
@@ -450,3 +506,60 @@ module Bluesky =
                 let! result = createRecord agent "app.bsky.feed.post" record
                 return result |> Result.map toPostRef
         }
+
+    // ── Read convenience methods ────────────────────────────────────────
+
+    /// <summary>
+    /// Get a user's profile by handle or DID string.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">A handle (e.g., <c>alice.bsky.social</c>) or DID (e.g., <c>did:plc:...</c>).</param>
+    /// <returns>The profile view on success, or an <see cref="XrpcError"/>.</returns>
+    let getProfile (agent: AtpAgent) (actor: string)
+        : Task<Result<AppBskyActor.GetProfile.Output, XrpcError>> =
+        AppBskyActor.GetProfile.query agent { Actor = actor }
+
+    /// <summary>
+    /// Get the authenticated user's home timeline.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="limit">Maximum number of posts to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A feed of posts with an optional cursor for pagination, or an <see cref="XrpcError"/>.</returns>
+    let getTimeline (agent: AtpAgent) (?limit: int64) (?cursor: string)
+        : Task<Result<AppBskyFeed.GetTimeline.Output, XrpcError>> =
+        AppBskyFeed.GetTimeline.query agent
+            { Algorithm = None
+              Cursor = cursor
+              Limit = limit }
+
+    /// <summary>
+    /// Get a post thread by its AT-URI, including parent and reply context.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="uri">The AT-URI of the post (e.g., <c>at://did:plc:.../app.bsky.feed.post/...</c>).</param>
+    /// <param name="depth">How many levels of replies to include (optional).</param>
+    /// <param name="parentHeight">How many levels of parent context to include (optional).</param>
+    /// <returns>The thread view on success, or an <see cref="XrpcError"/>.</returns>
+    let getPostThread (agent: AtpAgent) (uri: AtUri) (?depth: int64) (?parentHeight: int64)
+        : Task<Result<AppBskyFeed.GetPostThread.Output, XrpcError>> =
+        AppBskyFeed.GetPostThread.query agent
+            { Depth = depth
+              ParentHeight = parentHeight
+              Uri = uri }
+
+    /// <summary>
+    /// List notifications for the authenticated user.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="limit">Maximum number of notifications to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A list of notifications with an optional cursor for pagination, or an <see cref="XrpcError"/>.</returns>
+    let getNotifications (agent: AtpAgent) (?limit: int64) (?cursor: string)
+        : Task<Result<AppBskyNotification.ListNotifications.Output, XrpcError>> =
+        AppBskyNotification.ListNotifications.query agent
+            { Cursor = cursor
+              Limit = limit
+              Priority = None
+              Reasons = None
+              SeenAt = None }
