@@ -97,15 +97,22 @@ All 228 XRPC endpoints on Bluesky are available as typed wrappers under their Le
 
 ## Like a Post
 
+`like` takes a `PostRef` (returned by `post`, `reply`, or constructed from any post's URI + CID) and returns a `LikeRef`. Pass the `LikeRef` to `unlike` to undo:
+
 ```fsharp
 // Like the first post from the timeline
 match timelineResult with
 | Ok timeline when timeline.Feed.Length > 0 ->
     let first = timeline.Feed.[0].Post
-    let! likeResult = Bluesky.like agent first.Uri first.Cid
+    let postRef = { PostRef.Uri = first.Uri; Cid = first.Cid }
+    let! likeResult = Bluesky.like agent postRef
 
     match likeResult with
-    | Ok like -> printfn "Liked! %s" like.Uri
+    | Ok likeRef ->
+        printfn "Liked! %s" (AtUri.value likeRef.Uri)
+        // Undo the like
+        let! _ = Bluesky.unlike agent likeRef
+        ()
     | Error e -> printfn "Like failed: %A" e.Message
 | _ -> ()
 ```
@@ -115,14 +122,12 @@ match timelineResult with
 When replying, you need both a parent reference (the post you're replying to) and a root reference (the thread's top-level post). For a reply to a top-level post, both are the same:
 
 ```fsharp
+let parentRef = { PostRef.Uri = first.Uri; Cid = first.Cid }
 let! replyResult =
-    Bluesky.reply agent
-        "Great post!"
-        first.Uri first.Cid   // parent
-        first.Uri first.Cid   // root
+    Bluesky.reply agent "Great post!" parentRef parentRef
 
 match replyResult with
-| Ok r -> printfn "Replied: %s" r.Uri
+| Ok r -> printfn "Replied: %s" (AtUri.value r.Uri)
 | Error e -> printfn "Reply failed: %A" e.Message
 ```
 
@@ -176,7 +181,7 @@ let main _ =
             printfn "Timeline: %A" e.Message
 
         // Like our own post
-        let! _ = Bluesky.like agent post.Uri post.Cid
+        let! _ = Bluesky.like agent post
 
         // Clean up
         let! _ = Bluesky.deleteRecord agent post.Uri

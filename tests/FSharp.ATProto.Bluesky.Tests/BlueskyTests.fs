@@ -37,13 +37,16 @@ let private parseDid s = Did.parse s |> Result.defaultWith failwith
 let private blobResponse mimeType size =
     {| blob = {| ``$type`` = "blob"; ref = {| ``$link`` = "bafyreiabc123" |}; mimeType = mimeType; size = size |} |}
 
+let private testPostRef =
+    { PostRef.Uri = parseAtUri "at://did:plc:other/app.bsky.feed.post/abc"; Cid = parseCid "bafyreiabc" }
+
 [<Tests>]
 let postTests =
     testList "Bluesky.post" [
-        testCase "postWith creates post with correct collection" <| fun _ ->
+        testCase "postWithFacets creates post with correct collection" <| fun _ ->
             let mutable captured = None
             let agent = createRecordAgent (fun req -> captured <- Some req)
-            let result = Bluesky.postWith agent "Hello world" [] |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.postWithFacets agent "Hello world" [] |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
             let req = captured.Value
             let body = req.Content.ReadAsStringAsync().Result
@@ -51,28 +54,28 @@ let postTests =
             Expect.stringContains body "did:plc:testuser" "repo = session DID"
             Expect.stringContains body "Hello world" "text in record"
 
-        testCase "postWith returns PostRef with typed fields" <| fun _ ->
+        testCase "postWithFacets returns PostRef with typed fields" <| fun _ ->
             let mutable captured = None
             let agent = createRecordAgent (fun req -> captured <- Some req)
-            let result = Bluesky.postWith agent "Hello world" [] |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.postWithFacets agent "Hello world" [] |> Async.AwaitTask |> Async.RunSynchronously
             let postRef = Expect.wantOk result "should succeed"
             Expect.equal (AtUri.value postRef.Uri) "at://did:plc:testuser/app.bsky.feed.post/abc123" "uri"
             Expect.equal (Cid.value postRef.Cid) "bafyreiabc123" "cid"
 
-        testCase "postWith includes facets when provided" <| fun _ ->
+        testCase "postWithFacets includes facets when provided" <| fun _ ->
             let mutable captured = None
             let agent = createRecordAgent (fun req -> captured <- Some req)
             let facets : AppBskyRichtext.Facet.Facet list = [
                 { Index = { ByteStart = 0L; ByteEnd = 5L }
                   Features = [ AppBskyRichtext.Facet.FacetFeaturesItem.Tag { Tag = "hello" } ] }
             ]
-            let result = Bluesky.postWith agent "#hello world" facets |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.postWithFacets agent "#hello world" facets |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
 
-        testCase "postWith returns NotLoggedIn error without session" <| fun _ ->
+        testCase "postWithFacets returns NotLoggedIn error without session" <| fun _ ->
             let agent = createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
             // No session set
-            let result = Bluesky.postWith agent "Hello world" [] |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.postWithFacets agent "Hello world" [] |> Async.AwaitTask |> Async.RunSynchronously
             let err = Expect.wantError result "should fail without session"
             Expect.equal err.StatusCode 401 "status code"
             Expect.equal err.Error (Some "NotLoggedIn") "error code"
@@ -85,30 +88,37 @@ let likeTests =
         testCase "like creates record with correct collection and subject" <| fun _ ->
             let mutable captured = None
             let agent = createRecordAgent (fun req -> captured <- Some req)
-            let result = Bluesky.like agent (parseAtUri "at://did:plc:other/app.bsky.feed.post/abc") (parseCid "bafyreiabc") |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.like agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
             let body = captured.Value.Content.ReadAsStringAsync().Result
             Expect.stringContains body "app.bsky.feed.like" "like collection"
             Expect.stringContains body "bafyreiabc" "cid in subject"
 
-        testCase "like returns AtUri of created record" <| fun _ ->
+        testCase "like returns LikeRef with uri" <| fun _ ->
             let mutable captured = None
             let agent = createRecordAgent (fun req -> captured <- Some req)
-            let result = Bluesky.like agent (parseAtUri "at://did:plc:other/app.bsky.feed.post/abc") (parseCid "bafyreiabc") |> Async.AwaitTask |> Async.RunSynchronously
-            let uri = Expect.wantOk result "should succeed"
-            Expect.equal (AtUri.value uri) "at://did:plc:testuser/app.bsky.feed.post/abc123" "returns uri"
+            let result = Bluesky.like agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let likeRef = Expect.wantOk result "should succeed"
+            Expect.equal (AtUri.value likeRef.Uri) "at://did:plc:testuser/app.bsky.feed.post/abc123" "returns uri"
 
         testCase "repost creates record with correct collection" <| fun _ ->
             let mutable captured = None
             let agent = createRecordAgent (fun req -> captured <- Some req)
-            let result = Bluesky.repost agent (parseAtUri "at://did:plc:other/app.bsky.feed.post/abc") (parseCid "bafyreiabc") |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.repost agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
             Expect.isOk result "should succeed"
             let body = captured.Value.Content.ReadAsStringAsync().Result
             Expect.stringContains body "app.bsky.feed.repost" "repost collection"
 
+        testCase "repost returns RepostRef with uri" <| fun _ ->
+            let mutable captured = None
+            let agent = createRecordAgent (fun req -> captured <- Some req)
+            let result = Bluesky.repost agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
+            let repostRef = Expect.wantOk result "should succeed"
+            Expect.equal (AtUri.value repostRef.Uri) "at://did:plc:testuser/app.bsky.feed.post/abc123" "returns uri"
+
         testCase "like returns NotLoggedIn error without session" <| fun _ ->
             let agent = createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
-            let result = Bluesky.like agent (parseAtUri "at://did:plc:other/app.bsky.feed.post/abc") (parseCid "bafyreiabc") |> Async.AwaitTask |> Async.RunSynchronously
+            let result = Bluesky.like agent testPostRef |> Async.AwaitTask |> Async.RunSynchronously
             let err = Expect.wantError result "should fail without session"
             Expect.equal err.StatusCode 401 "status code"
             Expect.equal err.Error (Some "NotLoggedIn") "error code"
@@ -126,12 +136,12 @@ let followTests =
             Expect.stringContains body "app.bsky.graph.follow" "follow collection"
             Expect.stringContains body "did:plc:other" "subject DID"
 
-        testCase "follow returns AtUri of created record" <| fun _ ->
+        testCase "follow returns FollowRef with uri" <| fun _ ->
             let mutable captured = None
             let agent = createRecordAgent (fun req -> captured <- Some req)
             let result = Bluesky.follow agent (parseDid "did:plc:other") |> Async.AwaitTask |> Async.RunSynchronously
-            let uri = Expect.wantOk result "should succeed"
-            Expect.equal (AtUri.value uri) "at://did:plc:testuser/app.bsky.feed.post/abc123" "returns uri"
+            let followRef = Expect.wantOk result "should succeed"
+            Expect.equal (AtUri.value followRef.Uri) "at://did:plc:testuser/app.bsky.feed.post/abc123" "returns uri"
 
         testCase "block creates record with DID subject" <| fun _ ->
             let mutable captured = None
@@ -141,11 +151,62 @@ let followTests =
             let body = captured.Value.Content.ReadAsStringAsync().Result
             Expect.stringContains body "app.bsky.graph.block" "block collection"
 
+        testCase "block returns BlockRef with uri" <| fun _ ->
+            let mutable captured = None
+            let agent = createRecordAgent (fun req -> captured <- Some req)
+            let result = Bluesky.block agent (parseDid "did:plc:other") |> Async.AwaitTask |> Async.RunSynchronously
+            let blockRef = Expect.wantOk result "should succeed"
+            Expect.equal (AtUri.value blockRef.Uri) "at://did:plc:testuser/app.bsky.feed.post/abc123" "returns uri"
+
         testCase "follow returns NotLoggedIn error without session" <| fun _ ->
             let agent = createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
             let result = Bluesky.follow agent (parseDid "did:plc:other") |> Async.AwaitTask |> Async.RunSynchronously
             let err = Expect.wantError result "should fail without session"
             Expect.equal err.StatusCode 401 "status code"
+    ]
+
+[<Tests>]
+let undoTests =
+    testList "Bluesky.undo" [
+        testCase "unlike delegates to deleteRecord with LikeRef uri" <| fun _ ->
+            let mutable captured = None
+            let agent = deleteRecordAgent (fun req -> captured <- Some req)
+            let likeRef = { LikeRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.like/abc123" }
+            let result = Bluesky.unlike agent likeRef |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            Expect.stringContains body "app.bsky.feed.like" "collection"
+            Expect.stringContains body "abc123" "rkey"
+
+        testCase "unrepost delegates to deleteRecord with RepostRef uri" <| fun _ ->
+            let mutable captured = None
+            let agent = deleteRecordAgent (fun req -> captured <- Some req)
+            let repostRef = { RepostRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.repost/def456" }
+            let result = Bluesky.unrepost agent repostRef |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            Expect.stringContains body "app.bsky.feed.repost" "collection"
+            Expect.stringContains body "def456" "rkey"
+
+        testCase "unfollow delegates to deleteRecord with FollowRef uri" <| fun _ ->
+            let mutable captured = None
+            let agent = deleteRecordAgent (fun req -> captured <- Some req)
+            let followRef = { FollowRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.graph.follow/ghi789" }
+            let result = Bluesky.unfollow agent followRef |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            Expect.stringContains body "app.bsky.graph.follow" "collection"
+            Expect.stringContains body "ghi789" "rkey"
+
+        testCase "unblock delegates to deleteRecord with BlockRef uri" <| fun _ ->
+            let mutable captured = None
+            let agent = deleteRecordAgent (fun req -> captured <- Some req)
+            let blockRef = { BlockRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.graph.block/jkl012" }
+            let result = Bluesky.unblock agent blockRef |> Async.AwaitTask |> Async.RunSynchronously
+            Expect.isOk result "should succeed"
+            let body = captured.Value.Content.ReadAsStringAsync().Result
+            Expect.stringContains body "app.bsky.graph.block" "collection"
+            Expect.stringContains body "jkl012" "rkey"
     ]
 
 [<Tests>]
@@ -182,8 +243,8 @@ let replyTests =
         testCase "reply includes root and parent refs" <| fun _ ->
             let mutable captured = None
             let agent = createRecordAgent (fun req -> captured <- Some req)
-            let parent = { Uri = parseAtUri "at://did:plc:p/app.bsky.feed.post/parent"; Cid = parseCid "bafyparent" }
-            let root = { Uri = parseAtUri "at://did:plc:r/app.bsky.feed.post/root"; Cid = parseCid "bafyroot00" }
+            let parent = { PostRef.Uri = parseAtUri "at://did:plc:p/app.bsky.feed.post/parent"; Cid = parseCid "bafyparent" }
+            let root = { PostRef.Uri = parseAtUri "at://did:plc:r/app.bsky.feed.post/root"; Cid = parseCid "bafyroot00" }
             let result =
                 Bluesky.reply agent "A reply" parent root
                 |> Async.AwaitTask |> Async.RunSynchronously
@@ -195,8 +256,8 @@ let replyTests =
         testCase "reply returns PostRef" <| fun _ ->
             let mutable captured = None
             let agent = createRecordAgent (fun req -> captured <- Some req)
-            let parent = { Uri = parseAtUri "at://did:plc:p/app.bsky.feed.post/parent"; Cid = parseCid "bafyparent" }
-            let root = { Uri = parseAtUri "at://did:plc:r/app.bsky.feed.post/root"; Cid = parseCid "bafyroot00" }
+            let parent = { PostRef.Uri = parseAtUri "at://did:plc:p/app.bsky.feed.post/parent"; Cid = parseCid "bafyparent" }
+            let root = { PostRef.Uri = parseAtUri "at://did:plc:r/app.bsky.feed.post/root"; Cid = parseCid "bafyroot00" }
             let result =
                 Bluesky.reply agent "A reply" parent root
                 |> Async.AwaitTask |> Async.RunSynchronously

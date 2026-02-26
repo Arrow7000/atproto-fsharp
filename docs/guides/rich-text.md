@@ -86,7 +86,7 @@ let! facets = RichText.parse agent "Hello @alice.bsky.social! #atproto"
 
 ## Posting with Pre-Computed Facets
 
-If you've already computed facets (for example, from `RichText.parse` or constructed manually), use `Bluesky.postWith` to skip auto-detection:
+If you've already computed facets (for example, from `RichText.parse` or constructed manually), use `Bluesky.postWithFacets` to skip auto-detection:
 
 ```fsharp
 let! facets = RichText.parse agent text
@@ -94,7 +94,7 @@ let! facets = RichText.parse agent text
 // Maybe filter or modify facets here...
 let filteredFacets = facets |> List.filter (fun _ -> true)
 
-let! result = Bluesky.postWith agent text filteredFacets
+let! result = Bluesky.postWithFacets agent text filteredFacets
 ```
 
 This is useful when you want to:

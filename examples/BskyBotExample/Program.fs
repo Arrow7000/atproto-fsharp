@@ -73,31 +73,69 @@ let main _ =
         // ---------------------------------------------------------------
         // 4. Like a post
         // ---------------------------------------------------------------
-        let! likeResult = Bluesky.like agent post.Uri post.Cid
+        // like takes a PostRef and returns a LikeRef.
+        // Pass the LikeRef to unlike to undo.
+        let! likeResult = Bluesky.like agent post
 
         match likeResult with
-        | Ok likeUri -> printfn "Liked: %s" (AtUri.value likeUri)
+        | Ok likeRef -> printfn "Liked: %s" (AtUri.value likeRef.Uri)
         | Error e -> printfn "Like failed: %A" e
+
+        // ---------------------------------------------------------------
+        // 4b. Unlike (undo a like)
+        // ---------------------------------------------------------------
+        match likeResult with
+        | Ok likeRef ->
+            let! unlikeResult = Bluesky.unlike agent likeRef
+            match unlikeResult with
+            | Ok () -> printfn "Unliked: %s" (AtUri.value likeRef.Uri)
+            | Error e -> printfn "Unlike failed: %A" e
+        | _ -> ()
 
         // ---------------------------------------------------------------
         // 5. Repost
         // ---------------------------------------------------------------
-        let! repostResult = Bluesky.repost agent post.Uri post.Cid
+        // repost takes a PostRef and returns a RepostRef.
+        // Pass the RepostRef to unrepost to undo.
+        let! repostResult = Bluesky.repost agent post
 
         match repostResult with
-        | Ok repostUri -> printfn "Reposted: %s" (AtUri.value repostUri)
+        | Ok repostRef -> printfn "Reposted: %s" (AtUri.value repostRef.Uri)
         | Error e -> printfn "Repost failed: %A" e
+
+        // ---------------------------------------------------------------
+        // 5b. Unrepost (undo a repost)
+        // ---------------------------------------------------------------
+        match repostResult with
+        | Ok repostRef ->
+            let! unrepostResult = Bluesky.unrepost agent repostRef
+            match unrepostResult with
+            | Ok () -> printfn "Unreposted: %s" (AtUri.value repostRef.Uri)
+            | Error e -> printfn "Unrepost failed: %A" e
+        | _ -> ()
 
         // ---------------------------------------------------------------
         // 6. Follow a user (by DID)
         // ---------------------------------------------------------------
         // Use Identity.resolveIdentity (shown below) to resolve a handle to
         // a DID first if needed.
+        // follow returns a FollowRef; pass it to unfollow to undo.
         let! followResult = Bluesky.follow agent session.Did // following ourselves as demo
 
         match followResult with
-        | Ok followUri -> printfn "Followed: %s" (AtUri.value followUri)
+        | Ok followRef -> printfn "Followed: %s" (AtUri.value followRef.Uri)
         | Error e -> printfn "Follow failed: %A" e
+
+        // ---------------------------------------------------------------
+        // 6b. Unfollow (undo a follow)
+        // ---------------------------------------------------------------
+        match followResult with
+        | Ok followRef ->
+            let! unfollowResult = Bluesky.unfollow agent followRef
+            match unfollowResult with
+            | Ok () -> printfn "Unfollowed: %s" (AtUri.value followRef.Uri)
+            | Error e -> printfn "Unfollow failed: %A" e
+        | _ -> ()
 
         // ---------------------------------------------------------------
         // 7. Delete a record (e.g. delete the post we just created)

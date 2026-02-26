@@ -9,14 +9,47 @@ open FSharp.ATProto.Core
 open FSharp.ATProto.Syntax
 
 /// <summary>
-/// A reference to a specific version of a record (post, like, etc.).
+/// A reference to a specific version of a post record.
 /// Contains both the AT-URI (identifying the record) and the CID (identifying the exact version).
+/// Accepted by <c>like</c>, <c>repost</c>, and <c>reply</c>.
 /// </summary>
 type PostRef =
-    { /// <summary>The AT-URI of the record.</summary>
+    { /// <summary>The AT-URI of the post record.</summary>
       Uri: AtUri
-      /// <summary>The CID (content identifier) of the record version.</summary>
+      /// <summary>The CID (content identifier) of the post record version.</summary>
       Cid: Cid }
+
+/// <summary>
+/// A reference to a like record, returned by <c>Bluesky.like</c>.
+/// Pass to <c>Bluesky.unlike</c> to undo.
+/// </summary>
+type LikeRef =
+    { /// <summary>The AT-URI of the like record.</summary>
+      Uri: AtUri }
+
+/// <summary>
+/// A reference to a repost record, returned by <c>Bluesky.repost</c>.
+/// Pass to <c>Bluesky.unrepost</c> to undo.
+/// </summary>
+type RepostRef =
+    { /// <summary>The AT-URI of the repost record.</summary>
+      Uri: AtUri }
+
+/// <summary>
+/// A reference to a follow record, returned by <c>Bluesky.follow</c>.
+/// Pass to <c>Bluesky.unfollow</c> to undo.
+/// </summary>
+type FollowRef =
+    { /// <summary>The AT-URI of the follow record.</summary>
+      Uri: AtUri }
+
+/// <summary>
+/// A reference to a block record, returned by <c>Bluesky.block</c>.
+/// Pass to <c>Bluesky.unblock</c> to undo.
+/// </summary>
+type BlockRef =
+    { /// <summary>The AT-URI of the block record.</summary>
+      Uri: AtUri }
 
 /// <summary>
 /// Image data for upload with a post.
@@ -106,7 +139,7 @@ module Bluesky =
     /// <param name="text">The post text content.</param>
     /// <param name="facets">Pre-resolved facets (mentions, links, hashtags). Pass an empty list for plain text.</param>
     /// <returns>A <see cref="PostRef"/> with the AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
-    let postWith (agent: AtpAgent) (text: string) (facets: AppBskyRichtext.Facet.Facet list)
+    let postWithFacets (agent: AtpAgent) (text: string) (facets: AppBskyRichtext.Facet.Facet list)
         : Task<Result<PostRef, XrpcError>> =
         task {
             let record =
@@ -128,7 +161,7 @@ module Bluesky =
     /// <remarks>
     /// Internally calls <see cref="RichText.parse"/> to detect and resolve facets before creating the post.
     /// Unresolvable mentions are silently omitted from facets.
-    /// For pre-resolved facets, use <see cref="postWith"/> instead.
+    /// For pre-resolved facets, use <see cref="postWithFacets"/> instead.
     /// </remarks>
     /// <example>
     /// <code>
@@ -139,7 +172,7 @@ module Bluesky =
         : Task<Result<PostRef, XrpcError>> =
         task {
             let! facets = RichText.parse agent text
-            return! postWith agent text facets
+            return! postWithFacets agent text facets
         }
 
     /// <summary>
@@ -175,36 +208,34 @@ module Bluesky =
     /// Like a post or other record.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="uri">The AT-URI of the record to like.</param>
-    /// <param name="cid">The CID of the record to like.</param>
-    /// <returns>The AT-URI of the created like record on success, or an <see cref="XrpcError"/>.</returns>
-    let like (agent: AtpAgent) (uri: AtUri) (cid: Cid)
-        : Task<Result<AtUri, XrpcError>> =
+    /// <param name="postRef">A <see cref="PostRef"/> identifying the record to like.</param>
+    /// <returns>A <see cref="LikeRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>LikeRef</c> to <see cref="unlike"/> to undo.</returns>
+    let like (agent: AtpAgent) (postRef: PostRef)
+        : Task<Result<LikeRef, XrpcError>> =
         task {
             let record =
                 {| ``$type`` = AppBskyFeed.Like.TypeId
                    createdAt = nowTimestamp ()
-                   subject = {| uri = AtUri.value uri; cid = Cid.value cid |} |}
+                   subject = {| uri = AtUri.value postRef.Uri; cid = Cid.value postRef.Cid |} |}
             let! result = createRecord agent "app.bsky.feed.like" record
-            return result |> Result.map (fun o -> o.Uri)
+            return result |> Result.map (fun o -> { LikeRef.Uri = o.Uri })
         }
 
     /// <summary>
     /// Repost (retweet) a post or other record.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="uri">The AT-URI of the record to repost.</param>
-    /// <param name="cid">The CID of the record to repost.</param>
-    /// <returns>The AT-URI of the created repost record on success, or an <see cref="XrpcError"/>.</returns>
-    let repost (agent: AtpAgent) (uri: AtUri) (cid: Cid)
-        : Task<Result<AtUri, XrpcError>> =
+    /// <param name="postRef">A <see cref="PostRef"/> identifying the record to repost.</param>
+    /// <returns>A <see cref="RepostRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>RepostRef</c> to <see cref="unrepost"/> to undo.</returns>
+    let repost (agent: AtpAgent) (postRef: PostRef)
+        : Task<Result<RepostRef, XrpcError>> =
         task {
             let record =
                 {| ``$type`` = AppBskyFeed.Repost.TypeId
                    createdAt = nowTimestamp ()
-                   subject = {| uri = AtUri.value uri; cid = Cid.value cid |} |}
+                   subject = {| uri = AtUri.value postRef.Uri; cid = Cid.value postRef.Cid |} |}
             let! result = createRecord agent "app.bsky.feed.repost" record
-            return result |> Result.map (fun o -> o.Uri)
+            return result |> Result.map (fun o -> { RepostRef.Uri = o.Uri })
         }
 
     /// <summary>
@@ -212,16 +243,16 @@ module Bluesky =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="did">The DID of the user to follow.</param>
-    /// <returns>The AT-URI of the created follow record on success, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>A <see cref="FollowRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>FollowRef</c> to <see cref="unfollow"/> to undo.</returns>
     let follow (agent: AtpAgent) (did: Did)
-        : Task<Result<AtUri, XrpcError>> =
+        : Task<Result<FollowRef, XrpcError>> =
         task {
             let record =
                 {| ``$type`` = AppBskyGraph.Follow.TypeId
                    createdAt = nowTimestamp ()
                    subject = Did.value did |}
             let! result = createRecord agent "app.bsky.graph.follow" record
-            return result |> Result.map (fun o -> o.Uri)
+            return result |> Result.map (fun o -> { FollowRef.Uri = o.Uri })
         }
 
     /// <summary>
@@ -229,16 +260,16 @@ module Bluesky =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="did">The DID of the user to block.</param>
-    /// <returns>The AT-URI of the created block record on success, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>A <see cref="BlockRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>BlockRef</c> to <see cref="unblock"/> to undo.</returns>
     let block (agent: AtpAgent) (did: Did)
-        : Task<Result<AtUri, XrpcError>> =
+        : Task<Result<BlockRef, XrpcError>> =
         task {
             let record =
                 {| ``$type`` = AppBskyGraph.Block.TypeId
                    createdAt = nowTimestamp ()
                    subject = Did.value did |}
             let! result = createRecord agent "app.bsky.graph.block" record
-            return result |> Result.map (fun o -> o.Uri)
+            return result |> Result.map (fun o -> { BlockRef.Uri = o.Uri })
         }
 
     /// <summary>
@@ -276,6 +307,46 @@ module Bluesky =
                                       SwapRecord = None }
                     return result |> Result.map ignore
                 }
+
+    /// <summary>
+    /// Unlike a post by deleting the like record.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="likeRef">The <see cref="LikeRef"/> returned by <see cref="like"/>.</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let unlike (agent: AtpAgent) (likeRef: LikeRef)
+        : Task<Result<unit, XrpcError>> =
+        deleteRecord agent likeRef.Uri
+
+    /// <summary>
+    /// Undo a repost by deleting the repost record.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="repostRef">The <see cref="RepostRef"/> returned by <see cref="repost"/>.</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let unrepost (agent: AtpAgent) (repostRef: RepostRef)
+        : Task<Result<unit, XrpcError>> =
+        deleteRecord agent repostRef.Uri
+
+    /// <summary>
+    /// Unfollow a user by deleting the follow record.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="followRef">The <see cref="FollowRef"/> returned by <see cref="follow"/>.</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let unfollow (agent: AtpAgent) (followRef: FollowRef)
+        : Task<Result<unit, XrpcError>> =
+        deleteRecord agent followRef.Uri
+
+    /// <summary>
+    /// Unblock a user by deleting the block record.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="blockRef">The <see cref="BlockRef"/> returned by <see cref="block"/>.</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let unblock (agent: AtpAgent) (blockRef: BlockRef)
+        : Task<Result<unit, XrpcError>> =
+        deleteRecord agent blockRef.Uri
 
     /// <summary>
     /// Upload a blob (image, video, or other binary data) to the PDS.
