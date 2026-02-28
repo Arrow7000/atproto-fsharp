@@ -19,6 +19,17 @@ type NsidParams = { Collection: Nsid }
 type OptionalDidParams = { Actor: Did option }
 type DidListParams = { Actors: Did list }
 
+open System.Text.Json.Serialization
+
+type TestReason =
+    | [<JsonName("like")>] Like
+    | [<JsonName("repost")>] Repost
+    | Unknown of string
+
+type KnownValueParams = { Reason: TestReason }
+type OptionalKnownValueParams = { Reason: TestReason option }
+type KnownValueListParams = { Reasons: TestReason list }
+
 [<Tests>]
 let tests =
     testList "QueryParams" [
@@ -89,4 +100,20 @@ let tests =
             let did2 = Did.parse "did:web:example.com" |> Result.defaultWith failwith
             let result = QueryParams.toQueryString { DidListParams.Actors = [ did1; did2 ] }
             Expect.equal result "?actors=did%3Aplc%3Aabc123def456ghi&actors=did%3Aweb%3Aexample.com" "Did list"
+
+        testCase "serializes known-value DU fieldless case" <| fun () ->
+            let result = QueryParams.toQueryString { KnownValueParams.Reason = TestReason.Like }
+            Expect.equal result "?reason=like" "fieldless case uses JsonName value"
+
+        testCase "serializes known-value DU Unknown case" <| fun () ->
+            let result = QueryParams.toQueryString { KnownValueParams.Reason = TestReason.Unknown "custom-reason" }
+            Expect.equal result "?reason=custom-reason" "Unknown case extracts string"
+
+        testCase "serializes optional known-value DU" <| fun () ->
+            let result = QueryParams.toQueryString { OptionalKnownValueParams.Reason = Some TestReason.Repost }
+            Expect.equal result "?reason=repost" "optional known value Some"
+
+        testCase "serializes known-value DU list" <| fun () ->
+            let result = QueryParams.toQueryString { KnownValueListParams.Reasons = [TestReason.Like; TestReason.Repost] }
+            Expect.equal result "?reasons=like&reasons=repost" "DU list as repeated params"
     ]

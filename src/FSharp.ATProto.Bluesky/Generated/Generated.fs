@@ -70,22 +70,56 @@ module ComAtprotoLabel =
               [<JsonPropertyName("ver")>]
               Ver: int64 option }
 
-        type LabelValue = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<LabelValue>>)>]
+        type LabelValue =
+            | [<JsonName("!hide")>] Hide
+            | [<JsonName("!no-promote")>] NoPromote
+            | [<JsonName("!warn")>] Warn
+            | [<JsonName("!no-unauthenticated")>] NoUnauthenticated
+            | [<JsonName("dmca-violation")>] DmcaViolation
+            | [<JsonName("doxxing")>] Doxxing
+            | [<JsonName("porn")>] Porn
+            | [<JsonName("sexual")>] Sexual
+            | [<JsonName("nudity")>] Nudity
+            | [<JsonName("nsfl")>] Nsfl
+            | [<JsonName("gore")>] Gore
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<LabelValueDefinitionBlurs>>)>]
+        type LabelValueDefinitionBlurs =
+            | [<JsonName("content")>] Content
+            | [<JsonName("media")>] Media
+            | [<JsonName("none")>] None
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<LabelValueDefinitionDefaultSetting>>)>]
+        type LabelValueDefinitionDefaultSetting =
+            | [<JsonName("ignore")>] Ignore
+            | [<JsonName("warn")>] Warn
+            | [<JsonName("hide")>] Hide
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<LabelValueDefinitionSeverity>>)>]
+        type LabelValueDefinitionSeverity =
+            | [<JsonName("inform")>] Inform
+            | [<JsonName("alert")>] Alert
+            | [<JsonName("none")>] None
+            | Unknown of string
 
         /// Declares a label value and its expected interpretations and behaviors.
         type LabelValueDefinition =
             { [<JsonPropertyName("adultOnly")>]
               AdultOnly: bool option
               [<JsonPropertyName("blurs")>]
-              Blurs: string
+              Blurs: LabelValueDefinitionBlurs
               [<JsonPropertyName("defaultSetting")>]
-              DefaultSetting: string option
+              DefaultSetting: LabelValueDefinitionDefaultSetting option
               [<JsonPropertyName("identifier")>]
               Identifier: string
               [<JsonPropertyName("locales")>]
               Locales: Defs.LabelValueDefinitionStrings list
               [<JsonPropertyName("severity")>]
-              Severity: string }
+              Severity: LabelValueDefinitionSeverity }
 
         /// Strings which describe the label in the UI, localized into a specific language.
         type LabelValueDefinitionStrings =
@@ -147,11 +181,16 @@ module ComAtprotoLabel =
             [<Literal>]
             let FutureCursor = "FutureCursor"
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InfoName>>)>]
+        type InfoName =
+            | [<JsonName("OutdatedCursor")>] OutdatedCursor
+            | Unknown of string
+
         type Info =
             { [<JsonPropertyName("message")>]
               Message: string option
               [<JsonPropertyName("name")>]
-              Name: string }
+              Name: InfoName }
 
         type Labels =
             { [<JsonPropertyName("labels")>]
@@ -208,13 +247,19 @@ module ComAtprotoRepo =
               [<JsonPropertyName("value")>]
               Value: JsonElement }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<CreateResultValidationStatus>>)>]
+        type CreateResultValidationStatus =
+            | [<JsonName("valid")>] Valid
+            | [<JsonName("unknown")>] UnknownValue
+            | Unknown of string
+
         type CreateResult =
             { [<JsonPropertyName("cid")>]
               Cid: Cid
               [<JsonPropertyName("uri")>]
               Uri: AtUri
               [<JsonPropertyName("validationStatus")>]
-              ValidationStatus: string option }
+              ValidationStatus: CreateResultValidationStatus option }
 
         /// Operation which deletes an existing record.
         type Delete =
@@ -234,13 +279,19 @@ module ComAtprotoRepo =
               [<JsonPropertyName("value")>]
               Value: JsonElement }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<UpdateResultValidationStatus>>)>]
+        type UpdateResultValidationStatus =
+            | [<JsonName("valid")>] Valid
+            | [<JsonName("unknown")>] UnknownValue
+            | Unknown of string
+
         type UpdateResult =
             { [<JsonPropertyName("cid")>]
               Cid: Cid
               [<JsonPropertyName("uri")>]
               Uri: AtUri
               [<JsonPropertyName("validationStatus")>]
-              ValidationStatus: string option }
+              ValidationStatus: UpdateResultValidationStatus option }
 
     module CreateRecord =
         [<Literal>]
@@ -263,6 +314,12 @@ module ComAtprotoRepo =
               [<JsonPropertyName("validate")>]
               Validate: bool option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OutputValidationStatus>>)>]
+        type OutputValidationStatus =
+            | [<JsonName("valid")>] Valid
+            | [<JsonName("unknown")>] UnknownValue
+            | Unknown of string
+
         type Output =
             { [<JsonPropertyName("cid")>]
               Cid: Cid
@@ -271,7 +328,7 @@ module ComAtprotoRepo =
               [<JsonPropertyName("uri")>]
               Uri: AtUri
               [<JsonPropertyName("validationStatus")>]
-              ValidationStatus: string option }
+              ValidationStatus: OutputValidationStatus option }
 
         module Errors =
             [<Literal>]
@@ -448,6 +505,12 @@ module ComAtprotoRepo =
               [<JsonPropertyName("validate")>]
               Validate: bool option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OutputValidationStatus>>)>]
+        type OutputValidationStatus =
+            | [<JsonName("valid")>] Valid
+            | [<JsonName("unknown")>] UnknownValue
+            | Unknown of string
+
         type Output =
             { [<JsonPropertyName("cid")>]
               Cid: Cid
@@ -456,7 +519,7 @@ module ComAtprotoRepo =
               [<JsonPropertyName("uri")>]
               Uri: AtUri
               [<JsonPropertyName("validationStatus")>]
-              ValidationStatus: string option }
+              ValidationStatus: OutputValidationStatus option }
 
         module Errors =
             [<Literal>]
@@ -499,7 +562,12 @@ module AppBskyGraph =
               [<JsonPropertyName("uri")>]
               Uri: AtUri }
 
-        type ListPurpose = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ListPurpose>>)>]
+        type ListPurpose =
+            | [<JsonName("app.bsky.graph.defs#modlist")>] Modlist
+            | [<JsonName("app.bsky.graph.defs#curatelist")>] Curatelist
+            | [<JsonName("app.bsky.graph.defs#referencelist")>] Referencelist
+            | Unknown of string
 
         type ListView =
             { [<JsonPropertyName("avatar")>]
@@ -817,6 +885,12 @@ module AppBskyGraph =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsPurposesItem>>)>]
+        type ParamsPurposesItem =
+            | [<JsonName("modlist")>] Modlist
+            | [<JsonName("curatelist")>] Curatelist
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("actor")>]
               Actor: string
@@ -825,7 +899,7 @@ module AppBskyGraph =
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("purposes")>]
-              Purposes: string list option }
+              Purposes: ParamsPurposesItem list option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
@@ -840,6 +914,12 @@ module AppBskyGraph =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsPurposesItem>>)>]
+        type ParamsPurposesItem =
+            | [<JsonName("modlist")>] Modlist
+            | [<JsonName("curatelist")>] Curatelist
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("actor")>]
               Actor: string
@@ -848,7 +928,7 @@ module AppBskyGraph =
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("purposes")>]
-              Purposes: string list option }
+              Purposes: ParamsPurposesItem list option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
@@ -1217,6 +1297,12 @@ module AppBskyFeed =
               [<JsonPropertyName("reqId")>]
               ReqId: string option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<GeneratorViewContentMode>>)>]
+        type GeneratorViewContentMode =
+            | [<JsonName("app.bsky.feed.defs#contentModeUnspecified")>] ContentModeUnspecified
+            | [<JsonName("app.bsky.feed.defs#contentModeVideo")>] ContentModeVideo
+            | Unknown of string
+
         type GeneratorView =
             { [<JsonPropertyName("acceptsInteractions")>]
               AcceptsInteractions: bool option
@@ -1225,7 +1311,7 @@ module AppBskyFeed =
               [<JsonPropertyName("cid")>]
               Cid: Cid
               [<JsonPropertyName("contentMode")>]
-              ContentMode: string option
+              ContentMode: GeneratorViewContentMode option
               [<JsonPropertyName("creator")>]
               Creator: AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("description")>]
@@ -1251,9 +1337,25 @@ module AppBskyFeed =
             { [<JsonPropertyName("like")>]
               Like: AtUri option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InteractionEvent>>)>]
+        type InteractionEvent =
+            | [<JsonName("app.bsky.feed.defs#requestLess")>] RequestLess
+            | [<JsonName("app.bsky.feed.defs#requestMore")>] RequestMore
+            | [<JsonName("app.bsky.feed.defs#clickthroughItem")>] ClickthroughItem
+            | [<JsonName("app.bsky.feed.defs#clickthroughAuthor")>] ClickthroughAuthor
+            | [<JsonName("app.bsky.feed.defs#clickthroughReposter")>] ClickthroughReposter
+            | [<JsonName("app.bsky.feed.defs#clickthroughEmbed")>] ClickthroughEmbed
+            | [<JsonName("app.bsky.feed.defs#interactionSeen")>] InteractionSeen
+            | [<JsonName("app.bsky.feed.defs#interactionLike")>] InteractionLike
+            | [<JsonName("app.bsky.feed.defs#interactionRepost")>] InteractionRepost
+            | [<JsonName("app.bsky.feed.defs#interactionReply")>] InteractionReply
+            | [<JsonName("app.bsky.feed.defs#interactionQuote")>] InteractionQuote
+            | [<JsonName("app.bsky.feed.defs#interactionShare")>] InteractionShare
+            | Unknown of string
+
         type Interaction =
             { [<JsonPropertyName("event")>]
-              Event: string option
+              Event: InteractionEvent option
               [<JsonPropertyName("feedContext")>]
               FeedContext: string option
               [<JsonPropertyName("item")>]
@@ -1457,6 +1559,12 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.generator"
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<GeneratorContentMode>>)>]
+        type GeneratorContentMode =
+            | [<JsonName("app.bsky.feed.defs#contentModeUnspecified")>] ContentModeUnspecified
+            | [<JsonName("app.bsky.feed.defs#contentModeVideo")>] ContentModeVideo
+            | Unknown of string
+
         /// Self-label values
         [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
         type GeneratorLabelsUnion =
@@ -1470,7 +1578,7 @@ module AppBskyFeed =
               [<JsonPropertyName("avatar")>]
               Avatar: JsonElement option
               [<JsonPropertyName("contentMode")>]
-              ContentMode: string option
+              ContentMode: GeneratorContentMode option
               [<JsonPropertyName("createdAt")>]
               CreatedAt: AtDateTime
               [<JsonPropertyName("description")>]
@@ -1540,13 +1648,22 @@ module AppBskyFeed =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsFilter>>)>]
+        type ParamsFilter =
+            | [<JsonName("posts_with_replies")>] PostsWithReplies
+            | [<JsonName("posts_no_replies")>] PostsNoReplies
+            | [<JsonName("posts_with_media")>] PostsWithMedia
+            | [<JsonName("posts_and_author_threads")>] PostsAndAuthorThreads
+            | [<JsonName("posts_with_video")>] PostsWithVideo
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("actor")>]
               Actor: string
               [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("filter")>]
-              Filter: string option
+              Filter: ParamsFilter option
               [<JsonPropertyName("includePins")>]
               IncludePins: bool option
               [<JsonPropertyName("limit")>]
@@ -1970,6 +2087,12 @@ module AppBskyFeed =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsSort>>)>]
+        type ParamsSort =
+            | [<JsonName("top")>] Top
+            | [<JsonName("latest")>] Latest
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("author")>]
               Author: string option
@@ -1988,7 +2111,7 @@ module AppBskyFeed =
               [<JsonPropertyName("since")>]
               Since: string option
               [<JsonPropertyName("sort")>]
-              Sort: string option
+              Sort: ParamsSort option
               [<JsonPropertyName("tag")>]
               Tag: string list option
               [<JsonPropertyName("until")>]
@@ -2259,6 +2382,13 @@ module ComAtprotoServer =
               [<JsonPropertyName("password")>]
               Password: string }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OutputStatus>>)>]
+        type OutputStatus =
+            | [<JsonName("takendown")>] Takendown
+            | [<JsonName("suspended")>] Suspended
+            | [<JsonName("deactivated")>] Deactivated
+            | Unknown of string
+
         type Output =
             { [<JsonPropertyName("accessJwt")>]
               AccessJwt: string
@@ -2279,7 +2409,7 @@ module ComAtprotoServer =
               [<JsonPropertyName("refreshJwt")>]
               RefreshJwt: string
               [<JsonPropertyName("status")>]
-              Status: string option }
+              Status: OutputStatus option }
 
         module Errors =
             [<Literal>]
@@ -2437,6 +2567,13 @@ module ComAtprotoServer =
         let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OutputStatus>>)>]
+        type OutputStatus =
+            | [<JsonName("takendown")>] Takendown
+            | [<JsonName("suspended")>] Suspended
+            | [<JsonName("deactivated")>] Deactivated
+            | Unknown of string
+
         type Output =
             { [<JsonPropertyName("active")>]
               Active: bool option
@@ -2453,7 +2590,7 @@ module ComAtprotoServer =
               [<JsonPropertyName("handle")>]
               Handle: Handle
               [<JsonPropertyName("status")>]
-              Status: string option }
+              Status: OutputStatus option }
 
     module ListAppPasswords =
         [<Literal>]
@@ -2482,6 +2619,13 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.refreshSession"
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OutputStatus>>)>]
+        type OutputStatus =
+            | [<JsonName("takendown")>] Takendown
+            | [<JsonName("suspended")>] Suspended
+            | [<JsonName("deactivated")>] Deactivated
+            | Unknown of string
+
         type Output =
             { [<JsonPropertyName("accessJwt")>]
               AccessJwt: string
@@ -2502,7 +2646,7 @@ module ComAtprotoServer =
               [<JsonPropertyName("refreshJwt")>]
               RefreshJwt: string
               [<JsonPropertyName("status")>]
-              Status: string option }
+              Status: OutputStatus option }
 
         module Errors =
             [<Literal>]
@@ -2749,13 +2893,19 @@ module ComAtprotoAdmin =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsSort>>)>]
+        type ParamsSort =
+            | [<JsonName("recent")>] Recent
+            | [<JsonName("usage")>] Usage
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("sort")>]
-              Sort: string option }
+              Sort: ParamsSort option }
 
         type Output =
             { [<JsonPropertyName("codes")>]
@@ -2994,12 +3144,66 @@ module ComAtprotoModeration =
         [<Literal>]
         let ReasonSpam = "com.atproto.moderation.defs#reasonSpam"
 
-        type ReasonType = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ReasonType>>)>]
+        type ReasonType =
+            | [<JsonName("com.atproto.moderation.defs#reasonSpam")>] ReasonSpam
+            | [<JsonName("com.atproto.moderation.defs#reasonViolation")>] ReasonViolation
+            | [<JsonName("com.atproto.moderation.defs#reasonMisleading")>] ReasonMisleading
+            | [<JsonName("com.atproto.moderation.defs#reasonSexual")>] ReasonSexual
+            | [<JsonName("com.atproto.moderation.defs#reasonRude")>] ReasonRude
+            | [<JsonName("com.atproto.moderation.defs#reasonOther")>] ReasonOther
+            | [<JsonName("com.atproto.moderation.defs#reasonAppeal")>] ReasonAppeal
+            | [<JsonName("tools.ozone.report.defs#reasonAppeal")>] ReasonAppeal2
+            | [<JsonName("tools.ozone.report.defs#reasonOther")>] ReasonOther2
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceAnimal")>] ReasonViolenceAnimal
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceThreats")>] ReasonViolenceThreats
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceGraphicContent")>] ReasonViolenceGraphicContent
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceGlorification")>] ReasonViolenceGlorification
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceExtremistContent")>] ReasonViolenceExtremistContent
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceTrafficking")>] ReasonViolenceTrafficking
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceOther")>] ReasonViolenceOther
+            | [<JsonName("tools.ozone.report.defs#reasonSexualAbuseContent")>] ReasonSexualAbuseContent
+            | [<JsonName("tools.ozone.report.defs#reasonSexualNCII")>] ReasonSexualNCII
+            | [<JsonName("tools.ozone.report.defs#reasonSexualDeepfake")>] ReasonSexualDeepfake
+            | [<JsonName("tools.ozone.report.defs#reasonSexualAnimal")>] ReasonSexualAnimal
+            | [<JsonName("tools.ozone.report.defs#reasonSexualUnlabeled")>] ReasonSexualUnlabeled
+            | [<JsonName("tools.ozone.report.defs#reasonSexualOther")>] ReasonSexualOther
+            | [<JsonName("tools.ozone.report.defs#reasonChildSafetyCSAM")>] ReasonChildSafetyCSAM
+            | [<JsonName("tools.ozone.report.defs#reasonChildSafetyGroom")>] ReasonChildSafetyGroom
+            | [<JsonName("tools.ozone.report.defs#reasonChildSafetyPrivacy")>] ReasonChildSafetyPrivacy
+            | [<JsonName("tools.ozone.report.defs#reasonChildSafetyHarassment")>] ReasonChildSafetyHarassment
+            | [<JsonName("tools.ozone.report.defs#reasonChildSafetyOther")>] ReasonChildSafetyOther
+            | [<JsonName("tools.ozone.report.defs#reasonHarassmentTroll")>] ReasonHarassmentTroll
+            | [<JsonName("tools.ozone.report.defs#reasonHarassmentTargeted")>] ReasonHarassmentTargeted
+            | [<JsonName("tools.ozone.report.defs#reasonHarassmentHateSpeech")>] ReasonHarassmentHateSpeech
+            | [<JsonName("tools.ozone.report.defs#reasonHarassmentDoxxing")>] ReasonHarassmentDoxxing
+            | [<JsonName("tools.ozone.report.defs#reasonHarassmentOther")>] ReasonHarassmentOther
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingBot")>] ReasonMisleadingBot
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingImpersonation")>] ReasonMisleadingImpersonation
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingSpam")>] ReasonMisleadingSpam
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingScam")>] ReasonMisleadingScam
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingElections")>] ReasonMisleadingElections
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingOther")>] ReasonMisleadingOther
+            | [<JsonName("tools.ozone.report.defs#reasonRuleSiteSecurity")>] ReasonRuleSiteSecurity
+            | [<JsonName("tools.ozone.report.defs#reasonRuleProhibitedSales")>] ReasonRuleProhibitedSales
+            | [<JsonName("tools.ozone.report.defs#reasonRuleBanEvasion")>] ReasonRuleBanEvasion
+            | [<JsonName("tools.ozone.report.defs#reasonRuleOther")>] ReasonRuleOther
+            | [<JsonName("tools.ozone.report.defs#reasonSelfHarmContent")>] ReasonSelfHarmContent
+            | [<JsonName("tools.ozone.report.defs#reasonSelfHarmED")>] ReasonSelfHarmED
+            | [<JsonName("tools.ozone.report.defs#reasonSelfHarmStunts")>] ReasonSelfHarmStunts
+            | [<JsonName("tools.ozone.report.defs#reasonSelfHarmSubstances")>] ReasonSelfHarmSubstances
+            | [<JsonName("tools.ozone.report.defs#reasonSelfHarmOther")>] ReasonSelfHarmOther
+            | Unknown of string
 
         [<Literal>]
         let ReasonViolation = "com.atproto.moderation.defs#reasonViolation"
 
-        type SubjectType = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<SubjectType>>)>]
+        type SubjectType =
+            | [<JsonName("account")>] Account
+            | [<JsonName("record")>] Record
+            | [<JsonName("chat")>] Chat
+            | Unknown of string
 
 module AppBskyLabeler =
     module Defs =
@@ -3269,6 +3473,12 @@ module AppBskyEmbed =
               Record: Record.View }
 
     module Video =
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<VideoPresentation>>)>]
+        type VideoPresentation =
+            | [<JsonName("default")>] Default
+            | [<JsonName("gif")>] Gif
+            | Unknown of string
+
         type Video =
             { [<JsonPropertyName("alt")>]
               Alt: string option
@@ -3277,7 +3487,7 @@ module AppBskyEmbed =
               [<JsonPropertyName("captions")>]
               Captions: Video.Caption list option
               [<JsonPropertyName("presentation")>]
-              Presentation: string option
+              Presentation: VideoPresentation option
               [<JsonPropertyName("video")>]
               Video: JsonElement }
 
@@ -3286,6 +3496,12 @@ module AppBskyEmbed =
               File: JsonElement
               [<JsonPropertyName("lang")>]
               Lang: Language }
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ViewPresentation>>)>]
+        type ViewPresentation =
+            | [<JsonName("default")>] Default
+            | [<JsonName("gif")>] Gif
+            | Unknown of string
 
         type View =
             { [<JsonPropertyName("alt")>]
@@ -3297,7 +3513,7 @@ module AppBskyEmbed =
               [<JsonPropertyName("playlist")>]
               Playlist: Uri
               [<JsonPropertyName("presentation")>]
-              Presentation: string option
+              Presentation: ViewPresentation option
               [<JsonPropertyName("thumbnail")>]
               Thumbnail: Uri option }
 
@@ -3306,10 +3522,17 @@ module AppBskyNotification =
         [<Literal>]
         let TypeId = "app.bsky.notification.declaration"
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<DeclarationAllowSubscriptions>>)>]
+        type DeclarationAllowSubscriptions =
+            | [<JsonName("followers")>] Followers
+            | [<JsonName("mutuals")>] Mutuals
+            | [<JsonName("none")>] None
+            | Unknown of string
+
         /// A declaration of the user's choices related to notifications that can be produced by them.
         type Declaration =
             { [<JsonPropertyName("allowSubscriptions")>]
-              AllowSubscriptions: string }
+              AllowSubscriptions: DeclarationAllowSubscriptions }
 
     module Defs =
         type ActivitySubscription =
@@ -3318,15 +3541,27 @@ module AppBskyNotification =
               [<JsonPropertyName("reply")>]
               Reply: bool }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ChatPreferenceInclude>>)>]
+        type ChatPreferenceInclude =
+            | [<JsonName("all")>] All
+            | [<JsonName("accepted")>] Accepted
+            | Unknown of string
+
         type ChatPreference =
             { [<JsonPropertyName("include")>]
-              Include: string
+              Include: ChatPreferenceInclude
               [<JsonPropertyName("push")>]
               Push: bool }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<FilterablePreferenceInclude>>)>]
+        type FilterablePreferenceInclude =
+            | [<JsonName("all")>] All
+            | [<JsonName("follows")>] Follows
+            | Unknown of string
+
         type FilterablePreference =
             { [<JsonPropertyName("include")>]
-              Include: string
+              Include: FilterablePreferenceInclude
               [<JsonPropertyName("list")>]
               List: bool
               [<JsonPropertyName("push")>]
@@ -3451,6 +3686,23 @@ module AppBskyNotification =
               [<JsonPropertyName("seenAt")>]
               SeenAt: AtDateTime option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<NotificationReason>>)>]
+        type NotificationReason =
+            | [<JsonName("like")>] Like
+            | [<JsonName("repost")>] Repost
+            | [<JsonName("follow")>] Follow
+            | [<JsonName("mention")>] Mention
+            | [<JsonName("reply")>] Reply
+            | [<JsonName("quote")>] Quote
+            | [<JsonName("starterpack-joined")>] StarterpackJoined
+            | [<JsonName("verified")>] Verified
+            | [<JsonName("unverified")>] Unverified
+            | [<JsonName("like-via-repost")>] LikeViaRepost
+            | [<JsonName("repost-via-repost")>] RepostViaRepost
+            | [<JsonName("subscribed-post")>] SubscribedPost
+            | [<JsonName("contact-match")>] ContactMatch
+            | Unknown of string
+
         type Notification =
             { [<JsonPropertyName("author")>]
               Author: AppBskyActor.Defs.ProfileView
@@ -3463,7 +3715,7 @@ module AppBskyNotification =
               [<JsonPropertyName("labels")>]
               Labels: ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("reason")>]
-              Reason: string
+              Reason: NotificationReason
               [<JsonPropertyName("reasonSubject")>]
               ReasonSubject: AtUri option
               [<JsonPropertyName("record")>]
@@ -3547,13 +3799,20 @@ module AppBskyNotification =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputPlatform>>)>]
+        type InputPlatform =
+            | [<JsonName("ios")>] Ios
+            | [<JsonName("android")>] Android
+            | [<JsonName("web")>] Web
+            | Unknown of string
+
         type Input =
             { [<JsonPropertyName("ageRestricted")>]
               AgeRestricted: bool option
               [<JsonPropertyName("appId")>]
               AppId: string
               [<JsonPropertyName("platform")>]
-              Platform: string
+              Platform: InputPlatform
               [<JsonPropertyName("serviceDid")>]
               ServiceDid: Did
               [<JsonPropertyName("token")>]
@@ -3566,11 +3825,18 @@ module AppBskyNotification =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputPlatform>>)>]
+        type InputPlatform =
+            | [<JsonName("ios")>] Ios
+            | [<JsonName("android")>] Android
+            | [<JsonName("web")>] Web
+            | Unknown of string
+
         type Input =
             { [<JsonPropertyName("appId")>]
               AppId: string
               [<JsonPropertyName("platform")>]
-              Platform: string
+              Platform: InputPlatform
               [<JsonPropertyName("serviceDid")>]
               ServiceDid: Did
               [<JsonPropertyName("token")>]
@@ -3607,13 +3873,21 @@ module AppBskyActor =
               [<JsonPropertyName("queuedNudges")>]
               QueuedNudges: string list option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ContentLabelPrefVisibility>>)>]
+        type ContentLabelPrefVisibility =
+            | [<JsonName("ignore")>] Ignore
+            | [<JsonName("show")>] Show
+            | [<JsonName("warn")>] Warn
+            | [<JsonName("hide")>] Hide
+            | Unknown of string
+
         type ContentLabelPref =
             { [<JsonPropertyName("label")>]
               Label: string
               [<JsonPropertyName("labelerDid")>]
               LabelerDid: Did option
               [<JsonPropertyName("visibility")>]
-              Visibility: string }
+              Visibility: ContentLabelPrefVisibility }
 
         /// Read-only preference containing value(s) inferred from the user's declared birthdate. Absence of this preference object in the response indicates that the user has not made a declaration.
         type DeclaredAgePref =
@@ -3668,10 +3942,16 @@ module AppBskyActor =
               [<JsonPropertyName("hideAllFeeds")>]
               HideAllFeeds: bool option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<MutedWordActorTarget>>)>]
+        type MutedWordActorTarget =
+            | [<JsonName("all")>] All
+            | [<JsonName("exclude-following")>] ExcludeFollowing
+            | Unknown of string
+
         /// A word that the account owner has muted.
         type MutedWord =
             { [<JsonPropertyName("actorTarget")>]
-              ActorTarget: string option
+              ActorTarget: MutedWordActorTarget option
               [<JsonPropertyName("expiresAt")>]
               ExpiresAt: AtDateTime option
               [<JsonPropertyName("id")>]
@@ -3681,7 +3961,11 @@ module AppBskyActor =
               [<JsonPropertyName("value")>]
               Value: string }
 
-        type MutedWordTarget = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<MutedWordTarget>>)>]
+        type MutedWordTarget =
+            | [<JsonName("content")>] Content
+            | [<JsonName("tag")>] Tag
+            | Unknown of string
 
         type MutedWordsPref =
             { [<JsonPropertyName("items")>]
@@ -3741,19 +4025,39 @@ module AppBskyActor =
               [<JsonPropertyName("starterPacks")>]
               StarterPacks: int64 option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ProfileAssociatedActivitySubscriptionAllowSubscriptions>>)>]
+        type ProfileAssociatedActivitySubscriptionAllowSubscriptions =
+            | [<JsonName("followers")>] Followers
+            | [<JsonName("mutuals")>] Mutuals
+            | [<JsonName("none")>] None
+            | Unknown of string
+
         type ProfileAssociatedActivitySubscription =
             { [<JsonPropertyName("allowSubscriptions")>]
-              AllowSubscriptions: string }
+              AllowSubscriptions: ProfileAssociatedActivitySubscriptionAllowSubscriptions }
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ProfileAssociatedChatAllowIncoming>>)>]
+        type ProfileAssociatedChatAllowIncoming =
+            | [<JsonName("all")>] All
+            | [<JsonName("none")>] None
+            | [<JsonName("following")>] Following
+            | Unknown of string
 
         type ProfileAssociatedChat =
             { [<JsonPropertyName("allowIncoming")>]
-              AllowIncoming: string }
+              AllowIncoming: ProfileAssociatedChatAllowIncoming }
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ProfileAssociatedGermShowButtonTo>>)>]
+        type ProfileAssociatedGermShowButtonTo =
+            | [<JsonName("usersIFollow")>] UsersIFollow
+            | [<JsonName("everyone")>] Everyone
+            | Unknown of string
 
         type ProfileAssociatedGerm =
             { [<JsonPropertyName("messageMeUrl")>]
               MessageMeUrl: Uri
               [<JsonPropertyName("showButtonTo")>]
-              ShowButtonTo: string }
+              ShowButtonTo: ProfileAssociatedGermShowButtonTo }
 
         type ProfileView =
             { [<JsonPropertyName("associated")>]
@@ -3855,13 +4159,20 @@ module AppBskyActor =
               [<JsonPropertyName("website")>]
               Website: Uri option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<SavedFeedType>>)>]
+        type SavedFeedType =
+            | [<JsonName("feed")>] Feed
+            | [<JsonName("list")>] List
+            | [<JsonName("timeline")>] Timeline
+            | Unknown of string
+
         type SavedFeed =
             { [<JsonPropertyName("id")>]
               Id: string
               [<JsonPropertyName("pinned")>]
               Pinned: bool
               [<JsonPropertyName("type")>]
-              Type: string
+              Type: SavedFeedType
               [<JsonPropertyName("value")>]
               Value: string }
 
@@ -3876,6 +4187,11 @@ module AppBskyActor =
         type SavedFeedsPrefV2 =
             { [<JsonPropertyName("items")>]
               Items: Defs.SavedFeed list }
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<StatusViewStatus>>)>]
+        type StatusViewStatus =
+            | [<JsonName("app.bsky.actor.status#live")>] Live
+            | Unknown of string
 
         /// An optional embed associated with the status.
         [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
@@ -3897,27 +4213,50 @@ module AppBskyActor =
               [<JsonPropertyName("record")>]
               Record: JsonElement
               [<JsonPropertyName("status")>]
-              Status: string
+              Status: StatusViewStatus
               [<JsonPropertyName("uri")>]
               Uri: AtUri option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ThreadViewPrefSort>>)>]
+        type ThreadViewPrefSort =
+            | [<JsonName("oldest")>] Oldest
+            | [<JsonName("newest")>] Newest
+            | [<JsonName("most-likes")>] MostLikes
+            | [<JsonName("random")>] Random
+            | [<JsonName("hotness")>] Hotness
+            | Unknown of string
+
         type ThreadViewPref =
             { [<JsonPropertyName("sort")>]
-              Sort: string option }
+              Sort: ThreadViewPrefSort option }
 
         /// Preferences for how verified accounts appear in the app.
         type VerificationPrefs =
             { [<JsonPropertyName("hideBadges")>]
               HideBadges: bool option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<VerificationStateTrustedVerifierStatus>>)>]
+        type VerificationStateTrustedVerifierStatus =
+            | [<JsonName("valid")>] Valid
+            | [<JsonName("invalid")>] Invalid
+            | [<JsonName("none")>] None
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<VerificationStateVerifiedStatus>>)>]
+        type VerificationStateVerifiedStatus =
+            | [<JsonName("valid")>] Valid
+            | [<JsonName("invalid")>] Invalid
+            | [<JsonName("none")>] None
+            | Unknown of string
+
         /// Represents the verification information about the user this object is attached to.
         type VerificationState =
             { [<JsonPropertyName("trustedVerifierStatus")>]
-              TrustedVerifierStatus: string
+              TrustedVerifierStatus: VerificationStateTrustedVerifierStatus
               [<JsonPropertyName("verifications")>]
               Verifications: Defs.VerificationView list
               [<JsonPropertyName("verifiedStatus")>]
-              VerifiedStatus: string }
+              VerifiedStatus: VerificationStateVerifiedStatus }
 
         /// An individual verification for an associated subject.
         type VerificationView =
@@ -4101,6 +4440,11 @@ module AppBskyActor =
         [<Literal>]
         let TypeId = "app.bsky.actor.status"
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<StatusStatus>>)>]
+        type StatusStatus =
+            | [<JsonName("app.bsky.actor.status#live")>] Live
+            | Unknown of string
+
         /// An optional embed associated with the status.
         [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
         type StatusEmbedUnion =
@@ -4116,7 +4460,7 @@ module AppBskyActor =
               [<JsonPropertyName("embed")>]
               Embed: StatusEmbedUnion option
               [<JsonPropertyName("status")>]
-              Status: string }
+              Status: StatusStatus }
 
         [<Literal>]
         let Live = "app.bsky.actor.status#live"
@@ -4155,7 +4499,13 @@ module AppBskyAgeassurance =
             let RegionNotSupported = "RegionNotSupported"
 
     module Defs =
-        type Access = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<Access>>)>]
+        type Access =
+            | [<JsonName("unknown")>] UnknownValue
+            | [<JsonName("none")>] None
+            | [<JsonName("safe")>] Safe
+            | [<JsonName("full")>] Full
+            | Unknown of string
 
         ///
         type Config =
@@ -4238,10 +4588,26 @@ module AppBskyAgeassurance =
               [<JsonPropertyName("age")>]
               Age: int64 }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<EventAccess>>)>]
+        type EventAccess =
+            | [<JsonName("unknown")>] UnknownValue
+            | [<JsonName("none")>] None
+            | [<JsonName("safe")>] Safe
+            | [<JsonName("full")>] Full
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<EventStatus>>)>]
+        type EventStatus =
+            | [<JsonName("unknown")>] UnknownValue
+            | [<JsonName("pending")>] Pending
+            | [<JsonName("assured")>] Assured
+            | [<JsonName("blocked")>] Blocked
+            | Unknown of string
+
         /// Object used to store Age Assurance data in stash.
         type Event =
             { [<JsonPropertyName("access")>]
-              Access: string
+              Access: EventAccess
               [<JsonPropertyName("attemptId")>]
               AttemptId: string
               [<JsonPropertyName("completeIp")>]
@@ -4261,7 +4627,7 @@ module AppBskyAgeassurance =
               [<JsonPropertyName("regionCode")>]
               RegionCode: string option
               [<JsonPropertyName("status")>]
-              Status: string }
+              Status: EventStatus }
 
         /// The user's computed Age Assurance state.
         type State =
@@ -4277,7 +4643,13 @@ module AppBskyAgeassurance =
             { [<JsonPropertyName("accountCreatedAt")>]
               AccountCreatedAt: AtDateTime option }
 
-        type Status = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<Status>>)>]
+        type Status =
+            | [<JsonName("unknown")>] UnknownValue
+            | [<JsonName("pending")>] Pending
+            | [<JsonName("assured")>] Assured
+            | [<JsonName("blocked")>] Blocked
+            | Unknown of string
 
     module GetConfig =
         [<Literal>]
@@ -4748,6 +5120,13 @@ module AppBskyDraft =
 
 module AppBskyUnspecced =
     module Defs =
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AgeAssuranceEventStatus>>)>]
+        type AgeAssuranceEventStatus =
+            | [<JsonName("unknown")>] UnknownValue
+            | [<JsonName("pending")>] Pending
+            | [<JsonName("assured")>] Assured
+            | Unknown of string
+
         /// Object used to store age assurance data in stash.
         type AgeAssuranceEvent =
             { [<JsonPropertyName("attemptId")>]
@@ -4765,14 +5144,22 @@ module AppBskyUnspecced =
               [<JsonPropertyName("initUa")>]
               InitUa: string option
               [<JsonPropertyName("status")>]
-              Status: string }
+              Status: AgeAssuranceEventStatus }
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AgeAssuranceStateStatus>>)>]
+        type AgeAssuranceStateStatus =
+            | [<JsonName("unknown")>] UnknownValue
+            | [<JsonName("pending")>] Pending
+            | [<JsonName("assured")>] Assured
+            | [<JsonName("blocked")>] Blocked
+            | Unknown of string
 
         /// The computed state of the age assurance process, returned to the user in question on certain authenticated requests.
         type AgeAssuranceState =
             { [<JsonPropertyName("lastInitiatedAt")>]
               LastInitiatedAt: AtDateTime option
               [<JsonPropertyName("status")>]
-              Status: string }
+              Status: AgeAssuranceStateStatus }
 
         type SkeletonSearchActor =
             { [<JsonPropertyName("did")>]
@@ -4785,6 +5172,11 @@ module AppBskyUnspecced =
         type SkeletonSearchStarterPack =
             { [<JsonPropertyName("uri")>]
               Uri: AtUri }
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<SkeletonTrendStatus>>)>]
+        type SkeletonTrendStatus =
+            | [<JsonName("hot")>] Hot
+            | Unknown of string
 
         type SkeletonTrend =
             { [<JsonPropertyName("category")>]
@@ -4800,7 +5192,7 @@ module AppBskyUnspecced =
               [<JsonPropertyName("startedAt")>]
               StartedAt: AtDateTime
               [<JsonPropertyName("status")>]
-              Status: string option
+              Status: SkeletonTrendStatus option
               [<JsonPropertyName("topic")>]
               Topic: string }
 
@@ -4825,6 +5217,11 @@ module AppBskyUnspecced =
               [<JsonPropertyName("post")>]
               Post: AppBskyFeed.Defs.PostView }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<TrendViewStatus>>)>]
+        type TrendViewStatus =
+            | [<JsonName("hot")>] Hot
+            | Unknown of string
+
         type TrendView =
             { [<JsonPropertyName("actors")>]
               Actors: AppBskyActor.Defs.ProfileViewBasic list
@@ -4839,7 +5236,7 @@ module AppBskyUnspecced =
               [<JsonPropertyName("startedAt")>]
               StartedAt: AtDateTime
               [<JsonPropertyName("status")>]
-              Status: string option
+              Status: TrendViewStatus option
               [<JsonPropertyName("topic")>]
               Topic: string }
 
@@ -4990,6 +5387,13 @@ module AppBskyUnspecced =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsSort>>)>]
+        type ParamsSort =
+            | [<JsonName("newest")>] Newest
+            | [<JsonName("oldest")>] Oldest
+            | [<JsonName("top")>] Top
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("above")>]
               Above: bool option
@@ -5000,7 +5404,7 @@ module AppBskyUnspecced =
               [<JsonPropertyName("branchingFactor")>]
               BranchingFactor: int64 option
               [<JsonPropertyName("sort")>]
-              Sort: string option }
+              Sort: ParamsSort option }
 
         type Output =
             { [<JsonPropertyName("hasOtherReplies")>]
@@ -5190,11 +5594,17 @@ module AppBskyUnspecced =
             { [<JsonPropertyName("suggestions")>]
               Suggestions: GetTaggedSuggestions.Suggestion list }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<SuggestionSubjectType>>)>]
+        type SuggestionSubjectType =
+            | [<JsonName("actor")>] Actor
+            | [<JsonName("feed")>] Feed
+            | Unknown of string
+
         type Suggestion =
             { [<JsonPropertyName("subject")>]
               Subject: Uri
               [<JsonPropertyName("subjectType")>]
-              SubjectType: string
+              SubjectType: SuggestionSubjectType
               [<JsonPropertyName("tag")>]
               Tag: string }
 
@@ -5314,6 +5724,12 @@ module AppBskyUnspecced =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsSort>>)>]
+        type ParamsSort =
+            | [<JsonName("top")>] Top
+            | [<JsonName("latest")>] Latest
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("author")>]
               Author: string option
@@ -5332,7 +5748,7 @@ module AppBskyUnspecced =
               [<JsonPropertyName("since")>]
               Since: string option
               [<JsonPropertyName("sort")>]
-              Sort: string option
+              Sort: ParamsSort option
               [<JsonPropertyName("tag")>]
               Tag: string list option
               [<JsonPropertyName("until")>]
@@ -5385,6 +5801,12 @@ module AppBskyUnspecced =
 
 module AppBskyVideo =
     module Defs =
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<JobStatusState>>)>]
+        type JobStatusState =
+            | [<JsonName("JOB_STATE_COMPLETED")>] JOBSTATECOMPLETED
+            | [<JsonName("JOB_STATE_FAILED")>] JOBSTATEFAILED
+            | Unknown of string
+
         type JobStatus =
             { [<JsonPropertyName("blob")>]
               Blob: JsonElement option
@@ -5399,7 +5821,7 @@ module AppBskyVideo =
               [<JsonPropertyName("progress")>]
               Progress: int64 option
               [<JsonPropertyName("state")>]
-              State: string }
+              State: JobStatusState }
 
     module GetJobStatus =
         [<Literal>]
@@ -5451,10 +5873,17 @@ module ChatBskyActor =
         [<Literal>]
         let TypeId = "chat.bsky.actor.declaration"
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<DeclarationAllowIncoming>>)>]
+        type DeclarationAllowIncoming =
+            | [<JsonName("all")>] All
+            | [<JsonName("none")>] None
+            | [<JsonName("following")>] Following
+            | Unknown of string
+
         /// A declaration of a Bluesky chat account.
         type Declaration =
             { [<JsonPropertyName("allowIncoming")>]
-              AllowIncoming: string }
+              AllowIncoming: DeclarationAllowIncoming }
 
     module Defs =
         type ProfileViewBasic =
@@ -5531,6 +5960,12 @@ module ChatBskyConvo =
             let ReactionInvalidValue = "ReactionInvalidValue"
 
     module Defs =
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ConvoViewStatus>>)>]
+        type ConvoViewStatus =
+            | [<JsonName("request")>] Request
+            | [<JsonName("accepted")>] Accepted
+            | Unknown of string
+
         [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
         type ConvoViewLastMessageUnion =
             | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
@@ -5557,7 +5992,7 @@ module ChatBskyConvo =
               [<JsonPropertyName("rev")>]
               Rev: string
               [<JsonPropertyName("status")>]
-              Status: string option
+              Status: ConvoViewStatus option
               [<JsonPropertyName("unreadCount")>]
               UnreadCount: int64 }
 
@@ -5885,15 +6320,26 @@ module ChatBskyConvo =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsReadState>>)>]
+        type ParamsReadState =
+            | [<JsonName("unread")>] Unread
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsStatus>>)>]
+        type ParamsStatus =
+            | [<JsonName("request")>] Request
+            | [<JsonName("accepted")>] Accepted
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("limit")>]
               Limit: int64 option
               [<JsonPropertyName("readState")>]
-              ReadState: string option
+              ReadState: ParamsReadState option
               [<JsonPropertyName("status")>]
-              Status: string option }
+              Status: ParamsStatus option }
 
         type Output =
             { [<JsonPropertyName("convos")>]
@@ -6000,9 +6446,15 @@ module ChatBskyConvo =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputStatus>>)>]
+        type InputStatus =
+            | [<JsonName("request")>] Request
+            | [<JsonName("accepted")>] Accepted
+            | Unknown of string
+
         type Input =
             { [<JsonPropertyName("status")>]
-              Status: string option }
+              Status: InputStatus option }
 
         type Output =
             { [<JsonPropertyName("updatedCount")>]
@@ -6296,7 +6748,14 @@ module ComAtprotoLexicon =
 
 module ComAtprotoSync =
     module Defs =
-        type HostStatus = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<HostStatus>>)>]
+        type HostStatus =
+            | [<JsonName("active")>] Active
+            | [<JsonName("idle")>] Idle
+            | [<JsonName("offline")>] Offline
+            | [<JsonName("throttled")>] Throttled
+            | [<JsonName("banned")>] Banned
+            | Unknown of string
 
     module GetBlob =
         [<Literal>]
@@ -6494,6 +6953,16 @@ module ComAtprotoSync =
             { [<JsonPropertyName("did")>]
               Did: Did }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OutputStatus>>)>]
+        type OutputStatus =
+            | [<JsonName("takendown")>] Takendown
+            | [<JsonName("suspended")>] Suspended
+            | [<JsonName("deleted")>] Deleted
+            | [<JsonName("deactivated")>] Deactivated
+            | [<JsonName("desynchronized")>] Desynchronized
+            | [<JsonName("throttled")>] Throttled
+            | Unknown of string
+
         type Output =
             { [<JsonPropertyName("active")>]
               Active: bool
@@ -6502,7 +6971,7 @@ module ComAtprotoSync =
               [<JsonPropertyName("rev")>]
               Rev: Tid option
               [<JsonPropertyName("status")>]
-              Status: string option }
+              Status: OutputStatus option }
 
         module Errors =
             [<Literal>]
@@ -6592,6 +7061,16 @@ module ComAtprotoSync =
               [<JsonPropertyName("repos")>]
               Repos: ListRepos.Repo list }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<RepoStatus>>)>]
+        type RepoStatus =
+            | [<JsonName("takendown")>] Takendown
+            | [<JsonName("suspended")>] Suspended
+            | [<JsonName("deleted")>] Deleted
+            | [<JsonName("deactivated")>] Deactivated
+            | [<JsonName("desynchronized")>] Desynchronized
+            | [<JsonName("throttled")>] Throttled
+            | Unknown of string
+
         type Repo =
             { [<JsonPropertyName("active")>]
               Active: bool option
@@ -6602,7 +7081,7 @@ module ComAtprotoSync =
               [<JsonPropertyName("rev")>]
               Rev: Tid
               [<JsonPropertyName("status")>]
-              Status: string option }
+              Status: RepoStatus option }
 
     module ListReposByCollection =
         [<Literal>]
@@ -6679,6 +7158,16 @@ module ComAtprotoSync =
             [<Literal>]
             let ConsumerTooSlow = "ConsumerTooSlow"
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AccountStatus>>)>]
+        type AccountStatus =
+            | [<JsonName("takendown")>] Takendown
+            | [<JsonName("suspended")>] Suspended
+            | [<JsonName("deleted")>] Deleted
+            | [<JsonName("deactivated")>] Deactivated
+            | [<JsonName("desynchronized")>] Desynchronized
+            | [<JsonName("throttled")>] Throttled
+            | Unknown of string
+
         /// Represents a change to an account's status on a host (eg, PDS or Relay). The semantics of this event are that the status is at the host which emitted the event, not necessarily that at the currently active PDS. Eg, a Relay takedown would emit a takedown with active=false, even if the PDS is still active.
         type Account =
             { [<JsonPropertyName("active")>]
@@ -6688,7 +7177,7 @@ module ComAtprotoSync =
               [<JsonPropertyName("seq")>]
               Seq: int64
               [<JsonPropertyName("status")>]
-              Status: string option
+              Status: AccountStatus option
               [<JsonPropertyName("time")>]
               Time: AtDateTime }
 
@@ -6730,16 +7219,28 @@ module ComAtprotoSync =
               [<JsonPropertyName("time")>]
               Time: AtDateTime }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InfoName>>)>]
+        type InfoName =
+            | [<JsonName("OutdatedCursor")>] OutdatedCursor
+            | Unknown of string
+
         type Info =
             { [<JsonPropertyName("message")>]
               Message: string option
               [<JsonPropertyName("name")>]
-              Name: string }
+              Name: InfoName }
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<RepoOpAction>>)>]
+        type RepoOpAction =
+            | [<JsonName("create")>] Create
+            | [<JsonName("update")>] Update
+            | [<JsonName("delete")>] Delete
+            | Unknown of string
 
         /// A repo operation, ie a mutation of a single record.
         type RepoOp =
             { [<JsonPropertyName("action")>]
-              Action: string
+              Action: RepoOpAction
               [<JsonPropertyName("cid")>]
               Cid: Cid option
               [<JsonPropertyName("path")>]
@@ -6909,11 +7410,18 @@ module ComGermnetwork =
               [<JsonPropertyName("version")>]
               Version: string }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<MessageMeShowButtonTo>>)>]
+        type MessageMeShowButtonTo =
+            | [<JsonName("none")>] None
+            | [<JsonName("usersIFollow")>] UsersIFollow
+            | [<JsonName("everyone")>] Everyone
+            | Unknown of string
+
         type MessageMe =
             { [<JsonPropertyName("messageMeUrl")>]
               MessageMeUrl: Uri
               [<JsonPropertyName("showButtonTo")>]
-              ShowButtonTo: string }
+              ShowButtonTo: MessageMeShowButtonTo }
 
 module ToolsOzoneCommunication =
     module CreateTemplate =
@@ -7021,13 +7529,22 @@ module ToolsOzoneHosting =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsEventsItem>>)>]
+        type ParamsEventsItem =
+            | [<JsonName("accountCreated")>] AccountCreated
+            | [<JsonName("emailUpdated")>] EmailUpdated
+            | [<JsonName("emailConfirmed")>] EmailConfirmed
+            | [<JsonName("passwordUpdated")>] PasswordUpdated
+            | [<JsonName("handleUpdated")>] HandleUpdated
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
               [<JsonPropertyName("did")>]
               Did: Did
               [<JsonPropertyName("events")>]
-              Events: string list option
+              Events: ParamsEventsItem list option
               [<JsonPropertyName("limit")>]
               Limit: int64 option }
 
@@ -7110,6 +7627,16 @@ module ToolsOzoneModeration =
               ErrorCode: string option }
 
     module Defs =
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AccountEventStatus>>)>]
+        type AccountEventStatus =
+            | [<JsonName("unknown")>] UnknownValue
+            | [<JsonName("deactivated")>] Deactivated
+            | [<JsonName("deleted")>] Deleted
+            | [<JsonName("takendown")>] Takendown
+            | [<JsonName("suspended")>] Suspended
+            | [<JsonName("tombstoned")>] Tombstoned
+            | Unknown of string
+
         /// Logs account status related events on a repo subject. Normally captured by automod from the firehose and emitted to ozone for historical tracking.
         type AccountEvent =
             { [<JsonPropertyName("active")>]
@@ -7117,9 +7644,18 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("status")>]
-              Status: string option
+              Status: AccountEventStatus option
               [<JsonPropertyName("timestamp")>]
               Timestamp: AtDateTime }
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AccountHostingStatus>>)>]
+        type AccountHostingStatus =
+            | [<JsonName("takendown")>] Takendown
+            | [<JsonName("suspended")>] Suspended
+            | [<JsonName("deleted")>] Deleted
+            | [<JsonName("deactivated")>] Deactivated
+            | [<JsonName("unknown")>] UnknownValue
+            | Unknown of string
 
         type AccountHosting =
             { [<JsonPropertyName("createdAt")>]
@@ -7131,7 +7667,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("reactivatedAt")>]
               ReactivatedAt: AtDateTime option
               [<JsonPropertyName("status")>]
-              Status: string
+              Status: AccountHostingStatus
               [<JsonPropertyName("updatedAt")>]
               UpdatedAt: AtDateTime option }
 
@@ -7159,6 +7695,13 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("totalStrikeCount")>]
               TotalStrikeCount: int64 option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AgeAssuranceEventStatus>>)>]
+        type AgeAssuranceEventStatus =
+            | [<JsonName("unknown")>] UnknownValue
+            | [<JsonName("pending")>] Pending
+            | [<JsonName("assured")>] Assured
+            | Unknown of string
+
         /// Age assurance info coming directly from users. Only works on DID subjects.
         type AgeAssuranceEvent =
             { [<JsonPropertyName("access")>]
@@ -7180,7 +7723,14 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("regionCode")>]
               RegionCode: string option
               [<JsonPropertyName("status")>]
-              Status: string }
+              Status: AgeAssuranceEventStatus }
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AgeAssuranceOverrideEventStatus>>)>]
+        type AgeAssuranceOverrideEventStatus =
+            | [<JsonName("assured")>] Assured
+            | [<JsonName("reset")>] Reset
+            | [<JsonName("blocked")>] Blocked
+            | Unknown of string
 
         /// Age assurance status override by moderators. Only works on DID subjects.
         type AgeAssuranceOverrideEvent =
@@ -7189,7 +7739,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("comment")>]
               Comment: string
               [<JsonPropertyName("status")>]
-              Status: string }
+              Status: AgeAssuranceOverrideEventStatus }
 
         [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
         type BlobViewDetailsUnion =
@@ -7342,6 +7892,12 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("remove")>]
               Remove: string list }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ModEventTakedownTargetServicesItem>>)>]
+        type ModEventTakedownTargetServicesItem =
+            | [<JsonName("appview")>] Appview
+            | [<JsonName("pds")>] Pds
+            | Unknown of string
+
         /// Take down a subject permanently or temporarily
         type ModEventTakedown =
             { [<JsonPropertyName("acknowledgeAccountSubjects")>]
@@ -7359,7 +7915,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("strikeExpiresAt")>]
               StrikeExpiresAt: AtDateTime option
               [<JsonPropertyName("targetServices")>]
-              TargetServices: string list option }
+              TargetServices: ModEventTakedownTargetServicesItem list option }
 
         /// Unmute action on a subject
         type ModEventUnmute =
@@ -7514,6 +8070,13 @@ module ToolsOzoneModeration =
             { [<JsonPropertyName("subjectStatus")>]
               SubjectStatus: Defs.SubjectStatusView option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<RecordEventOp>>)>]
+        type RecordEventOp =
+            | [<JsonName("create")>] Create
+            | [<JsonName("update")>] Update
+            | [<JsonName("delete")>] Delete
+            | Unknown of string
+
         /// Logs lifecycle event on a record subject. Normally captured by automod from the firehose and emitted to ozone for historical tracking.
         type RecordEvent =
             { [<JsonPropertyName("cid")>]
@@ -7521,9 +8084,15 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("comment")>]
               Comment: string option
               [<JsonPropertyName("op")>]
-              Op: string
+              Op: RecordEventOp
               [<JsonPropertyName("timestamp")>]
               Timestamp: AtDateTime }
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<RecordHostingStatus>>)>]
+        type RecordHostingStatus =
+            | [<JsonName("deleted")>] Deleted
+            | [<JsonName("unknown")>] UnknownValue
+            | Unknown of string
 
         type RecordHosting =
             { [<JsonPropertyName("createdAt")>]
@@ -7531,7 +8100,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("deletedAt")>]
               DeletedAt: AtDateTime option
               [<JsonPropertyName("status")>]
-              Status: string
+              Status: RecordHostingStatus
               [<JsonPropertyName("updatedAt")>]
               UpdatedAt: AtDateTime option }
 
@@ -7698,10 +8267,23 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("executeUntil")>]
               ExecuteUntil: AtDateTime option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ScheduledActionViewAction>>)>]
+        type ScheduledActionViewAction =
+            | [<JsonName("takedown")>] Takedown
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ScheduledActionViewStatus>>)>]
+        type ScheduledActionViewStatus =
+            | [<JsonName("pending")>] Pending
+            | [<JsonName("executed")>] Executed
+            | [<JsonName("cancelled")>] Cancelled
+            | [<JsonName("failed")>] Failed
+            | Unknown of string
+
         /// View of a scheduled moderation action
         type ScheduledActionView =
             { [<JsonPropertyName("action")>]
-              Action: string
+              Action: ScheduledActionViewAction
               [<JsonPropertyName("createdAt")>]
               CreatedAt: AtDateTime
               [<JsonPropertyName("createdBy")>]
@@ -7727,11 +8309,32 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("randomizeExecution")>]
               RandomizeExecution: bool option
               [<JsonPropertyName("status")>]
-              Status: string
+              Status: ScheduledActionViewStatus
               [<JsonPropertyName("updatedAt")>]
               UpdatedAt: AtDateTime option }
 
-        type SubjectReviewState = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<SubjectReviewState>>)>]
+        type SubjectReviewState =
+            | [<JsonName("tools.ozone.moderation.defs#reviewOpen")>] ReviewOpen
+            | [<JsonName("tools.ozone.moderation.defs#reviewEscalated")>] ReviewEscalated
+            | [<JsonName("tools.ozone.moderation.defs#reviewClosed")>] ReviewClosed
+            | [<JsonName("tools.ozone.moderation.defs#reviewNone")>] ReviewNone
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<SubjectStatusViewAgeAssuranceState>>)>]
+        type SubjectStatusViewAgeAssuranceState =
+            | [<JsonName("pending")>] Pending
+            | [<JsonName("assured")>] Assured
+            | [<JsonName("unknown")>] UnknownValue
+            | [<JsonName("reset")>] Reset
+            | [<JsonName("blocked")>] Blocked
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<SubjectStatusViewAgeAssuranceUpdatedBy>>)>]
+        type SubjectStatusViewAgeAssuranceUpdatedBy =
+            | [<JsonName("admin")>] Admin
+            | [<JsonName("user")>] User
+            | Unknown of string
 
         [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
         type SubjectStatusViewHostingUnion =
@@ -7752,9 +8355,9 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("accountStrike")>]
               AccountStrike: Defs.AccountStrike option
               [<JsonPropertyName("ageAssuranceState")>]
-              AgeAssuranceState: string option
+              AgeAssuranceState: SubjectStatusViewAgeAssuranceState option
               [<JsonPropertyName("ageAssuranceUpdatedBy")>]
-              AgeAssuranceUpdatedBy: string option
+              AgeAssuranceUpdatedBy: SubjectStatusViewAgeAssuranceUpdatedBy option
               [<JsonPropertyName("appealed")>]
               Appealed: bool option
               [<JsonPropertyName("comment")>]
@@ -7934,13 +8537,55 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("summary")>]
               Summary: GetAccountTimeline.TimelineItemSummary list }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<TimelineItemSummaryEventSubjectType>>)>]
+        type TimelineItemSummaryEventSubjectType =
+            | [<JsonName("account")>] Account
+            | [<JsonName("record")>] Record
+            | [<JsonName("chat")>] Chat
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<TimelineItemSummaryEventType>>)>]
+        type TimelineItemSummaryEventType =
+            | [<JsonName("tools.ozone.moderation.defs#modEventTakedown")>] ModEventTakedown
+            | [<JsonName("tools.ozone.moderation.defs#modEventReverseTakedown")>] ModEventReverseTakedown
+            | [<JsonName("tools.ozone.moderation.defs#modEventComment")>] ModEventComment
+            | [<JsonName("tools.ozone.moderation.defs#modEventReport")>] ModEventReport
+            | [<JsonName("tools.ozone.moderation.defs#modEventLabel")>] ModEventLabel
+            | [<JsonName("tools.ozone.moderation.defs#modEventAcknowledge")>] ModEventAcknowledge
+            | [<JsonName("tools.ozone.moderation.defs#modEventEscalate")>] ModEventEscalate
+            | [<JsonName("tools.ozone.moderation.defs#modEventMute")>] ModEventMute
+            | [<JsonName("tools.ozone.moderation.defs#modEventUnmute")>] ModEventUnmute
+            | [<JsonName("tools.ozone.moderation.defs#modEventMuteReporter")>] ModEventMuteReporter
+            | [<JsonName("tools.ozone.moderation.defs#modEventUnmuteReporter")>] ModEventUnmuteReporter
+            | [<JsonName("tools.ozone.moderation.defs#modEventEmail")>] ModEventEmail
+            | [<JsonName("tools.ozone.moderation.defs#modEventResolveAppeal")>] ModEventResolveAppeal
+            | [<JsonName("tools.ozone.moderation.defs#modEventDivert")>] ModEventDivert
+            | [<JsonName("tools.ozone.moderation.defs#modEventTag")>] ModEventTag
+            | [<JsonName("tools.ozone.moderation.defs#accountEvent")>] AccountEvent
+            | [<JsonName("tools.ozone.moderation.defs#identityEvent")>] IdentityEvent
+            | [<JsonName("tools.ozone.moderation.defs#recordEvent")>] RecordEvent
+            | [<JsonName("tools.ozone.moderation.defs#modEventPriorityScore")>] ModEventPriorityScore
+            | [<JsonName("tools.ozone.moderation.defs#revokeAccountCredentialsEvent")>] RevokeAccountCredentialsEvent
+            | [<JsonName("tools.ozone.moderation.defs#ageAssuranceEvent")>] AgeAssuranceEvent
+            | [<JsonName("tools.ozone.moderation.defs#ageAssuranceOverrideEvent")>] AgeAssuranceOverrideEvent
+            | [<JsonName("tools.ozone.moderation.defs#timelineEventPlcCreate")>] TimelineEventPlcCreate
+            | [<JsonName("tools.ozone.moderation.defs#timelineEventPlcOperation")>] TimelineEventPlcOperation
+            | [<JsonName("tools.ozone.moderation.defs#timelineEventPlcTombstone")>] TimelineEventPlcTombstone
+            | [<JsonName("tools.ozone.hosting.getAccountHistory#accountCreated")>] AccountCreated
+            | [<JsonName("tools.ozone.hosting.getAccountHistory#emailConfirmed")>] EmailConfirmed
+            | [<JsonName("tools.ozone.hosting.getAccountHistory#passwordUpdated")>] PasswordUpdated
+            | [<JsonName("tools.ozone.hosting.getAccountHistory#handleUpdated")>] HandleUpdated
+            | [<JsonName("tools.ozone.moderation.defs#scheduleTakedownEvent")>] ScheduleTakedownEvent
+            | [<JsonName("tools.ozone.moderation.defs#cancelScheduledTakedownEvent")>] CancelScheduledTakedownEvent
+            | Unknown of string
+
         type TimelineItemSummary =
             { [<JsonPropertyName("count")>]
               Count: int64
               [<JsonPropertyName("eventSubjectType")>]
-              EventSubjectType: string
+              EventSubjectType: TimelineItemSummaryEventSubjectType
               [<JsonPropertyName("eventType")>]
-              EventType: string }
+              EventType: TimelineItemSummaryEventType }
 
     module GetEvent =
         [<Literal>]
@@ -8071,6 +8716,14 @@ module ToolsOzoneModeration =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputStatusesItem>>)>]
+        type InputStatusesItem =
+            | [<JsonName("pending")>] Pending
+            | [<JsonName("executed")>] Executed
+            | [<JsonName("cancelled")>] Cancelled
+            | [<JsonName("failed")>] Failed
+            | Unknown of string
+
         type Input =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -8081,7 +8734,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("startsAfter")>]
               StartsAfter: AtDateTime option
               [<JsonPropertyName("statuses")>]
-              Statuses: string list
+              Statuses: InputStatusesItem list
               [<JsonPropertyName("subjects")>]
               Subjects: Did list option }
 
@@ -8098,13 +8751,28 @@ module ToolsOzoneModeration =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsAgeAssuranceState>>)>]
+        type ParamsAgeAssuranceState =
+            | [<JsonName("pending")>] Pending
+            | [<JsonName("assured")>] Assured
+            | [<JsonName("unknown")>] UnknownValue
+            | [<JsonName("reset")>] Reset
+            | [<JsonName("blocked")>] Blocked
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsSubjectType>>)>]
+        type ParamsSubjectType =
+            | [<JsonName("account")>] Account
+            | [<JsonName("record")>] Record
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("addedLabels")>]
               AddedLabels: string list option
               [<JsonPropertyName("addedTags")>]
               AddedTags: string list option
               [<JsonPropertyName("ageAssuranceState")>]
-              AgeAssuranceState: string option
+              AgeAssuranceState: ParamsAgeAssuranceState option
               [<JsonPropertyName("batchId")>]
               BatchId: string option
               [<JsonPropertyName("collections")>]
@@ -8140,7 +8808,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("subject")>]
               Subject: Uri option
               [<JsonPropertyName("subjectType")>]
-              SubjectType: string option
+              SubjectType: ParamsSubjectType option
               [<JsonPropertyName("types")>]
               Types: string list option
               [<JsonPropertyName("withStrike")>]
@@ -8159,9 +8827,32 @@ module ToolsOzoneModeration =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsAgeAssuranceState>>)>]
+        type ParamsAgeAssuranceState =
+            | [<JsonName("pending")>] Pending
+            | [<JsonName("assured")>] Assured
+            | [<JsonName("unknown")>] UnknownValue
+            | [<JsonName("reset")>] Reset
+            | [<JsonName("blocked")>] Blocked
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsReviewState>>)>]
+        type ParamsReviewState =
+            | [<JsonName("tools.ozone.moderation.defs#reviewOpen")>] ReviewOpen
+            | [<JsonName("tools.ozone.moderation.defs#reviewClosed")>] ReviewClosed
+            | [<JsonName("tools.ozone.moderation.defs#reviewEscalated")>] ReviewEscalated
+            | [<JsonName("tools.ozone.moderation.defs#reviewNone")>] ReviewNone
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsSubjectType>>)>]
+        type ParamsSubjectType =
+            | [<JsonName("account")>] Account
+            | [<JsonName("record")>] Record
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("ageAssuranceState")>]
-              AgeAssuranceState: string option
+              AgeAssuranceState: ParamsAgeAssuranceState option
               [<JsonPropertyName("appealed")>]
               Appealed: bool option
               [<JsonPropertyName("collections")>]
@@ -8215,7 +8906,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("reportedBefore")>]
               ReportedBefore: AtDateTime option
               [<JsonPropertyName("reviewState")>]
-              ReviewState: string option
+              ReviewState: ParamsReviewState option
               [<JsonPropertyName("reviewedAfter")>]
               ReviewedAfter: AtDateTime option
               [<JsonPropertyName("reviewedBefore")>]
@@ -8227,7 +8918,7 @@ module ToolsOzoneModeration =
               [<JsonPropertyName("subject")>]
               Subject: Uri option
               [<JsonPropertyName("subjectType")>]
-              SubjectType: string option
+              SubjectType: ParamsSubjectType option
               [<JsonPropertyName("tags")>]
               Tags: string list option
               [<JsonPropertyName("takendown")>]
@@ -8436,7 +9127,49 @@ module ToolsOzoneReport =
         [<Literal>]
         let ReasonSexualUnlabeled = "tools.ozone.report.defs#reasonSexualUnlabeled"
 
-        type ReasonType = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ReasonType>>)>]
+        type ReasonType =
+            | [<JsonName("tools.ozone.report.defs#reasonAppeal")>] ReasonAppeal
+            | [<JsonName("tools.ozone.report.defs#reasonOther")>] ReasonOther
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceAnimal")>] ReasonViolenceAnimal
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceThreats")>] ReasonViolenceThreats
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceGraphicContent")>] ReasonViolenceGraphicContent
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceGlorification")>] ReasonViolenceGlorification
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceExtremistContent")>] ReasonViolenceExtremistContent
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceTrafficking")>] ReasonViolenceTrafficking
+            | [<JsonName("tools.ozone.report.defs#reasonViolenceOther")>] ReasonViolenceOther
+            | [<JsonName("tools.ozone.report.defs#reasonSexualAbuseContent")>] ReasonSexualAbuseContent
+            | [<JsonName("tools.ozone.report.defs#reasonSexualNCII")>] ReasonSexualNCII
+            | [<JsonName("tools.ozone.report.defs#reasonSexualDeepfake")>] ReasonSexualDeepfake
+            | [<JsonName("tools.ozone.report.defs#reasonSexualAnimal")>] ReasonSexualAnimal
+            | [<JsonName("tools.ozone.report.defs#reasonSexualUnlabeled")>] ReasonSexualUnlabeled
+            | [<JsonName("tools.ozone.report.defs#reasonSexualOther")>] ReasonSexualOther
+            | [<JsonName("tools.ozone.report.defs#reasonChildSafetyCSAM")>] ReasonChildSafetyCSAM
+            | [<JsonName("tools.ozone.report.defs#reasonChildSafetyGroom")>] ReasonChildSafetyGroom
+            | [<JsonName("tools.ozone.report.defs#reasonChildSafetyPrivacy")>] ReasonChildSafetyPrivacy
+            | [<JsonName("tools.ozone.report.defs#reasonChildSafetyHarassment")>] ReasonChildSafetyHarassment
+            | [<JsonName("tools.ozone.report.defs#reasonChildSafetyOther")>] ReasonChildSafetyOther
+            | [<JsonName("tools.ozone.report.defs#reasonHarassmentTroll")>] ReasonHarassmentTroll
+            | [<JsonName("tools.ozone.report.defs#reasonHarassmentTargeted")>] ReasonHarassmentTargeted
+            | [<JsonName("tools.ozone.report.defs#reasonHarassmentHateSpeech")>] ReasonHarassmentHateSpeech
+            | [<JsonName("tools.ozone.report.defs#reasonHarassmentDoxxing")>] ReasonHarassmentDoxxing
+            | [<JsonName("tools.ozone.report.defs#reasonHarassmentOther")>] ReasonHarassmentOther
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingBot")>] ReasonMisleadingBot
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingImpersonation")>] ReasonMisleadingImpersonation
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingSpam")>] ReasonMisleadingSpam
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingScam")>] ReasonMisleadingScam
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingElections")>] ReasonMisleadingElections
+            | [<JsonName("tools.ozone.report.defs#reasonMisleadingOther")>] ReasonMisleadingOther
+            | [<JsonName("tools.ozone.report.defs#reasonRuleSiteSecurity")>] ReasonRuleSiteSecurity
+            | [<JsonName("tools.ozone.report.defs#reasonRuleProhibitedSales")>] ReasonRuleProhibitedSales
+            | [<JsonName("tools.ozone.report.defs#reasonRuleBanEvasion")>] ReasonRuleBanEvasion
+            | [<JsonName("tools.ozone.report.defs#reasonRuleOther")>] ReasonRuleOther
+            | [<JsonName("tools.ozone.report.defs#reasonSelfHarmContent")>] ReasonSelfHarmContent
+            | [<JsonName("tools.ozone.report.defs#reasonSelfHarmED")>] ReasonSelfHarmED
+            | [<JsonName("tools.ozone.report.defs#reasonSelfHarmStunts")>] ReasonSelfHarmStunts
+            | [<JsonName("tools.ozone.report.defs#reasonSelfHarmSubstances")>] ReasonSelfHarmSubstances
+            | [<JsonName("tools.ozone.report.defs#reasonSelfHarmOther")>] ReasonSelfHarmOther
+            | Unknown of string
 
         [<Literal>]
         let ReasonViolenceAnimal = "tools.ozone.report.defs#reasonViolenceAnimal"
@@ -8494,7 +9227,12 @@ module ToolsOzoneSafelink =
             let RuleAlreadyExists = "RuleAlreadyExists"
 
     module Defs =
-        type ActionType = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ActionType>>)>]
+        type ActionType =
+            | [<JsonName("block")>] Block
+            | [<JsonName("warn")>] Warn
+            | [<JsonName("whitelist")>] Whitelist
+            | Unknown of string
 
         /// An event for URL safety decisions
         type Event =
@@ -8517,9 +9255,26 @@ module ToolsOzoneSafelink =
               [<JsonPropertyName("url")>]
               Url: string }
 
-        type EventType = string
-        type PatternType = string
-        type ReasonType = string
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<EventType>>)>]
+        type EventType =
+            | [<JsonName("addRule")>] AddRule
+            | [<JsonName("updateRule")>] UpdateRule
+            | [<JsonName("removeRule")>] RemoveRule
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<PatternType>>)>]
+        type PatternType =
+            | [<JsonName("domain")>] Domain
+            | [<JsonName("url")>] Url
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ReasonType>>)>]
+        type ReasonType =
+            | [<JsonName("csam")>] Csam
+            | [<JsonName("spam")>] Spam
+            | [<JsonName("phishing")>] Phishing
+            | [<JsonName("none")>] None
+            | Unknown of string
 
         /// Input for creating a URL safety rule
         type UrlRule =
@@ -8547,6 +9302,12 @@ module ToolsOzoneSafelink =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputSortDirection>>)>]
+        type InputSortDirection =
+            | [<JsonName("asc")>] Asc
+            | [<JsonName("desc")>] Desc
+            | Unknown of string
+
         type Input =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -8555,7 +9316,7 @@ module ToolsOzoneSafelink =
               [<JsonPropertyName("patternType")>]
               PatternType: string option
               [<JsonPropertyName("sortDirection")>]
-              SortDirection: string option
+              SortDirection: InputSortDirection option
               [<JsonPropertyName("urls")>]
               Urls: string list option }
 
@@ -8572,6 +9333,12 @@ module ToolsOzoneSafelink =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputSortDirection>>)>]
+        type InputSortDirection =
+            | [<JsonName("asc")>] Asc
+            | [<JsonName("desc")>] Desc
+            | Unknown of string
+
         type Input =
             { [<JsonPropertyName("actions")>]
               Actions: string list option
@@ -8586,7 +9353,7 @@ module ToolsOzoneSafelink =
               [<JsonPropertyName("reason")>]
               Reason: string option
               [<JsonPropertyName("sortDirection")>]
-              SortDirection: string option
+              SortDirection: InputSortDirection option
               [<JsonPropertyName("urls")>]
               Urls: string list option }
 
@@ -8672,9 +9439,17 @@ module ToolsOzoneServer =
             { [<JsonPropertyName("url")>]
               Url: Uri option }
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ViewerConfigRole>>)>]
+        type ViewerConfigRole =
+            | [<JsonName("tools.ozone.team.defs#roleAdmin")>] RoleAdmin
+            | [<JsonName("tools.ozone.team.defs#roleModerator")>] RoleModerator
+            | [<JsonName("tools.ozone.team.defs#roleTriage")>] RoleTriage
+            | [<JsonName("tools.ozone.team.defs#roleVerifier")>] RoleVerifier
+            | Unknown of string
+
         type ViewerConfig =
             { [<JsonPropertyName("role")>]
-              Role: string option }
+              Role: ViewerConfigRole option }
 
 module ToolsOzoneSet =
     module AddValues =
@@ -8805,6 +9580,20 @@ module ToolsOzoneSet =
 
 module ToolsOzoneSetting =
     module Defs =
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OptionManagerRole>>)>]
+        type OptionManagerRole =
+            | [<JsonName("tools.ozone.team.defs#roleModerator")>] RoleModerator
+            | [<JsonName("tools.ozone.team.defs#roleTriage")>] RoleTriage
+            | [<JsonName("tools.ozone.team.defs#roleAdmin")>] RoleAdmin
+            | [<JsonName("tools.ozone.team.defs#roleVerifier")>] RoleVerifier
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OptionScope>>)>]
+        type OptionScope =
+            | [<JsonName("instance")>] Instance
+            | [<JsonName("personal")>] Personal
+            | Unknown of string
+
         type Option =
             { [<JsonPropertyName("createdAt")>]
               CreatedAt: AtDateTime option
@@ -8819,9 +9608,9 @@ module ToolsOzoneSetting =
               [<JsonPropertyName("lastUpdatedBy")>]
               LastUpdatedBy: Did
               [<JsonPropertyName("managerRole")>]
-              ManagerRole: string option
+              ManagerRole: OptionManagerRole option
               [<JsonPropertyName("scope")>]
-              Scope: string
+              Scope: OptionScope
               [<JsonPropertyName("updatedAt")>]
               UpdatedAt: AtDateTime option
               [<JsonPropertyName("value")>]
@@ -8834,6 +9623,12 @@ module ToolsOzoneSetting =
         let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsScope>>)>]
+        type ParamsScope =
+            | [<JsonName("instance")>] Instance
+            | [<JsonName("personal")>] Personal
+            | Unknown of string
+
         type Params =
             { [<JsonPropertyName("cursor")>]
               Cursor: string option
@@ -8844,7 +9639,7 @@ module ToolsOzoneSetting =
               [<JsonPropertyName("prefix")>]
               Prefix: string option
               [<JsonPropertyName("scope")>]
-              Scope: string option }
+              Scope: ParamsScope option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
@@ -8859,11 +9654,17 @@ module ToolsOzoneSetting =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputScope>>)>]
+        type InputScope =
+            | [<JsonName("instance")>] Instance
+            | [<JsonName("personal")>] Personal
+            | Unknown of string
+
         type Input =
             { [<JsonPropertyName("keys")>]
               Keys: Nsid list
               [<JsonPropertyName("scope")>]
-              Scope: string }
+              Scope: InputScope }
 
     module UpsertOption =
         [<Literal>]
@@ -8872,15 +9673,29 @@ module ToolsOzoneSetting =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputManagerRole>>)>]
+        type InputManagerRole =
+            | [<JsonName("tools.ozone.team.defs#roleModerator")>] RoleModerator
+            | [<JsonName("tools.ozone.team.defs#roleTriage")>] RoleTriage
+            | [<JsonName("tools.ozone.team.defs#roleVerifier")>] RoleVerifier
+            | [<JsonName("tools.ozone.team.defs#roleAdmin")>] RoleAdmin
+            | Unknown of string
+
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputScope>>)>]
+        type InputScope =
+            | [<JsonName("instance")>] Instance
+            | [<JsonName("personal")>] Personal
+            | Unknown of string
+
         type Input =
             { [<JsonPropertyName("description")>]
               Description: string option
               [<JsonPropertyName("key")>]
               Key: Nsid
               [<JsonPropertyName("managerRole")>]
-              ManagerRole: string option
+              ManagerRole: InputManagerRole option
               [<JsonPropertyName("scope")>]
-              Scope: string
+              Scope: InputScope
               [<JsonPropertyName("value")>]
               Value: JsonElement }
 
@@ -8967,11 +9782,19 @@ module ToolsOzoneTeam =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputRole>>)>]
+        type InputRole =
+            | [<JsonName("tools.ozone.team.defs#roleAdmin")>] RoleAdmin
+            | [<JsonName("tools.ozone.team.defs#roleModerator")>] RoleModerator
+            | [<JsonName("tools.ozone.team.defs#roleVerifier")>] RoleVerifier
+            | [<JsonName("tools.ozone.team.defs#roleTriage")>] RoleTriage
+            | Unknown of string
+
         type Input =
             { [<JsonPropertyName("did")>]
               Did: Did
               [<JsonPropertyName("role")>]
-              Role: string }
+              Role: InputRole }
 
         type Output = Defs.Member
 
@@ -8980,6 +9803,14 @@ module ToolsOzoneTeam =
             let MemberAlreadyExists = "MemberAlreadyExists"
 
     module Defs =
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<MemberRole>>)>]
+        type MemberRole =
+            | [<JsonName("tools.ozone.team.defs#roleAdmin")>] RoleAdmin
+            | [<JsonName("tools.ozone.team.defs#roleModerator")>] RoleModerator
+            | [<JsonName("tools.ozone.team.defs#roleTriage")>] RoleTriage
+            | [<JsonName("tools.ozone.team.defs#roleVerifier")>] RoleVerifier
+            | Unknown of string
+
         type Member =
             { [<JsonPropertyName("createdAt")>]
               CreatedAt: AtDateTime option
@@ -8992,7 +9823,7 @@ module ToolsOzoneTeam =
               [<JsonPropertyName("profile")>]
               Profile: AppBskyActor.Defs.ProfileViewDetailed option
               [<JsonPropertyName("role")>]
-              Role: string
+              Role: MemberRole
               [<JsonPropertyName("updatedAt")>]
               UpdatedAt: AtDateTime option }
 
@@ -9058,13 +9889,21 @@ module ToolsOzoneTeam =
         let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
+        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputRole>>)>]
+        type InputRole =
+            | [<JsonName("tools.ozone.team.defs#roleAdmin")>] RoleAdmin
+            | [<JsonName("tools.ozone.team.defs#roleModerator")>] RoleModerator
+            | [<JsonName("tools.ozone.team.defs#roleVerifier")>] RoleVerifier
+            | [<JsonName("tools.ozone.team.defs#roleTriage")>] RoleTriage
+            | Unknown of string
+
         type Input =
             { [<JsonPropertyName("did")>]
               Did: Did
               [<JsonPropertyName("disabled")>]
               Disabled: bool option
               [<JsonPropertyName("role")>]
-              Role: string option }
+              Role: InputRole option }
 
         type Output = Defs.Member
 

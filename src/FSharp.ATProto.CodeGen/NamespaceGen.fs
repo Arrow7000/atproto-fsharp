@@ -331,6 +331,31 @@ let private collectInlineUnionsAndOverrides
 
     (List.rev widgets, overrides)
 
+/// Collect known-value DU info from an object's properties.
+/// Returns (widgets to emit, overrides map: property name -> F# type string).
+let private collectKnownValueOverrides
+    (parentTypeName: string)
+    (properties: Map<string, LexType>)
+    =
+    let mutable widgets = []
+    let mutable overrides = Map.empty
+
+    for (propName, lexType) in Map.toList properties do
+        match lexType with
+        | LexType.String s when s.KnownValues.IsSome && s.KnownValues.Value.Length > 0 ->
+            let duName = parentTypeName + (Naming.toPascalCase propName)
+            let widget = TypeGen.generateKnownValueDU duName s.KnownValues.Value
+            widgets <- widget :: widgets
+            overrides <- Map.add propName duName overrides
+        | LexType.Array { Items = LexType.String s } when s.KnownValues.IsSome && s.KnownValues.Value.Length > 0 ->
+            let duName = parentTypeName + (Naming.toPascalCase propName) + "Item"
+            let widget = TypeGen.generateKnownValueDU duName s.KnownValues.Value
+            widgets <- widget :: widgets
+            overrides <- Map.add propName (sprintf "%s list" duName) overrides
+        | _ -> ()
+
+    (List.rev widgets, overrides)
+
 /// Check if a LexBody has JSON schema (application/json encoding with a non-empty object schema).
 let private hasJsonObjectSchema (body: LexBody) : LexObject option =
     if body.Encoding = "application/json" then
@@ -366,12 +391,18 @@ let private generateRecordModule
     (record: LexRecord)
     (otherDefs: (string * LexDef) list)
     =
-    let (mainDuWidgets, mainOverrides) =
+    let (mainDuWidgets, mainUnionOverrides) =
         collectInlineUnionsAndOverrides currentNamespace moduleName record.Record.Properties
+    let (mainKvWidgets, mainKvOverrides) =
+        collectKnownValueOverrides moduleName record.Record.Properties
+    let mainOverrides = Map.fold (fun acc k v -> Map.add k v acc) mainUnionOverrides mainKvOverrides
 
     Module(moduleName) {
         Value("TypeId", ConstantExpr(Ast.String(nsid)))
             .attribute(Attribute("Literal"))
+
+        for w in mainKvWidgets do
+            w
 
         for w in mainDuWidgets do
             w
@@ -384,7 +415,11 @@ let private generateRecordModule
 
             match def with
             | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
-                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace typeName obj.Properties
+                let (duWidgets, unionOverrides) = collectInlineUnionsAndOverrides currentNamespace typeName obj.Properties
+                let (kvWidgets, kvOverrides) = collectKnownValueOverrides typeName obj.Properties
+                let overrides = Map.fold (fun acc k v -> Map.add k v acc) unionOverrides kvOverrides
+                for w in kvWidgets do
+                    w
                 for w in duWidgets do
                     w
                 generateRecordWidget currentNamespace typeName obj.Description obj overrides
@@ -396,6 +431,8 @@ let private generateRecordModule
             | LexDef.Token t ->
                 Value(typeName, ConstantExpr(Ast.String(sprintf "%s#%s" nsid defName)))
                     .attribute(Attribute("Literal"))
+            | LexDef.DefType (LexType.String s) when s.KnownValues.IsSome && s.KnownValues.Value.Length > 0 ->
+                TypeGen.generateKnownValueDU typeName s.KnownValues.Value
             | LexDef.DefType (LexType.String _) ->
                 Abbrev(typeName, LongIdent("string"))
             | _ -> ()
@@ -415,7 +452,11 @@ let private generateQueryModule
 
         match query.Parameters with
         | Some p when p.Properties.Count > 0 ->
-            let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace "Params" p.Properties
+            let (duWidgets, unionOverrides) = collectInlineUnionsAndOverrides currentNamespace "Params" p.Properties
+            let (kvWidgets, kvOverrides) = collectKnownValueOverrides "Params" p.Properties
+            let overrides = Map.fold (fun acc k v -> Map.add k v acc) unionOverrides kvOverrides
+            for w in kvWidgets do
+                w
             for w in duWidgets do
                 w
             generateParamsWidget currentNamespace "Params" p overrides
@@ -425,7 +466,11 @@ let private generateQueryModule
         | Some body ->
             match hasJsonObjectSchema body with
             | Some obj ->
-                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace "Output" obj.Properties
+                let (duWidgets, unionOverrides) = collectInlineUnionsAndOverrides currentNamespace "Output" obj.Properties
+                let (kvWidgets, kvOverrides) = collectKnownValueOverrides "Output" obj.Properties
+                let overrides = Map.fold (fun acc k v -> Map.add k v acc) unionOverrides kvOverrides
+                for w in kvWidgets do
+                    w
                 for w in duWidgets do
                     w
                 generateRecordWidget currentNamespace "Output" body.Description obj overrides
@@ -451,7 +496,11 @@ let private generateQueryModule
 
             match def with
             | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
-                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace typeName obj.Properties
+                let (duWidgets, unionOverrides) = collectInlineUnionsAndOverrides currentNamespace typeName obj.Properties
+                let (kvWidgets, kvOverrides) = collectKnownValueOverrides typeName obj.Properties
+                let overrides = Map.fold (fun acc k v -> Map.add k v acc) unionOverrides kvOverrides
+                for w in kvWidgets do
+                    w
                 for w in duWidgets do
                     w
                 generateRecordWidget currentNamespace typeName obj.Description obj overrides
@@ -463,6 +512,8 @@ let private generateQueryModule
             | LexDef.Token t ->
                 Value(typeName, ConstantExpr(Ast.String(sprintf "%s#%s" nsid defName)))
                     .attribute(Attribute("Literal"))
+            | LexDef.DefType (LexType.String s) when s.KnownValues.IsSome && s.KnownValues.Value.Length > 0 ->
+                TypeGen.generateKnownValueDU typeName s.KnownValues.Value
             | LexDef.DefType (LexType.String _) ->
                 Abbrev(typeName, LongIdent("string"))
             | _ -> ()
@@ -482,7 +533,11 @@ let private generateProcedureModule
 
         match proc.Parameters with
         | Some p when p.Properties.Count > 0 ->
-            let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace "Params" p.Properties
+            let (duWidgets, unionOverrides) = collectInlineUnionsAndOverrides currentNamespace "Params" p.Properties
+            let (kvWidgets, kvOverrides) = collectKnownValueOverrides "Params" p.Properties
+            let overrides = Map.fold (fun acc k v -> Map.add k v acc) unionOverrides kvOverrides
+            for w in kvWidgets do
+                w
             for w in duWidgets do
                 w
             generateParamsWidget currentNamespace "Params" p overrides
@@ -492,7 +547,11 @@ let private generateProcedureModule
         | Some body ->
             match hasJsonObjectSchema body with
             | Some obj ->
-                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace "Input" obj.Properties
+                let (duWidgets, unionOverrides) = collectInlineUnionsAndOverrides currentNamespace "Input" obj.Properties
+                let (kvWidgets, kvOverrides) = collectKnownValueOverrides "Input" obj.Properties
+                let overrides = Map.fold (fun acc k v -> Map.add k v acc) unionOverrides kvOverrides
+                for w in kvWidgets do
+                    w
                 for w in duWidgets do
                     w
                 generateRecordWidget currentNamespace "Input" body.Description obj overrides
@@ -508,7 +567,11 @@ let private generateProcedureModule
         | Some body ->
             match hasJsonObjectSchema body with
             | Some obj ->
-                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace "Output" obj.Properties
+                let (duWidgets, unionOverrides) = collectInlineUnionsAndOverrides currentNamespace "Output" obj.Properties
+                let (kvWidgets, kvOverrides) = collectKnownValueOverrides "Output" obj.Properties
+                let overrides = Map.fold (fun acc k v -> Map.add k v acc) unionOverrides kvOverrides
+                for w in kvWidgets do
+                    w
                 for w in duWidgets do
                     w
                 generateRecordWidget currentNamespace "Output" body.Description obj overrides
@@ -534,7 +597,11 @@ let private generateProcedureModule
 
             match def with
             | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
-                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace typeName obj.Properties
+                let (duWidgets, unionOverrides) = collectInlineUnionsAndOverrides currentNamespace typeName obj.Properties
+                let (kvWidgets, kvOverrides) = collectKnownValueOverrides typeName obj.Properties
+                let overrides = Map.fold (fun acc k v -> Map.add k v acc) unionOverrides kvOverrides
+                for w in kvWidgets do
+                    w
                 for w in duWidgets do
                     w
                 generateRecordWidget currentNamespace typeName obj.Description obj overrides
@@ -546,6 +613,8 @@ let private generateProcedureModule
             | LexDef.Token t ->
                 Value(typeName, ConstantExpr(Ast.String(sprintf "%s#%s" nsid defName)))
                     .attribute(Attribute("Literal"))
+            | LexDef.DefType (LexType.String s) when s.KnownValues.IsSome && s.KnownValues.Value.Length > 0 ->
+                TypeGen.generateKnownValueDU typeName s.KnownValues.Value
             | LexDef.DefType (LexType.String _) ->
                 Abbrev(typeName, LongIdent("string"))
             | _ -> ()
@@ -565,7 +634,11 @@ let private generateSubscriptionModule
 
         match sub.Parameters with
         | Some p when p.Properties.Count > 0 ->
-            let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace "Params" p.Properties
+            let (duWidgets, unionOverrides) = collectInlineUnionsAndOverrides currentNamespace "Params" p.Properties
+            let (kvWidgets, kvOverrides) = collectKnownValueOverrides "Params" p.Properties
+            let overrides = Map.fold (fun acc k v -> Map.add k v acc) unionOverrides kvOverrides
+            for w in kvWidgets do
+                w
             for w in duWidgets do
                 w
             generateParamsWidget currentNamespace "Params" p overrides
@@ -590,7 +663,11 @@ let private generateSubscriptionModule
 
             match def with
             | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
-                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace typeName obj.Properties
+                let (duWidgets, unionOverrides) = collectInlineUnionsAndOverrides currentNamespace typeName obj.Properties
+                let (kvWidgets, kvOverrides) = collectKnownValueOverrides typeName obj.Properties
+                let overrides = Map.fold (fun acc k v -> Map.add k v acc) unionOverrides kvOverrides
+                for w in kvWidgets do
+                    w
                 for w in duWidgets do
                     w
                 generateRecordWidget currentNamespace typeName obj.Description obj overrides
@@ -602,6 +679,8 @@ let private generateSubscriptionModule
             | LexDef.Token t ->
                 Value(typeName, ConstantExpr(Ast.String(sprintf "%s#%s" nsid defName)))
                     .attribute(Attribute("Literal"))
+            | LexDef.DefType (LexType.String s) when s.KnownValues.IsSome && s.KnownValues.Value.Length > 0 ->
+                TypeGen.generateKnownValueDU typeName s.KnownValues.Value
             | LexDef.DefType (LexType.String _) ->
                 Abbrev(typeName, LongIdent("string"))
             | _ -> ()
@@ -620,7 +699,11 @@ let private generateDefsOnlyModule
 
             match def with
             | LexDef.DefType (LexType.Object obj) when not obj.Properties.IsEmpty ->
-                let (duWidgets, overrides) = collectInlineUnionsAndOverrides currentNamespace typeName obj.Properties
+                let (duWidgets, unionOverrides) = collectInlineUnionsAndOverrides currentNamespace typeName obj.Properties
+                let (kvWidgets, kvOverrides) = collectKnownValueOverrides typeName obj.Properties
+                let overrides = Map.fold (fun acc k v -> Map.add k v acc) unionOverrides kvOverrides
+                for w in kvWidgets do
+                    w
                 for w in duWidgets do
                     w
                 generateRecordWidget currentNamespace typeName obj.Description obj overrides
@@ -632,6 +715,8 @@ let private generateDefsOnlyModule
             | LexDef.Token t ->
                 Value(typeName, ConstantExpr(Ast.String(sprintf "%s#%s" nsid defName)))
                     .attribute(Attribute("Literal"))
+            | LexDef.DefType (LexType.String s) when s.KnownValues.IsSome && s.KnownValues.Value.Length > 0 ->
+                TypeGen.generateKnownValueDU typeName s.KnownValues.Value
             | LexDef.DefType (LexType.String _) ->
                 Abbrev(typeName, LongIdent("string"))
             | LexDef.DefType (LexType.Array arr) ->

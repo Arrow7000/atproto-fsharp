@@ -23,7 +23,25 @@ module QueryParams =
         | :? int64 as i -> string i
         | :? int as i -> string i
         | :? bool as b -> if b then "true" else "false"
-        | _ -> string value
+        | _ ->
+            let t = value.GetType()
+            if FSharpType.IsUnion(t) then
+                let case, fields = FSharpValue.GetUnionFields(value, t)
+                if fields.Length = 0 then
+                    // Fieldless case: look for JsonName attribute
+                    case.GetCustomAttributesData()
+                    |> Seq.tryFind (fun a -> a.AttributeType.Name.Contains("JsonName"))
+                    |> Option.bind (fun a ->
+                        a.ConstructorArguments
+                        |> Seq.tryHead
+                        |> Option.map (fun arg -> arg.Value :?> string))
+                    |> Option.defaultValue case.Name
+                elif fields.Length = 1 && fields.[0] :? string then
+                    fields.[0] :?> string
+                else
+                    string value
+            else
+                string value
 
     let private toCamelCase (name: string) =
         if String.IsNullOrEmpty(name) then name

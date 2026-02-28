@@ -3,6 +3,8 @@ module TypeGenTests
 open Expecto
 open FSharp.ATProto.Lexicon
 open FSharp.ATProto.CodeGen.TypeGen
+open Fabulous.AST
+open type Fabulous.AST.Ast
 
 // Helpers for creating empty constraint records
 let emptyStringConstraints: LexString =
@@ -374,4 +376,63 @@ let generateUnionTests =
             // Should have Images and Images2 (or similar deduplication)
             Expect.stringContains source "Images" "first case"
             Expect.stringContains source "Images2" "deduplicated second case"
+    ]
+
+[<Tests>]
+let generateKnownValueDUTests =
+    testList "generateKnownValueDU" [
+        testCase "generates DU with JsonName attributes" <| fun () ->
+            let widget = generateKnownValueDU "Reason" ["like"; "repost"; "follow"]
+            let source =
+                Oak() { AnonymousModule() { widget } }
+                |> Gen.mkOak
+                |> Gen.run
+            Expect.stringContains source "type Reason =" "should have type name"
+            Expect.stringContains source "Like" "should have Like case"
+            Expect.stringContains source "Repost" "should have Repost case"
+            Expect.stringContains source "Follow" "should have Follow case"
+            Expect.stringContains source "Unknown of string" "should have Unknown fallback"
+            Expect.stringContains source "JsonName" "should have JsonName attribute"
+            Expect.stringContains source "\"like\"" "should have original value"
+
+        testCase "generates JsonConverter attribute" <| fun () ->
+            let widget = generateKnownValueDU "Sort" ["hot"; "new"]
+            let source =
+                Oak() { AnonymousModule() { widget } }
+                |> Gen.mkOak
+                |> Gen.run
+            Expect.stringContains source "JsonConverter" "should have converter attribute"
+            Expect.stringContains source "KnownValueConverter" "should reference KnownValueConverter"
+
+        testCase "handles hash-fragment known values" <| fun () ->
+            let widget = generateKnownValueDU "Sort" ["app.bsky.feed.defs#sortHot"; "app.bsky.feed.defs#sortNew"]
+            let source =
+                Oak() { AnonymousModule() { widget } }
+                |> Gen.mkOak
+                |> Gen.run
+            Expect.stringContains source "SortHot" "should extract name after hash"
+            Expect.stringContains source "SortNew" "should extract name after hash"
+            Expect.stringContains source "\"app.bsky.feed.defs#sortHot\"" "should preserve full value in JsonName"
+
+        testCase "deduplicates case names" <| fun () ->
+            let widget = generateKnownValueDU "Test" ["app.a#hot"; "app.b#hot"]
+            let source =
+                Oak() { AnonymousModule() { widget } }
+                |> Gen.mkOak
+                |> Gen.run
+            Expect.stringContains source "Hot" "should have first case"
+            Expect.stringContains source "Hot2" "should deduplicate second case"
+
+        testCase "PascalCases simple known values" <| fun () ->
+            let widget = generateKnownValueDU "Action" ["type"; "module"]
+            let source =
+                Oak() { AnonymousModule() { widget } }
+                |> Gen.mkOak
+                |> Gen.run
+            // knownValueToName PascalCases: "type" -> "Type", "module" -> "Module"
+            // PascalCased forms are not reserved words, so no escaping needed
+            Expect.stringContains source "Type" "should have PascalCased case"
+            Expect.stringContains source "Module" "should have PascalCased case"
+            Expect.stringContains source "\"type\"" "should preserve original value in JsonName"
+            Expect.stringContains source "\"module\"" "should preserve original value in JsonName"
     ]

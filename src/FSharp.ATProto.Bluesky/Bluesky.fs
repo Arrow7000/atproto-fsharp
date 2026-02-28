@@ -137,6 +137,12 @@ type ActorWitness =
     static member ToActorString(ActorWitness, s: string) = s
 
 /// <summary>
+/// Type alias for the thread union returned by <c>getPostThread</c>.
+/// Simplifies pattern matching when working with thread responses.
+/// </summary>
+type ThreadResult = AppBskyFeed.GetPostThread.OutputThreadUnion
+
+/// <summary>
 /// High-level convenience methods for common Bluesky operations:
 /// posting, replying, liking, reposting, following, blocking, uploading blobs, and deleting records.
 /// All methods require an authenticated <see cref="AtpAgent"/>.
@@ -277,6 +283,30 @@ module Bluesky =
         task {
             let! facets = RichText.parse agent text
             return! postWithFacets agent text facets
+        }
+
+    /// <summary>
+    /// Create a quote post. The quoted post appears as an embedded record below your text.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="text">The post text. Mentions, links, and hashtags are auto-detected.</param>
+    /// <param name="quotedPost">A <see cref="PostRef"/> identifying the post to quote.</param>
+    /// <returns>A <see cref="PostRef"/> with the AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
+    let quotePost (agent: AtpAgent) (text: string) (quotedPost: PostRef)
+        : Task<Result<PostRef, XrpcError>> =
+        task {
+            let! facets = RichText.parse agent text
+            let embed =
+                {| ``$type`` = "app.bsky.embed.record"
+                   record = {| uri = AtUri.value quotedPost.Uri; cid = Cid.value quotedPost.Cid |} |}
+            let record =
+                {| ``$type`` = AppBskyFeed.Post.TypeId
+                   text = text
+                   createdAt = nowTimestamp ()
+                   facets = if facets.IsEmpty then null else facets |> box
+                   embed = embed |}
+            let! result = createRecord agent "app.bsky.feed.post" record
+            return result |> Result.map toPostRef
         }
 
     /// <summary>
@@ -445,16 +475,16 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Follow a user by DID string or handle. If the identifier starts with <c>did:</c>,
-    /// it is parsed as a DID directly. Otherwise, the handle is resolved to a DID first.
+    /// Follow a user by handle string. The handle is resolved to a DID, then the follow is created.
+    /// Also accepts a DID string directly (if it starts with <c>did:</c>, it is parsed as a DID).
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="identifier">A DID string (e.g., <c>did:plc:abc123</c>) or handle (e.g., <c>my-handle.bsky.social</c>).</param>
+    /// <param name="identifier">A handle (e.g., <c>my-handle.bsky.social</c>) or DID string (e.g., <c>did:plc:abc123</c>).</param>
     /// <returns>A <see cref="FollowRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>FollowRef</c> to <see cref="unfollow"/> to undo.</returns>
     /// <remarks>
     /// For type-safe usage when you already have a <see cref="Did"/>, use <see cref="follow"/> instead.
     /// </remarks>
-    let followUser (agent: AtpAgent) (identifier: string)
+    let followByHandle (agent: AtpAgent) (identifier: string)
         : Task<Result<FollowRef, XrpcError>> =
         task {
             match! resolveIdentifier agent identifier with
@@ -463,16 +493,16 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Block a user by DID string or handle. If the identifier starts with <c>did:</c>,
-    /// it is parsed as a DID directly. Otherwise, the handle is resolved to a DID first.
+    /// Block a user by handle string. The handle is resolved to a DID, then the block is created.
+    /// Also accepts a DID string directly (if it starts with <c>did:</c>, it is parsed as a DID).
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="identifier">A DID string (e.g., <c>did:plc:abc123</c>) or handle (e.g., <c>my-handle.bsky.social</c>).</param>
+    /// <param name="identifier">A handle (e.g., <c>my-handle.bsky.social</c>) or DID string (e.g., <c>did:plc:abc123</c>).</param>
     /// <returns>A <see cref="BlockRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>BlockRef</c> to <see cref="unblock"/> to undo.</returns>
     /// <remarks>
     /// For type-safe usage when you already have a <see cref="Did"/>, use <see cref="block"/> instead.
     /// </remarks>
-    let blockUser (agent: AtpAgent) (identifier: string)
+    let blockByHandle (agent: AtpAgent) (identifier: string)
         : Task<Result<BlockRef, XrpcError>> =
         task {
             match! resolveIdentifier agent identifier with
@@ -563,7 +593,12 @@ module Bluesky =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="likeRef">The <see cref="LikeRef"/> returned by <see cref="like"/>.</param>
-    /// <returns><c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>
+    /// <c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.
+    /// Note: the AT Protocol's deleteRecord is idempotent, so this always returns <c>Undone</c>
+    /// even if the record was already deleted. Only target-based functions
+    /// (<see cref="unlikePost"/>/<see cref="unrepostPost"/>) can return <c>WasNotPresent</c>.
+    /// </returns>
     let undoLike (agent: AtpAgent) (likeRef: LikeRef) : Task<Result<UndoResult, XrpcError>> =
         task {
             let! result = deleteRecord agent likeRef.Uri
@@ -575,7 +610,12 @@ module Bluesky =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="repostRef">The <see cref="RepostRef"/> returned by <see cref="repost"/>.</param>
-    /// <returns><c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>
+    /// <c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.
+    /// Note: the AT Protocol's deleteRecord is idempotent, so this always returns <c>Undone</c>
+    /// even if the record was already deleted. Only target-based functions
+    /// (<see cref="unlikePost"/>/<see cref="unrepostPost"/>) can return <c>WasNotPresent</c>.
+    /// </returns>
     let undoRepost (agent: AtpAgent) (repostRef: RepostRef) : Task<Result<UndoResult, XrpcError>> =
         task {
             let! result = deleteRecord agent repostRef.Uri
@@ -587,7 +627,12 @@ module Bluesky =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="followRef">The <see cref="FollowRef"/> returned by <see cref="follow"/>.</param>
-    /// <returns><c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>
+    /// <c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.
+    /// Note: the AT Protocol's deleteRecord is idempotent, so this always returns <c>Undone</c>
+    /// even if the record was already deleted. Only target-based functions
+    /// (<see cref="unlikePost"/>/<see cref="unrepostPost"/>) can return <c>WasNotPresent</c>.
+    /// </returns>
     let undoFollow (agent: AtpAgent) (followRef: FollowRef) : Task<Result<UndoResult, XrpcError>> =
         task {
             let! result = deleteRecord agent followRef.Uri
@@ -599,7 +644,12 @@ module Bluesky =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="blockRef">The <see cref="BlockRef"/> returned by <see cref="block"/>.</param>
-    /// <returns><c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>
+    /// <c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.
+    /// Note: the AT Protocol's deleteRecord is idempotent, so this always returns <c>Undone</c>
+    /// even if the record was already deleted. Only target-based functions
+    /// (<see cref="unlikePost"/>/<see cref="unrepostPost"/>) can return <c>WasNotPresent</c>.
+    /// </returns>
     let undoBlock (agent: AtpAgent) (blockRef: BlockRef) : Task<Result<UndoResult, XrpcError>> =
         task {
             let! result = deleteRecord agent blockRef.Uri
@@ -613,7 +663,12 @@ module Bluesky =
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="ref">Any ref type with an AT-URI (LikeRef, RepostRef, FollowRef, or BlockRef).</param>
-    /// <returns><c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>
+    /// <c>Ok Undone</c> on success, or an <see cref="XrpcError"/>.
+    /// Note: the AT Protocol's deleteRecord is idempotent, so this always returns <c>Undone</c>
+    /// even if the record was already deleted. Only target-based functions
+    /// (<see cref="unlikePost"/>/<see cref="unrepostPost"/>) can return <c>WasNotPresent</c>.
+    /// </returns>
     /// <example>
     /// <code>
     /// let! likeRef = Bluesky.like agent postRef
@@ -831,6 +886,25 @@ module Bluesky =
               Uri = uri }
 
     /// <summary>
+    /// Get a post thread, returning just the thread view post if available.
+    /// Returns <c>Some threadViewPost</c> for normal threads, <c>None</c> for not-found or blocked posts.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="uri">The AT-URI of the post.</param>
+    /// <param name="depth">How many levels of replies to include (optional).</param>
+    /// <param name="parentHeight">How many levels of parent context to include (optional).</param>
+    /// <returns><c>Some ThreadViewPost</c> if the post is accessible, <c>None</c> if not found or blocked, or an <see cref="XrpcError"/>.</returns>
+    let getPostThreadView (agent: AtpAgent) (uri: AtUri) (depth: int64 option) (parentHeight: int64 option)
+        : Task<Result<AppBskyFeed.Defs.ThreadViewPost option, XrpcError>> =
+        task {
+            let! result = getPostThread agent uri depth parentHeight
+            return result |> Result.map (fun output ->
+                match output.Thread with
+                | AppBskyFeed.GetPostThread.OutputThreadUnion.ThreadViewPost tvp -> Some tvp
+                | _ -> None)
+        }
+
+    /// <summary>
     /// List notifications for the authenticated user.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
@@ -845,6 +919,36 @@ module Bluesky =
               Priority = None
               Reasons = None
               SeenAt = None }
+
+    /// <summary>
+    /// Get the followers of an actor.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">The actor identifier (handle or DID string).</param>
+    /// <param name="limit">Maximum number of followers to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A list of followers with an optional cursor for pagination, or an <see cref="XrpcError"/>.</returns>
+    let getFollowers (agent: AtpAgent) (actor: string) (limit: int64 option) (cursor: string option)
+        : Task<Result<AppBskyGraph.GetFollowers.Output, XrpcError>> =
+        AppBskyGraph.GetFollowers.query agent
+            { Actor = actor
+              Cursor = cursor
+              Limit = limit }
+
+    /// <summary>
+    /// Get the accounts that an actor follows.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">The actor identifier (handle or DID string).</param>
+    /// <param name="limit">Maximum number of follows to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A list of followed accounts with an optional cursor for pagination, or an <see cref="XrpcError"/>.</returns>
+    let getFollows (agent: AtpAgent) (actor: string) (limit: int64 option) (cursor: string option)
+        : Task<Result<AppBskyGraph.GetFollows.Output, XrpcError>> =
+        AppBskyGraph.GetFollows.query agent
+            { Actor = actor
+              Cursor = cursor
+              Limit = limit }
 
     // ── Pre-built paginators ───────────────────────────────────────────
 

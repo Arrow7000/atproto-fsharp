@@ -4,6 +4,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="TaskResult.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="QueryParams.fs" />
