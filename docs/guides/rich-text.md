@@ -2,14 +2,16 @@
 title: Rich Text
 category: Guides
 categoryindex: 1
-index: 7
+index: 12
 description: Understand and control rich text facet detection in FSharp.ATProto
 keywords: rich text, facets, mentions, links, hashtags, utf-8
 ---
 
 # Rich Text
 
-Posts and messages on Bluesky support rich text through **facets** -- annotations on byte ranges within the text that mark up @mentions, links, and #hashtags. The AT Protocol specifies facet positions in UTF-8 byte offsets, not character indices.
+> All examples use `taskResult {}`. See the [Error Handling guide](error-handling.html) for details.
+
+Posts and messages on Bluesky support rich text through **[facets](../concepts.html)** -- annotations on byte ranges within the text that mark up @mentions, links, and #hashtags. The AT Protocol specifies facet positions in UTF-8 byte offsets, not character indices.
 
 FSharp.ATProto handles all of this for you by default, but also gives you full control when you need it.
 
@@ -21,13 +23,16 @@ The simplest way to post with rich text is `Bluesky.post`, which auto-detects me
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 
-let! result =
-    Bluesky.post agent
-        "Hello @other-user.bsky.social! Check https://atproto.com #atproto"
+taskResult {
+    let! result =
+        Bluesky.post agent
+            "Hello @other-user.bsky.social! Check https://atproto.com #atproto"
+    return result
+}
 ```
 
 This detects three facets:
-1. `@other-user.bsky.social` -- resolved to its DID via the API
+1. `@other-user.bsky.social` -- resolved to its [DID](../concepts.html) via the API
 2. `https://atproto.com` -- marked as a link
 3. `#atproto` -- marked as a hashtag
 
@@ -71,9 +76,11 @@ type DetectedFacet =
 `RichText.resolve` takes detected facets and resolves mentions to DIDs via the API. Mentions that can't be resolved are silently dropped:
 
 ```fsharp
-let! facets = RichText.resolve agent detected
-
-// facets : AppBskyRichtext.Facet.Facet list
+task {
+    let! facets = RichText.resolve agent detected
+    // facets : AppBskyRichtext.Facet.Facet list
+    return facets
+}
 ```
 
 ### Combined: `RichText.parse`
@@ -81,7 +88,10 @@ let! facets = RichText.resolve agent detected
 `RichText.parse` combines both steps -- detect and resolve in one call:
 
 ```fsharp
-let! facets = RichText.parse agent "Hello @my-handle.bsky.social! #atproto"
+task {
+    let! facets = RichText.parse agent "Hello @my-handle.bsky.social! #atproto"
+    return facets
+}
 ```
 
 ## Posting with Pre-Computed Facets
@@ -89,13 +99,20 @@ let! facets = RichText.parse agent "Hello @my-handle.bsky.social! #atproto"
 If you've already computed facets (for example, from `RichText.parse` or constructed manually), use `Bluesky.postWithFacets` to skip auto-detection:
 
 ```fsharp
-let! facets = RichText.parse agent text
+task {
+    let! facets = RichText.parse agent text
 
-// Maybe filter or modify facets here...
-let filteredFacets = facets |> List.filter (fun _ -> true)
+    // Maybe filter or modify facets here...
+    let filteredFacets = facets |> List.filter (fun _ -> true)
 
-let! result = Bluesky.postWithFacets agent text filteredFacets
+    let! result = Bluesky.postWithFacets agent text filteredFacets
+    match result with
+    | Ok postRef -> printfn "Posted: %s" (AtUri.value postRef.Uri)
+    | Error err -> printfn "Failed: %A" err
+}
 ```
+
+Note: `RichText.parse` and `RichText.resolve` return bare `Task<Facet list>` (not `Task<Result<_, _>>`), because unresolvable mentions are silently dropped rather than producing an error. When mixing these with result-returning functions like `Bluesky.postWithFacets`, use `task {}` and match the result manually.
 
 This is useful when you want to:
 - Cache resolved mention DIDs across multiple posts
@@ -104,14 +121,14 @@ This is useful when you want to:
 
 ## Measuring Text Length
 
-Bluesky enforces a 300-grapheme limit on posts (not 300 characters or 300 bytes). Use `RichText.graphemeLength` to check:
+Bluesky enforces a 300-grapheme limit on posts (not 300 characters or 300 bytes). Check grapheme length before posting to avoid the server rejecting your post:
 
 ```fsharp
 let len = RichText.graphemeLength "Hello world!"  // 12
 let emojiLen = RichText.graphemeLength "\U0001F468\u200D\U0001F469\u200D\U0001F467\u200D\U0001F466"  // 1 (family emoji)
 ```
 
-For byte length (used in facet offsets):
+Byte length is used internally for facet offsets -- you rarely need it directly:
 
 ```fsharp
 let bytes = RichText.byteLength "Hello!"  // 6
@@ -123,25 +140,32 @@ let emojiBytes = RichText.byteLength "\U0001F600"  // 4
 `Chat.sendMessage` auto-detects mentions, links, and hashtags -- just like `Bluesky.post`:
 
 ```fsharp
-let! result =
-    Chat.sendMessage agent convoId "Check out https://example.com! cc @friend.bsky.social"
+taskResult {
+    let! result =
+        Chat.sendMessage agent convoId "Check out https://example.com! cc @friend.bsky.social"
+    return result
+}
 ```
 
 If you need to supply custom or pre-computed facets, drop down to the raw API:
 
 ```fsharp
-let text = "Check out https://example.com!"
-let! facets = RichText.parse agent text
+task {
+    let text = "Check out https://example.com!"
+    let! facets = RichText.parse agent text
 
-// Maybe filter or modify facets here...
+    let! result =
+        ChatBskyConvo.SendMessage.call (AtpAgent.withChatProxy agent)
+            { ConvoId = convoId
+              Message =
+                { Text = text
+                  Facets = if facets.IsEmpty then None else Some facets
+                  Embed = None } }
 
-let! result =
-    ChatBskyConvo.SendMessage.call (AtpAgent.withChatProxy agent)
-        { ConvoId = convoId
-          Message =
-            { Text = text
-              Facets = if facets.IsEmpty then None else Some facets
-              Embed = None } }
+    match result with
+    | Ok msg -> printfn "Sent with custom facets"
+    | Error err -> printfn "Failed: %A" err
+}
 ```
 
 See the [Chat / DMs](chat.html) guide for more on sending messages.

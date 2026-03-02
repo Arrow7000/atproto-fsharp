@@ -471,6 +471,18 @@ type ReportSubject =
     | Record of PostRef
 
 /// <summary>
+/// Witness type enabling SRTP-based overloading for post reference parameters.
+/// Allows functions like <c>like</c>, <c>repost</c>, and <c>replyTo</c> to accept
+/// either a <see cref="PostRef"/> or a <see cref="TimelinePost"/> directly.
+/// This type is an implementation detail and should not be used directly.
+/// </summary>
+[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type PostRefWitness =
+    | PostRefWitness
+    static member ToPostRef (PostRefWitness, pr : PostRef) = pr
+    static member ToPostRef (PostRefWitness, tp : TimelinePost) = { PostRef.Uri = tp.Uri; Cid = tp.Cid }
+
+/// <summary>
 /// High-level convenience methods for common Bluesky operations:
 /// posting, replying, liking, reposting, following, blocking, uploading blobs, and deleting records.
 /// All methods require an authenticated <see cref="AtpAgent"/>.
@@ -479,6 +491,9 @@ module Bluesky =
 
     let inline internal toActorString (x : ^a) : string =
         ((^a or ActorWitness) : (static member ToActorString : ActorWitness * ^a -> string) (ActorWitness, x))
+
+    let inline internal asPostRef (x : ^a) : PostRef =
+        ((^a or PostRefWitness) : (static member ToPostRef : PostRefWitness * ^a -> PostRef) (PostRefWitness, x))
 
     let private nowTimestamp () = DateTimeOffset.UtcNow.ToString ("o")
 
@@ -708,14 +723,8 @@ module Bluesky =
             return! postWithFacets agent text facets
         }
 
-    /// <summary>
-    /// Create a quote post. The quoted post appears as an embedded record below your text.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="text">The post text. Mentions, links, and hashtags are auto-detected.</param>
-    /// <param name="quotedPost">A <see cref="PostRef"/> identifying the post to quote.</param>
-    /// <returns>A <see cref="PostRef"/> with the AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
-    let quotePost (agent : AtpAgent) (text : string) (quotedPost : PostRef) : Task<Result<PostRef, XrpcError>> =
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let quotePostImpl (agent : AtpAgent) (text : string) (quotedPost : PostRef) : Task<Result<PostRef, XrpcError>> =
         task {
             let! facets = RichText.parse agent text
 
@@ -735,6 +744,16 @@ module Bluesky =
             let! result = createRecord agent "app.bsky.feed.post" record
             return result |> Result.map toPostRef
         }
+
+    /// <summary>
+    /// Create a quote post. The quoted post appears as an embedded record below your text.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="text">The post text. Mentions, links, and hashtags are auto-detected.</param>
+    /// <param name="quoted">A <see cref="PostRef"/> or <see cref="TimelinePost"/> identifying the post to quote.</param>
+    /// <returns>A <see cref="PostRef"/> with the AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
+    let inline quotePost (agent : AtpAgent) (text : string) (quoted : ^a) : Task<Result<PostRef, XrpcError>> =
+        quotePostImpl agent text (asPostRef quoted)
 
     /// <summary>
     /// Create a reply with explicit parent and root references.
@@ -778,20 +797,8 @@ module Bluesky =
             return result |> Result.map toPostRef
         }
 
-    /// <summary>
-    /// Reply to a post. Fetches the parent to auto-resolve the thread root.
-    /// This is the recommended way to reply: you only need the parent post's <see cref="PostRef"/>.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="text">The reply text. Mentions, links, and hashtags are auto-detected.</param>
-    /// <param name="parentRef">A <see cref="PostRef"/> for the post being replied to.</param>
-    /// <returns>A <see cref="PostRef"/> with the AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
-    /// <remarks>
-    /// Fetches the parent post via <c>app.bsky.feed.getPosts</c> to determine the thread root.
-    /// If the parent has a <c>reply</c> field, its root is used. Otherwise, the parent itself is the root.
-    /// For full control over both parent and root, use <see cref="replyWithKnownRoot"/> instead.
-    /// </remarks>
-    let replyTo (agent : AtpAgent) (text : string) (parentRef : PostRef) : Task<Result<PostRef, XrpcError>> =
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let replyToImpl (agent : AtpAgent) (text : string) (parentRef : PostRef) : Task<Result<PostRef, XrpcError>> =
         task {
             let! postsResult = AppBskyFeed.GetPosts.query agent { Uris = [ parentRef.Uri ] }
 
@@ -823,12 +830,23 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Like a post or other record.
+    /// Reply to a post. Fetches the parent to auto-resolve the thread root.
+    /// This is the recommended way to reply: you only need the parent post's <see cref="PostRef"/>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="postRef">A <see cref="PostRef"/> identifying the record to like.</param>
-    /// <returns>A <see cref="LikeRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>LikeRef</c> to <see cref="unlike"/> to undo.</returns>
-    let like (agent : AtpAgent) (postRef : PostRef) : Task<Result<LikeRef, XrpcError>> =
+    /// <param name="text">The reply text. Mentions, links, and hashtags are auto-detected.</param>
+    /// <param name="parent">A <see cref="PostRef"/> or <see cref="TimelinePost"/> for the post being replied to.</param>
+    /// <returns>A <see cref="PostRef"/> with the AT-URI and CID on success, or an <see cref="XrpcError"/>.</returns>
+    /// <remarks>
+    /// Fetches the parent post via <c>app.bsky.feed.getPosts</c> to determine the thread root.
+    /// If the parent has a <c>reply</c> field, its root is used. Otherwise, the parent itself is the root.
+    /// For full control over both parent and root, use <see cref="replyWithKnownRoot"/> instead.
+    /// </remarks>
+    let inline replyTo (agent : AtpAgent) (text : string) (parent : ^a) : Task<Result<PostRef, XrpcError>> =
+        replyToImpl agent text (asPostRef parent)
+
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let likeImpl (agent : AtpAgent) (postRef : PostRef) : Task<Result<LikeRef, XrpcError>> =
         task {
             let record =
                 {| ``$type`` = AppBskyFeed.Like.TypeId
@@ -842,12 +860,16 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Repost (retweet) a post or other record.
+    /// Like a post or other record.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="postRef">A <see cref="PostRef"/> identifying the record to repost.</param>
-    /// <returns>A <see cref="RepostRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>RepostRef</c> to <see cref="unrepost"/> to undo.</returns>
-    let repost (agent : AtpAgent) (postRef : PostRef) : Task<Result<RepostRef, XrpcError>> =
+    /// <param name="target">A <see cref="PostRef"/> or <see cref="TimelinePost"/> identifying the record to like.</param>
+    /// <returns>A <see cref="LikeRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>LikeRef</c> to <see cref="unlike"/> to undo.</returns>
+    let inline like (agent : AtpAgent) (target : ^a) : Task<Result<LikeRef, XrpcError>> =
+        likeImpl agent (asPostRef target)
+
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let repostImpl (agent : AtpAgent) (postRef : PostRef) : Task<Result<RepostRef, XrpcError>> =
         task {
             let record =
                 {| ``$type`` = AppBskyFeed.Repost.TypeId
@@ -859,6 +881,15 @@ module Bluesky =
             let! result = createRecord agent "app.bsky.feed.repost" record
             return result |> Result.map (fun o -> { RepostRef.Uri = o.Uri })
         }
+
+    /// <summary>
+    /// Repost (retweet) a post or other record.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="target">A <see cref="PostRef"/> or <see cref="TimelinePost"/> identifying the record to repost.</param>
+    /// <returns>A <see cref="RepostRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>RepostRef</c> to <see cref="unrepost"/> to undo.</returns>
+    let inline repost (agent : AtpAgent) (target : ^a) : Task<Result<RepostRef, XrpcError>> =
+        repostImpl agent (asPostRef target)
 
     /// <summary>
     /// Follow a user by their DID.
@@ -1143,19 +1174,8 @@ module Bluesky =
 
     // ── Target-based undo ──────────────────────────────────────────────
 
-    /// <summary>
-    /// Unlike a post by its <see cref="PostRef"/>, without needing the original <see cref="LikeRef"/>.
-    /// Fetches the post to find the current user's like URI from the viewer state,
-    /// then deletes it.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="postRef">The post to unlike.</param>
-    /// <returns>
-    /// <c>Ok Undone</c> if the like was found and deleted,
-    /// <c>Ok WasNotPresent</c> if the post was not liked by the current user,
-    /// or an <see cref="XrpcError"/> on failure.
-    /// </returns>
-    let unlikePost (agent : AtpAgent) (postRef : PostRef) : Task<Result<UndoResult, XrpcError>> =
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let unlikePostImpl (agent : AtpAgent) (postRef : PostRef) : Task<Result<UndoResult, XrpcError>> =
         task {
             let! postsResult = AppBskyFeed.GetPosts.query agent { Uris = [ postRef.Uri ] }
 
@@ -1173,18 +1193,22 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Un-repost a post by its <see cref="PostRef"/>, without needing the original <see cref="RepostRef"/>.
-    /// Fetches the post to find the current user's repost URI from the viewer state,
+    /// Unlike a post by its <see cref="PostRef"/>, without needing the original <see cref="LikeRef"/>.
+    /// Fetches the post to find the current user's like URI from the viewer state,
     /// then deletes it.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="postRef">The post to un-repost.</param>
+    /// <param name="target">The post to unlike (a <see cref="PostRef"/> or <see cref="TimelinePost"/>).</param>
     /// <returns>
-    /// <c>Ok Undone</c> if the repost was found and deleted,
-    /// <c>Ok WasNotPresent</c> if the post was not reposted by the current user,
+    /// <c>Ok Undone</c> if the like was found and deleted,
+    /// <c>Ok WasNotPresent</c> if the post was not liked by the current user,
     /// or an <see cref="XrpcError"/> on failure.
     /// </returns>
-    let unrepostPost (agent : AtpAgent) (postRef : PostRef) : Task<Result<UndoResult, XrpcError>> =
+    let inline unlikePost (agent : AtpAgent) (target : ^a) : Task<Result<UndoResult, XrpcError>> =
+        unlikePostImpl agent (asPostRef target)
+
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let unrepostPostImpl (agent : AtpAgent) (postRef : PostRef) : Task<Result<UndoResult, XrpcError>> =
         task {
             let! postsResult = AppBskyFeed.GetPosts.query agent { Uris = [ postRef.Uri ] }
 
@@ -1200,6 +1224,21 @@ module Bluesky =
                         return result |> Result.map (fun () -> Undone)
                     | None -> return Ok WasNotPresent
         }
+
+    /// <summary>
+    /// Un-repost a post by its <see cref="PostRef"/>, without needing the original <see cref="RepostRef"/>.
+    /// Fetches the post to find the current user's repost URI from the viewer state,
+    /// then deletes it.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="target">The post to un-repost (a <see cref="PostRef"/> or <see cref="TimelinePost"/>).</param>
+    /// <returns>
+    /// <c>Ok Undone</c> if the repost was found and deleted,
+    /// <c>Ok WasNotPresent</c> if the post was not reposted by the current user,
+    /// or an <see cref="XrpcError"/> on failure.
+    /// </returns>
+    let inline unrepostPost (agent : AtpAgent) (target : ^a) : Task<Result<UndoResult, XrpcError>> =
+        unrepostPostImpl agent (asPostRef target)
 
     /// <summary>
     /// Upload a blob (image, video, or other binary data) to the PDS.
@@ -1330,22 +1369,56 @@ module Bluesky =
     // ── Mute / report / bookmark / handle ───────────────────────────────
 
     /// <summary>
-    /// Mute an account. Muted accounts are hidden from your feeds but not blocked.
+    /// Mute an account by DID. Muted accounts are hidden from your feeds but not blocked.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="actor">The actor identifier (handle or DID string) to mute.</param>
+    /// <param name="did">The <see cref="Did"/> of the account to mute.</param>
     /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
-    let muteUser (agent : AtpAgent) (actor : string) : Task<Result<unit, XrpcError>> =
-        AppBskyGraph.MuteActor.call agent { Actor = actor }
+    let muteUser (agent : AtpAgent) (did : Did) : Task<Result<unit, XrpcError>> =
+        AppBskyGraph.MuteActor.call agent { Actor = Did.value did }
 
     /// <summary>
-    /// Unmute a previously muted account.
+    /// Unmute a previously muted account by DID.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="actor">The actor identifier (handle or DID string) to unmute.</param>
+    /// <param name="did">The <see cref="Did"/> of the account to unmute.</param>
     /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
-    let unmuteUser (agent : AtpAgent) (actor : string) : Task<Result<unit, XrpcError>> =
-        AppBskyGraph.UnmuteActor.call agent { Actor = actor }
+    let unmuteUser (agent : AtpAgent) (did : Did) : Task<Result<unit, XrpcError>> =
+        AppBskyGraph.UnmuteActor.call agent { Actor = Did.value did }
+
+    /// <summary>
+    /// Mute an account by handle string. The handle is resolved to a DID, then the mute is created.
+    /// Also accepts a DID string directly (if it starts with <c>did:</c>, it is parsed as a DID).
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="identifier">A handle (e.g., <c>my-handle.bsky.social</c>) or DID string (e.g., <c>did:plc:abc123</c>).</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    /// <remarks>
+    /// For type-safe usage when you already have a <see cref="Did"/>, use <see cref="muteUser"/> instead.
+    /// </remarks>
+    let muteUserByHandle (agent : AtpAgent) (identifier : string) : Task<Result<unit, XrpcError>> =
+        task {
+            match! resolveIdentifier agent identifier with
+            | Error e -> return Error e
+            | Ok did -> return! muteUser agent did
+        }
+
+    /// <summary>
+    /// Unmute an account by handle string. The handle is resolved to a DID, then the unmute is performed.
+    /// Also accepts a DID string directly (if it starts with <c>did:</c>, it is parsed as a DID).
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="identifier">A handle (e.g., <c>my-handle.bsky.social</c>) or DID string (e.g., <c>did:plc:abc123</c>).</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    /// <remarks>
+    /// For type-safe usage when you already have a <see cref="Did"/>, use <see cref="unmuteUser"/> instead.
+    /// </remarks>
+    let unmuteUserByHandle (agent : AtpAgent) (identifier : string) : Task<Result<unit, XrpcError>> =
+        task {
+            match! resolveIdentifier agent identifier with
+            | Error e -> return Error e
+            | Ok did -> return! unmuteUser agent did
+        }
 
     /// <summary>
     /// Mute an entire moderation list. All accounts on the list are muted.
@@ -1418,14 +1491,18 @@ module Bluesky =
             return result |> Result.map (fun output -> output.Id)
         }
 
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let addBookmarkImpl (agent : AtpAgent) (postRef : PostRef) : Task<Result<unit, XrpcError>> =
+        AppBskyBookmark.CreateBookmark.call agent { Uri = postRef.Uri; Cid = postRef.Cid }
+
     /// <summary>
     /// Add a post to your bookmarks.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="postRef">A <see cref="PostRef"/> identifying the post to bookmark.</param>
+    /// <param name="target">A <see cref="PostRef"/> or <see cref="TimelinePost"/> identifying the post to bookmark.</param>
     /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
-    let addBookmark (agent : AtpAgent) (postRef : PostRef) : Task<Result<unit, XrpcError>> =
-        AppBskyBookmark.CreateBookmark.call agent { Uri = postRef.Uri; Cid = postRef.Cid }
+    let inline addBookmark (agent : AtpAgent) (target : ^a) : Task<Result<unit, XrpcError>> =
+        addBookmarkImpl agent (asPostRef target)
 
     /// <summary>
     /// Remove a post from your bookmarks.

@@ -2,81 +2,41 @@
 title: Identity Resolution
 category: Guides
 categoryindex: 1
-index: 9
+index: 13
 description: Resolve AT Protocol handles and DIDs with bidirectional verification
 keywords: identity, did, handle, resolution, verification
 ---
 
 # Identity Resolution
 
+All examples use `taskResult {}`. See the [Error Handling guide](error-handling.html) for details.
+
 The AT Protocol uses two kinds of identifiers for accounts:
 
-- **Handles** -- human-readable names like `my-handle.bsky.social`
-- **DIDs** -- stable, cryptographic identifiers like `did:plc:z72i7hdynmk6r22z27h6tvur`
+- **[Handles](../concepts.html)** -- human-readable names like `my-handle.bsky.social`
+- **[DIDs](../concepts.html)** -- stable, cryptographic identifiers like `did:plc:z72i7hdynmk6r22z27h6tvur`
 
 Handles can change; DIDs cannot. The `Identity` module provides functions to resolve between them, with optional bidirectional verification to ensure they agree.
 
-## Resolving a Handle to a DID
+## Resolving an Identity (Recommended)
 
-Given a typed `Handle`, `resolveHandle` calls `com.atproto.identity.resolveHandle` on the PDS and returns the corresponding `Did`. The agent must be authenticated.
+`resolveIdentity` is the recommended entry point. It accepts a plain `string` -- either a handle or a DID -- performs forward and reverse resolution, and checks that both sides agree.
 
 ```fsharp
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 open FSharp.ATProto.Syntax
 
-let handle = Handle.parse "my-handle.bsky.social" |> Result.defaultWith failwith
-let! result = Identity.resolveHandle agent handle
-
-match result with
-| Ok did -> printfn "DID: %s" (Did.value did)
-| Error e -> printfn "Resolution failed: %A" e
-```
-
-`resolveHandle` takes a typed `Handle` (not a raw string) and returns `Task<Result<Did, IdentityError>>`. If you have a raw string, parse it first with `Handle.parse`.
-
-## Resolving a DID to Identity Info
-
-`resolveDid` fetches the DID document for a given `Did` and extracts everything useful from it into an `AtprotoIdentity` record.
-
-```fsharp
-let did = Did.parse "did:plc:z72i7hdynmk6r22z27h6tvur" |> Result.defaultWith failwith
-let! result = Identity.resolveDid agent did
-
-match result with
-| Ok identity ->
-    printfn "DID: %s" (Did.value identity.Did)
-    printfn "Handle: %s" (identity.Handle |> Option.map Handle.value |> Option.defaultValue "(none)")
-    printfn "PDS: %s" (identity.PdsEndpoint |> Option.map string |> Option.defaultValue "(none)")
-    printfn "Signing key: %s" (identity.SigningKey |> Option.defaultValue "(none)")
-| Error e ->
-    printfn "Failed: %A" e
-```
-
-The function extracts:
-
-- The **handle** from the `alsoKnownAs` field (the `at://` entry)
-- The **PDS endpoint** from the `service` entries (type `AtprotoPersonalDataServer`)
-- The **signing key** from the `verificationMethod` entries (the `#atproto` key)
-
-Both `did:plc:` (resolved via the PLC directory at `plc.directory`) and `did:web:` (resolved via `.well-known/did.json`) methods are supported.
-
-## Bidirectional Verification
-
-`resolveIdentity` is the recommended way to resolve an identifier when you need confidence that a handle and DID actually belong together. It performs forward and reverse resolution, checking that both sides agree.
-
-```fsharp
-// Works with both handles and DIDs as a plain string
-let! result = Identity.resolveIdentity agent "my-handle.bsky.social"
-
-match result with
-| Ok identity ->
+taskResult {
+    let! identity = Identity.resolveIdentity agent "my-handle.bsky.social"
     printfn "Verified DID: %s" (Did.value identity.Did)
+
     match identity.Handle with
     | Some h -> printfn "Verified handle: %s" (Handle.value h)
     | None -> printfn "Handle could not be verified"
-| Error e ->
-    printfn "Resolution failed: %A" e
+
+    return identity
+}
 ```
 
 Unlike `resolveHandle` and `resolveDid` which take typed `Handle` and `Did` respectively, `resolveIdentity` accepts a plain `string` -- it figures out whether you gave it a handle or a DID and does the right thing.
@@ -87,6 +47,38 @@ The verification works as follows:
 2. **Input is a DID**: fetch the DID document to get the claimed handle, then resolve that handle back to a DID and check they match.
 
 If the bidirectional check fails, the returned `AtprotoIdentity` will have `Handle = None` rather than an unverified value.
+
+## Typed Alternatives
+
+If you already have a typed `Handle` or `Did`, you can use the single-direction functions directly. These perform one lookup without bidirectional verification.
+
+**Resolve a Handle to a DID:**
+
+```fsharp
+// Handle.parse returns Result<Handle, string> -- handle the error first
+match Handle.parse "my-handle.bsky.social" with
+| Ok handle ->
+    taskResult {
+        let! did = Identity.resolveHandle agent handle
+        printfn "DID: %s" (Did.value did)
+    }
+| Error msg -> printfn "Invalid handle: %s" msg
+```
+
+**Resolve a DID to full identity info:**
+
+```fsharp
+match Did.parse "did:plc:z72i7hdynmk6r22z27h6tvur" with
+| Ok did ->
+    taskResult {
+        let! identity = Identity.resolveDid agent did
+        printfn "Handle: %s" (identity.Handle |> Option.map Handle.value |> Option.defaultValue "(none)")
+        printfn "PDS: %s" (identity.PdsEndpoint |> Option.map string |> Option.defaultValue "(none)")
+    }
+| Error msg -> printfn "Invalid DID: %s" msg
+```
+
+`resolveDid` fetches the DID document and extracts the **handle** from `alsoKnownAs`, the **PDS endpoint** from the `service` entries, and the **signing key** from the `verificationMethod` entries. Both `did:plc:` (via the PLC directory) and `did:web:` (via `.well-known/did.json`) methods are supported.
 
 ## The AtprotoIdentity Type
 
@@ -123,8 +115,6 @@ type IdentityError =
 You can pattern match on this to handle each case differently:
 
 ```fsharp
-let! result = Identity.resolveIdentity agent "some-handle.bsky.social"
-
 match result with
 | Ok identity ->
     printfn "Resolved: %s" (Did.value identity.Did)
@@ -134,7 +124,7 @@ match result with
     printfn "Malformed DID document: %s" msg
 ```
 
-`XrpcError` covers failures during XRPC calls -- authentication issues, network problems, rate limiting, and so on. `DocumentParseError` covers cases where the DID document was retrieved but couldn't be parsed into a valid identity (missing required fields, malformed JSON, etc.).
+`XrpcError` covers failures during XRPC calls -- authentication issues, network problems, rate limiting. `DocumentParseError` covers cases where a DID document was retrieved but couldn't be parsed into a valid identity (missing required fields, malformed JSON, etc.).
 
 ## Parsing DID Documents Directly
 
@@ -156,9 +146,9 @@ Note that `parseDidDocument` returns `Result<AtprotoIdentity, string>` (not `Ide
 
 | Function | Input | Returns | Network Calls | Verification |
 |----------|-------|---------|---------------|-------------|
+| `resolveIdentity` | `string` | `Result<AtprotoIdentity, IdentityError>` | 2 (forward + reverse) | Bidirectional |
 | `resolveHandle` | `Handle` | `Result<Did, IdentityError>` | 1 (XRPC) | None |
 | `resolveDid` | `Did` | `Result<AtprotoIdentity, IdentityError>` | 1 (HTTP) | None |
-| `resolveIdentity` | `string` | `Result<AtprotoIdentity, IdentityError>` | 2 (forward + reverse) | Bidirectional |
 | `parseDidDocument` | `JsonElement` | `Result<AtprotoIdentity, string>` | 0 | None |
 
 Use `resolveIdentity` when you need confidence that a handle and DID actually belong together -- it's the safest choice for displaying user identity in your application. Use `resolveHandle` or `resolveDid` when you only need a quick lookup and trust the input. Use `parseDidDocument` when you already have the raw DID document in hand.

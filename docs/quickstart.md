@@ -4,7 +4,7 @@ category: Guides
 categoryindex: 1
 index: 1
 description: Get up and running with FSharp.ATProto in 5 minutes
-keywords: quickstart, tutorial, getting started, fsharp, atproto
+keywords: quickstart, tutorial, getting started, fsharp, atproto, bluesky
 ---
 
 # Quickstart
@@ -21,7 +21,13 @@ Get from zero to posting on Bluesky in under 5 minutes.
 ```bash
 dotnet new console -lang F# -n MyBskyBot
 cd MyBskyBot
-dotnet add package FSharp.ATProto.Bluesky
+```
+
+The library is not yet published on NuGet. Clone the repository and add a project reference:
+
+```bash
+git clone https://github.com/aron/atproto-fsharp.git ../atproto-fsharp
+dotnet add reference ../atproto-fsharp/src/FSharp.ATProto.Bluesky/FSharp.ATProto.Bluesky.fsproj
 ```
 
 ## Log In
@@ -38,7 +44,7 @@ let main _ =
     let result =
         taskResult {
             let! agent = Bluesky.login "https://bsky.social" "your-handle.bsky.social" "your-app-password"
-            printfn "Logged in as %s" (Handle.value agent.Session.Value.Handle)
+            printfn "Logged in!"
             return 0
         }
 
@@ -52,7 +58,7 @@ Run it:
 
 ```bash
 dotnet run
-# Logged in as your-handle.bsky.social
+# Logged in!
 ```
 
 `Bluesky.login` creates the agent, authenticates, and returns it ready to use -- all in one call. If anything fails, you get an `Error` with details. No exceptions.
@@ -66,15 +72,13 @@ let! post = Bluesky.post agent "Hello world from F#! #atproto"
 printfn "Posted! URI: %s" (AtUri.value post.Uri)
 ```
 
-Every `@handle.domain` in the text is resolved to a DID via the API. Links and hashtags are detected by pattern. You never need to compute byte offsets or construct facet objects yourself. The result is a `PostRef` containing the AT-URI and CID of the new post.
+Every `@handle.domain` in the text is resolved to a [DID](concepts.html) via the API. Links and hashtags are detected by pattern. You never need to compute byte offsets or construct facet objects yourself. The result is a `PostRef` containing the [AT-URI](concepts.html) and [CID](concepts.html) of the new post.
 
 ## Read Your Timeline
 
 `Bluesky.getTimeline` wraps the `app.bsky.feed.getTimeline` endpoint with a simpler signature:
 
 ```fsharp
-open FSharp.ATProto.Syntax
-
 let! timeline = Bluesky.getTimeline agent (Some 10L) None
 
 for item in timeline.Items do
@@ -87,29 +91,26 @@ Each `FeedItem` has a `.Post` field (a `TimelinePost`) with `.Text`, `.Author`, 
 
 ## Like a Post
 
-Construct a `PostRef` from any `FeedItem`'s `Post` field, then pass it to `Bluesky.like`:
+`Bluesky.like` accepts a `TimelinePost` (or a `PostRef`) directly:
 
 ```fsharp
 let firstPost = timeline.Items.[0].Post
-let postRef = { PostRef.Uri = firstPost.Uri; Cid = firstPost.Cid }
-
-let! like = Bluesky.like agent postRef
-printfn "Liked! %s" (AtUri.value like.Uri)
+let! likeRef = Bluesky.like agent firstPost
+printfn "Liked! %s" (AtUri.value likeRef.Uri)
 ```
 
-The result is a `LikeRef` you can hold on to. To undo the like later, just pass it to `Bluesky.undo`:
+The result is a `LikeRef` you can hold on to. To undo the like later, pass it to `Bluesky.undoLike`:
 
 ```fsharp
-let! undoResult = Bluesky.undo agent like
-// undoResult is Undone or WasNotPresent
+let! _ = Bluesky.undoLike agent likeRef
 ```
 
 ## Reply to a Post
 
-`Bluesky.replyTo` fetches the parent post to resolve the thread root automatically. You only need the text and the `PostRef` of the post you are replying to:
+`Bluesky.replyTo` fetches the parent post to resolve the thread root automatically. Pass the post you are replying to directly:
 
 ```fsharp
-let! reply = Bluesky.replyTo agent "Great post!" postRef
+let! reply = Bluesky.replyTo agent "Great post!" firstPost
 printfn "Replied: %s" (AtUri.value reply.Uri)
 ```
 
@@ -157,20 +158,20 @@ let main _ =
                 printfn "  @%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
 
             // Like the first post from the timeline
-            if timeline.Items.Length > 0 then
-                let first = timeline.Items.[0].Post
-                let firstRef = { PostRef.Uri = first.Uri; Cid = first.Cid }
-                let! like = Bluesky.like agent firstRef
-                printfn "Liked: %s" (AtUri.value like.Uri)
+            match timeline.Items with
+            | first :: _ ->
+                let! likeRef = Bluesky.like agent first.Post
+                printfn "Liked: %s" (AtUri.value likeRef.Uri)
 
                 // Reply to it
-                let! reply = Bluesky.replyTo agent "Nice post!" firstRef
+                let! reply = Bluesky.replyTo agent "Nice post!" first.Post
                 printfn "Replied: %s" (AtUri.value reply.Uri)
 
                 // Clean up: undo the like and delete the reply
-                let! _ = Bluesky.undo agent like
+                let! _ = Bluesky.undoLike agent likeRef
                 let! _ = Bluesky.deleteRecord agent reply.Uri
                 printfn "Cleaned up."
+            | [] -> ()
 
             // Delete our original post
             let! _ = Bluesky.deleteRecord agent post.Uri
@@ -187,12 +188,18 @@ let main _ =
 
 ## What's Next
 
+- [Build a Bot](guides/build-a-bot.html) -- end-to-end bot tutorial
+- [Concepts](concepts.html) -- AT Protocol terms explained (DID, Handle, AT-URI, CID, PDS)
 - [Posts Guide](guides/posts.html) -- reading posts, threads, and search
 - [Social Actions Guide](guides/social.html) -- like, repost, follow, block, and undo
-- [Rich Text Guide](guides/rich-text.html) -- finer control over mention/link/hashtag detection
 - [Feeds Guide](guides/feeds.html) -- timelines and custom feeds
-- [Media Guide](guides/media.html) -- image uploads
 - [Profiles Guide](guides/profiles.html) -- fetch user profiles
+- [Media Guide](guides/media.html) -- image uploads
 - [Chat / DM Guide](guides/chat.html) -- direct messaging
+- [Notifications](guides/notifications.html) -- unread counts, mark-as-read
+- [Moderation](guides/moderation.html) -- mute, block, report
+- [Rich Text Guide](guides/rich-text.html) -- finer control over mention/link/hashtag detection
 - [Identity Guide](guides/identity.html) -- resolve handles and DIDs
+- [Error Handling](guides/error-handling.html) -- XrpcError, taskResult, retry behaviour
 - [Pagination Guide](guides/pagination.html) -- iterate through large result sets
+- [Raw XRPC](guides/raw-xrpc.html) -- drop to generated wrappers for advanced usage

@@ -69,26 +69,23 @@ let main _ =
 
                 let! ownProfile = Bluesky.getProfile agent session.Handle
                 printfn "Own profile: @%s (%s)" (Handle.value ownProfile.Handle) (Did.value ownProfile.Did)
-                printfn "  Display name: %s" (ownProfile.DisplayName |> Option.defaultValue "(none)")
+                printfn "  Display name: %s" ownProfile.DisplayName
 
                 printfn
-                    "  Posts: %s, Followers: %s, Following: %s"
-                    (ownProfile.PostsCount |> Option.map string |> Option.defaultValue "?")
-                    (ownProfile.FollowersCount |> Option.map string |> Option.defaultValue "?")
-                    (ownProfile.FollowsCount |> Option.map string |> Option.defaultValue "?")
+                    "  Posts: %d, Followers: %d, Following: %d"
+                    ownProfile.PostsCount
+                    ownProfile.FollowersCount
+                    ownProfile.FollowsCount
 
-                let! otherProfile = AppBskyActor.GetProfile.query agent { Actor = "bsky.app" }
+                let! otherProfile = Bluesky.getProfile agent "bsky.app"
                 printfn "Other profile: @%s" (Handle.value otherProfile.Handle)
 
                 printfn
                     "  Bio: %s"
                     (otherProfile.Description
-                     |> Option.defaultValue "(no bio)"
                      |> fun s -> if s.Length > 80 then s.[..79] + "..." else s)
 
-                match otherProfile.Viewer with
-                | Some v -> printfn "  Following: %b, Followed by: %b" v.Following.IsSome v.FollowedBy.IsSome
-                | None -> ()
+                printfn "  Following: %b, Followed by: %b" otherProfile.IsFollowing otherProfile.IsFollowedBy
 
                 // ─────────────────────────────────────────────────────
                 // 3. TIMELINE
@@ -97,24 +94,24 @@ let main _ =
 
                 let! tl = Bluesky.getTimeline agent (Some 10L) None
 
-                printfn "Timeline: %d posts (cursor: %s)" tl.Feed.Length (tl.Cursor |> Option.defaultValue "(end)")
+                printfn "Timeline: %d posts (cursor: %s)" tl.Items.Length (tl.Cursor |> Option.defaultValue "(end)")
 
-                for item in tl.Feed do
+                for item in tl.Items do
                     let prefix =
                         match item.Reason with
-                        | Some (AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonRepost _) -> "[repost] "
-                        | Some (AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin _) -> "[pinned] "
-                        | _ -> ""
+                        | Some (FeedReason.Repost _) -> "[repost] "
+                        | Some FeedReason.Pin -> "[pinned] "
+                        | None -> ""
 
                     let text = item.Post.Text
                     let truncated = if text.Length > 60 then text.[..59] + "..." else text
                     printfn "  %s@%s: %s" prefix (Handle.value item.Post.Author.Handle) truncated
 
                     printfn
-                        "    likes: %s, reposts: %s, replies: %s"
-                        (item.Post.LikeCount |> Option.map string |> Option.defaultValue "?")
-                        (item.Post.RepostCount |> Option.map string |> Option.defaultValue "?")
-                        (item.Post.ReplyCount |> Option.map string |> Option.defaultValue "?")
+                        "    likes: %d, reposts: %d, replies: %d"
+                        item.Post.LikeCount
+                        item.Post.RepostCount
+                        item.Post.ReplyCount
 
                 // ─────────────────────────────────────────────────────
                 // 4. POSTING
@@ -160,15 +157,11 @@ let main _ =
                 // ─────────────────────────────────────────────────────
                 section "5. Replying"
 
-                if tl.Feed.Length > 0 then
-                    let parentPost = tl.Feed.[0].Post
-
-                    let parentRef : PostRef =
-                        { Uri = parentPost.Uri
-                          Cid = parentPost.Cid }
-
-                    let! replyRef = Bluesky.replyTo agent "Great post!" parentRef
+                match tl.Items with
+                | first :: _ ->
+                    let! replyRef = Bluesky.replyTo agent "Great post!" first.Post
                     printfn "replyTo (auto-root): %s" (AtUri.value replyRef.Uri)
+                | [] -> ()
 
                 // replyWithKnownRoot — when you have both parent and root refs
                 let! topReply = Bluesky.replyTo agent "Replying to myself!" postRef
@@ -183,7 +176,7 @@ let main _ =
                 let! likeRef = Bluesky.like agent postRef
                 printfn "Liked: %s" (AtUri.value likeRef.Uri)
 
-                let! undoLike = Bluesky.undo agent likeRef
+                let! undoLike = Bluesky.undoLike agent likeRef
 
                 match undoLike with
                 | Undone -> printfn "Unliked successfully"
@@ -197,7 +190,7 @@ let main _ =
                 let! repostRef = Bluesky.repost agent postRef
                 printfn "Reposted: %s" (AtUri.value repostRef.Uri)
 
-                let! undoRepost = Bluesky.undo agent repostRef
+                let! undoRepost = Bluesky.undoRepost agent repostRef
 
                 match undoRepost with
                 | Undone -> printfn "Unreposted successfully"
@@ -211,7 +204,7 @@ let main _ =
                 let! followRef = Bluesky.follow agent session.Did
                 printfn "Followed (by DID): %s" (AtUri.value followRef.Uri)
 
-                let! undoFollow = Bluesky.undo agent followRef
+                let! undoFollow = Bluesky.undoFollow agent followRef
 
                 match undoFollow with
                 | Undone -> printfn "Unfollowed successfully"
@@ -219,7 +212,7 @@ let main _ =
 
                 let! followByHandleRef = Bluesky.followByHandle agent (Handle.value session.Handle)
                 printfn "Followed (by handle): %s" (AtUri.value followByHandleRef.Uri)
-                let! _ = Bluesky.undo agent followByHandleRef
+                let! _ = Bluesky.undoFollow agent followByHandleRef
                 printfn "Unfollowed"
 
                 // ─────────────────────────────────────────────────────
@@ -230,7 +223,7 @@ let main _ =
                 let! blockRef = Bluesky.block agent session.Did
                 printfn "Blocked: %s" (AtUri.value blockRef.Uri)
 
-                let! undoBlock = Bluesky.undo agent blockRef
+                let! undoBlock = Bluesky.undoBlock agent blockRef
 
                 match undoBlock with
                 | Undone -> printfn "Unblocked successfully"
@@ -238,7 +231,7 @@ let main _ =
 
                 let! blockByHandleRef = Bluesky.blockByHandle agent (Handle.value session.Handle)
                 printfn "Blocked (by handle): %s" (AtUri.value blockByHandleRef.Uri)
-                let! _ = Bluesky.undo agent blockByHandleRef
+                let! _ = Bluesky.undoBlock agent blockByHandleRef
                 printfn "Unblocked"
 
                 // ─────────────────────────────────────────────────────
@@ -257,37 +250,37 @@ let main _ =
                 section "11. Followers / Follows"
 
                 let! followers = Bluesky.getFollowers agent (Handle.value session.Handle) (Some 5L) None
-                printfn "Followers: %d (showing first page)" followers.Followers.Length
+                printfn "Followers: %d (showing first page)" followers.Items.Length
 
-                for f in followers.Followers |> List.truncate 5 do
+                for f in followers.Items |> List.truncate 5 do
                     printfn "  @%s (%s)" (Handle.value f.Handle) (Did.value f.Did)
 
                 let! follows = Bluesky.getFollows agent (Handle.value session.Handle) (Some 5L) None
-                printfn "Following: %d (showing first page)" follows.Follows.Length
+                printfn "Following: %d (showing first page)" follows.Items.Length
 
-                for f in follows.Follows |> List.truncate 5 do
+                for f in follows.Items |> List.truncate 5 do
                     printfn "  @%s (%s)" (Handle.value f.Handle) (Did.value f.Did)
 
                 // ─────────────────────────────────────────────────────
                 // 12. NOTIFICATIONS
-                // Each notification has a typed Reason DU.
+                // Each notification has a typed Kind DU.
                 // ─────────────────────────────────────────────────────
                 section "12. Notifications"
 
                 let! notifs = Bluesky.getNotifications agent (Some 10L) None
-                printfn "Notifications: %d" notifs.Notifications.Length
+                printfn "Notifications: %d" notifs.Items.Length
 
-                for notif in notifs.Notifications do
+                for notif in notifs.Items do
                     let reasonStr =
-                        match notif.Reason with
-                        | AppBskyNotification.ListNotifications.NotificationReason.Like -> "like"
-                        | AppBskyNotification.ListNotifications.NotificationReason.Repost -> "repost"
-                        | AppBskyNotification.ListNotifications.NotificationReason.Follow -> "follow"
-                        | AppBskyNotification.ListNotifications.NotificationReason.Mention -> "mention"
-                        | AppBskyNotification.ListNotifications.NotificationReason.Reply -> "reply"
-                        | AppBskyNotification.ListNotifications.NotificationReason.Quote -> "quote"
-                        | AppBskyNotification.ListNotifications.NotificationReason.Unknown s -> sprintf "unknown(%s)" s
-                        | other -> sprintf "%A" other
+                        match notif.Kind with
+                        | NotificationKind.Like -> "like"
+                        | NotificationKind.Repost -> "repost"
+                        | NotificationKind.Follow -> "follow"
+                        | NotificationKind.Mention -> "mention"
+                        | NotificationKind.Reply -> "reply"
+                        | NotificationKind.Quote -> "quote"
+                        | NotificationKind.StarterpackJoined -> "starterpack-joined"
+                        | NotificationKind.Unknown s -> sprintf "unknown(%s)" s
 
                     printfn "  [%s] from @%s (read: %b)" reasonStr (Handle.value notif.Author.Handle) notif.IsRead
 
@@ -297,8 +290,8 @@ let main _ =
                 // ─────────────────────────────────────────────────────
                 section "13. Post Thread"
 
-                if tl.Feed.Length > 0 then
-                    let threadUri = tl.Feed.[0].Post.Uri
+                if tl.Items.Length > 0 then
+                    let threadUri = tl.Items.[0].Post.Uri
 
                     let! threadView = Bluesky.getPostThreadView agent threadUri (Some 6L) (Some 3L)
 
@@ -315,36 +308,30 @@ let main _ =
                                  postText)
 
                         match tvp.Parent with
-                        | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost parent) ->
+                        | Some (ThreadNode.Post parent) ->
                             printfn "  Parent by @%s" (Handle.value parent.Post.Author.Handle)
-                        | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.NotFoundPost _) ->
+                        | Some (ThreadNode.NotFound _) ->
                             printfn "  Parent not found (deleted?)"
-                        | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.BlockedPost _) -> printfn "  Parent blocked"
-                        | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.Unknown (tag, _)) ->
-                            printfn "  Parent unknown type: %s" tag
+                        | Some (ThreadNode.Blocked _) -> printfn "  Parent blocked"
                         | None -> printfn "  (top-level post, no parent)"
 
-                        let replyCount = tvp.Replies |> Option.map List.length |> Option.defaultValue 0
+                        let replyCount = tvp.Replies.Length
                         printfn "  Replies: %d" replyCount
 
-                        match tvp.Replies with
-                        | Some replies ->
-                            for r in replies |> List.truncate 3 do
-                                match r with
-                                | AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost rtvp ->
-                                    printfn "    @%s replied" (Handle.value rtvp.Post.Author.Handle)
-                                | _ -> printfn "    (non-post reply node)"
-                        | None -> ()
+                        for r in tvp.Replies |> List.truncate 3 do
+                            match r with
+                            | ThreadNode.Post rtvp ->
+                                printfn "    @%s replied" (Handle.value rtvp.Post.Author.Handle)
+                            | _ -> printfn "    (non-post reply node)"
                     | None -> printfn "Thread not found or blocked"
 
-                    // Full getPostThread — use ThreadResult alias for raw matching
+                    // Full getPostThread — returns a ThreadNode DU
                     let! rawThread = Bluesky.getPostThread agent threadUri (Some 1L) None
 
-                    match rawThread.Thread with
-                    | ThreadResult.ThreadViewPost _ -> printfn "Raw thread: ThreadViewPost"
-                    | ThreadResult.NotFoundPost _ -> printfn "Raw thread: NotFoundPost"
-                    | ThreadResult.BlockedPost _ -> printfn "Raw thread: BlockedPost"
-                    | ThreadResult.Unknown (tag, _) -> printfn "Raw thread unknown: %s" tag
+                    match rawThread with
+                    | ThreadNode.Post _ -> printfn "Raw thread: Post"
+                    | ThreadNode.NotFound _ -> printfn "Raw thread: NotFound"
+                    | ThreadNode.Blocked _ -> printfn "Raw thread: Blocked"
                 else
                     printfn "(no timeline posts to fetch thread for)"
 
@@ -355,81 +342,67 @@ let main _ =
                 section "14. Chat / DMs"
 
                 let! convos = Chat.listConvos agent (Some 10L) None
-                printfn "Conversations: %d" convos.Convos.Length
+                printfn "Conversations: %d" convos.Items.Length
 
-                for c in convos.Convos do
+                for c in convos.Items do
                     let members =
                         c.Members |> List.map (fun m -> Handle.value m.Handle) |> String.concat ", "
 
-                    printfn "  %s (members: %s, unread: %d, muted: %b)" c.Id members c.UnreadCount c.Muted
+                    printfn "  %s (members: %s, unread: %d, muted: %b)" c.Id members c.UnreadCount c.IsMuted
 
-                let! convoResult = Chat.getConvoForMembers agent [ session.Did ]
-                let convo = convoResult.Convo
+                let! convo = Chat.getConvoForMembers agent [ session.Did ]
                 printfn "Convo: %s (members: %d)" convo.Id convo.Members.Length
 
-                // Chat.sendMessage should auto-detect and create rich text facets (links, mentions, etc.) just like the Bsky app does.
-                // The user shouldn't need to drop down to the raw ChatBskyConvo.SendMessage API to send a message with a link in it.
-                // This whole "Rich text DM via raw XRPC" section below (lines 406-429) should be unnecessary.
+                // Chat.sendMessage auto-detects rich text facets (links, mentions, etc.)
                 let! msg = Chat.sendMessage agent convo.Id "Hello from the F# ATProto bot!"
-                printfn "Sent: \"%s\" (id: %s)" msg.Text msg.Id
 
-                let! delMsg = Chat.deleteMessage agent convo.Id msg.Id
-                printfn "Deleted message: %s" delMsg.Id
+                match msg with
+                | ChatMessage.Message m -> printfn "Sent: \"%s\" (id: %s)" m.Text m.Id
+                | ChatMessage.Deleted d -> printfn "Sent but deleted: %s" d.Id
+
+                let msgId =
+                    match msg with
+                    | ChatMessage.Message m -> m.Id
+                    | ChatMessage.Deleted d -> d.Id
+
+                let! _ = Chat.deleteMessage agent convo.Id msgId
+                printfn "Deleted message: %s" msgId
 
                 let! msgs = Chat.getMessages agent convo.Id (Some 5L) None
-                printfn "Messages: %d" msgs.Messages.Length
+                printfn "Messages: %d" msgs.Items.Length
 
-                for m in msgs.Messages do
+                for m in msgs.Items do
                     match m with
-                    | ChatBskyConvo.GetMessages.OutputMessagesItem.MessageView mv ->
+                    | ChatMessage.Message mv ->
                         printfn
                             "  [%s] %s"
-                            (Did.value mv.Sender.Did)
+                            (Did.value mv.Sender)
                             (if mv.Text.Length > 40 then
                                  mv.Text.[..39] + "..."
                              else
                                  mv.Text)
-                    | ChatBskyConvo.GetMessages.OutputMessagesItem.DeletedMessageView dv ->
-                        printfn "  [deleted by %s]" (Did.value dv.Sender.Did)
-                    | ChatBskyConvo.GetMessages.OutputMessagesItem.Unknown (tag, _) -> printfn "  [unknown: %s]" tag
+                    | ChatMessage.Deleted dv ->
+                        printfn "  [deleted by %s]" (Did.value dv.Sender)
 
-                let! readResult = Chat.markRead agent convo.Id
-                printfn "Marked read: unread=%d" readResult.Convo.UnreadCount
+                let! _ = Chat.markRead agent convo.Id
+                printfn "Marked read"
 
-                let! _ = Chat.markAllRead agent
-                printfn "Marked all read"
+                let! readCount = Chat.markAllRead agent
+                printfn "Marked all read (updated: %d)" readCount
 
-                // why does this return a type called "Output" (ChatBskyConvo.MuteConvo.Output)? it should return something more descriptive.
-                let! muteResult = Chat.muteConvo agent convo.Id
-                printfn "Muted: %b" muteResult.Convo.Muted
+                let! _ = Chat.muteConvo agent convo.Id
+                printfn "Muted convo"
 
-                let! unmuteResult = Chat.unmuteConvo agent convo.Id
-                printfn "Unmuted: %b" unmuteResult.Convo.Muted
+                let! _ = Chat.unmuteConvo agent convo.Id
+                printfn "Unmuted convo"
 
-                // Rich text DM via raw XRPC (requires explicit chat proxy)
-                let dmText = "Check out https://atproto.com!"
+                // Rich text DM — sendMessage already auto-detects facets,
+                // so no need for manual facet construction or raw XRPC calls
+                let! richDm = Chat.sendMessage agent convo.Id "Check out https://atproto.com!"
 
-                let! dmFacets =
-                    task {
-                        let! f = RichText.parse agent dmText
-                        return Ok f
-                    }
-
-                let chatAgent = AtpAgent.withChatProxy agent
-
-                let! richDm =
-                    ChatBskyConvo.SendMessage.call
-                        chatAgent
-                        { ConvoId = convo.Id
-                          Message =
-                            { Text = dmText
-                              Facets = if dmFacets.IsEmpty then None else Some dmFacets
-                              Embed = None } }
-
-                printfn
-                    "Rich DM: \"%s\" (facets: %d)"
-                    richDm.Text
-                    (richDm.Facets |> Option.map List.length |> Option.defaultValue 0)
+                match richDm with
+                | ChatMessage.Message m -> printfn "Rich DM: \"%s\" (id: %s)" m.Text m.Id
+                | ChatMessage.Deleted _ -> printfn "Rich DM was deleted"
 
                 return ()
             }
@@ -562,7 +535,7 @@ let main _ =
                     printfn
                         "  Page %d: %d posts (cursor: %s)"
                         pageNum
-                        page.Feed.Length
+                        page.Items.Length
                         (page.Cursor |> Option.defaultValue "(end)")
                 | Error e ->
                     printfn "  Page error: %A" e
@@ -579,9 +552,9 @@ let main _ =
         if hasFirst then
             match followerEnum.Current with
             | Ok page ->
-                printfn "  First page: %d followers" page.Followers.Length
+                printfn "  First page: %d followers" page.Items.Length
 
-                for f in page.Followers |> List.truncate 5 do
+                for f in page.Items |> List.truncate 5 do
                     printfn "    @%s (%s)" (Handle.value f.Handle) (Did.value f.Did)
             | Error e -> printfn "  Followers error: %A" e
 

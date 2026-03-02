@@ -2,47 +2,38 @@
 title: Chat / DMs
 category: Guides
 categoryindex: 1
-index: 6
+index: 9
 description: Send and receive Bluesky direct messages with FSharp.ATProto
-keywords: chat, dm, direct messages, bluesky, conversations
+keywords: chat, dm, direct messages, bluesky, conversations, fsharp, atproto
 ---
 
 # Chat / Direct Messages
 
+All examples use `taskResult {}`. See the [Error Handling guide](error-handling.html) for details.
+
 Bluesky direct messages use a separate service (`api.bsky.chat`) from the main PDS. The `Chat` module adds the required proxy header automatically -- you use the same agent as for everything else.
 
-## Getting Started
+## Starting a Conversation
 
-Log in with `Bluesky.login` and start chatting. No extra configuration needed:
+Get or create a conversation with one or more members by their [DIDs](../concepts.html). `getConvoForMembers` takes a `Did list`, so you first need to resolve a handle to a DID (or use a DID you already have from a profile lookup):
 
 ```fsharp
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 open FSharp.ATProto.Syntax
 
-let! agent = Bluesky.login "https://bsky.social" "my-handle.bsky.social" "app-password"
+taskResult {
+    let! agent = Bluesky.login "https://bsky.social" "my-handle.bsky.social" "app-password"
 
-match agent with
-| Ok agent ->
-    // Use this same agent for posts, likes, follows, AND chat
-    printfn "Logged in and ready to chat!"
-| Error e ->
-    printfn "Login failed: %A" e
-```
+    // Look up the user's DID via their profile
+    let! profile = Bluesky.getProfile agent "alice.bsky.social"
 
-## Starting a Conversation
-
-Get or create a conversation with one or more members by their DIDs. Note that `getConvoForMembers` takes a `Did list`, not raw strings:
-
-```fsharp
-let did = Did.parse "did:plc:xyz123" |> Result.defaultWith failwith
-let! convoResult = Chat.getConvoForMembers agent [ did ]
-
-match convoResult with
-| Ok convo ->
+    // Start (or resume) a conversation with that user
+    let! convo = Chat.getConvoForMembers agent [ profile.Did ]
     printfn "Conversation: %s (members: %d)" convo.Id convo.Members.Length
-| Error e ->
-    printfn "Failed: %A" e
+
+    return convo
+}
 ```
 
 If a conversation already exists between the specified members, the existing one is returned. Otherwise a new conversation is created.
@@ -51,83 +42,65 @@ If a conversation already exists between the specified members, the existing one
 
 ### Plain Text
 
-For simple text messages, `Chat.sendMessage` takes the agent, conversation ID, and message text:
+`Chat.sendMessage` takes the agent, conversation ID, and message text:
 
 ```fsharp
-let! msgResult = Chat.sendMessage agent convo.Id "Hello from F#!"
+taskResult {
+    let! msg = Chat.sendMessage agent convo.Id "Hello from F#!"
 
-match msgResult with
-| Ok (ChatMessage.Message msg) ->
-    printfn "Sent: %s (id: %s)" msg.Text msg.Id
-| Ok (ChatMessage.Deleted _) ->
-    () // shouldn't happen for a fresh send
-| Error e ->
-    printfn "Send failed: %A" e
+    match msg with
+    | ChatMessage.Message m -> printfn "Sent: %s (id: %s)" m.Text m.Id
+    | ChatMessage.Deleted _ -> ()
+}
 ```
 
-### Rich Text (with Links, Mentions, Hashtags)
+### Rich Text (Links, Mentions, Hashtags)
 
-`Chat.sendMessage` automatically detects links, mentions, and hashtags in your message text -- just like `Bluesky.post`. No extra steps needed:
+`Chat.sendMessage` **automatically detects** links, mentions, and hashtags -- just like `Bluesky.post`. No extra steps needed:
 
 ```fsharp
-let! result = Chat.sendMessage agent convo.Id "Check out https://atproto.com for the AT Protocol spec!"
+taskResult {
+    let! _ = Chat.sendMessage agent convo.Id "Check out https://atproto.com for the AT Protocol spec!"
+    return ()
+}
 ```
 
 See the [Rich Text](rich-text.html) guide for more on how facet detection works.
 
-**Power Users:** If you need full control over facets or want to include an embed (e.g., sharing a post into a DM), use the raw XRPC wrapper:
-
-```fsharp
-let text = "Check out https://atproto.com for the AT Protocol spec!"
-let! facets = RichText.parse agent text
-
-let! result =
-    ChatBskyConvo.SendMessage.call (AtpAgent.withChatProxy agent)
-        { ConvoId = convo.Id
-          Message =
-            { Text = text
-              Facets = if facets.IsEmpty then None else Some facets
-              Embed = None } }
-```
-
 ## Reading Messages
 
-Retrieve messages from a conversation with optional pagination:
+Retrieve messages from a conversation:
 
 ```fsharp
-let! msgsResult = Chat.getMessages agent convo.Id (Some 20L) None
+taskResult {
+    let! page = Chat.getMessages agent convo.Id (Some 20L) None
 
-match msgsResult with
-| Ok page ->
-    printfn "Messages (%d):" page.Items.Length
     for m in page.Items do
         match m with
         | ChatMessage.Message msg ->
             printfn "  [%s] %s" (Did.value msg.Sender) msg.Text
         | ChatMessage.Deleted del ->
             printfn "  (deleted: %s)" del.Id
-| Error e ->
-    printfn "Failed: %A" e
+
+    return page
+}
 ```
 
-Messages are returned as a `Page<ChatMessage>`. Each `ChatMessage` is a discriminated union with `Message` and `Deleted` cases. The `Message` record gives you typed access to `Id`, `Text`, `Sender` (a `Did`), and `SentAt` (a `DateTimeOffset`).
-
-To fetch older messages, pass the cursor from the previous response:
-
-```fsharp
-let! page2 = Chat.getMessages agent convo.Id (Some 20L) page.Cursor
-```
+Each `ChatMessage` is a discriminated union with `Message` and `Deleted` cases. The `Message` record gives you typed access to `Id`, `Text`, `Sender` (a [DID](../concepts.html)), and `SentAt` (a `DateTimeOffset`). To fetch older messages, pass `page.Cursor` as the last argument.
 
 ## Reactions
 
-Add or remove a reaction (emoji) on a message:
+Add or remove emoji reactions on a message:
 
 ```fsharp
-// Add a reaction -- takes convoId, messageId, and emoji string
-let! _ = Chat.addReaction agent convo.Id msgId "\u2764\uFE0F"  // red heart
+taskResult {
+    // Add a reaction
+    let! _ = Chat.addReaction agent convo.Id msgId "\u2764\uFE0F"
 
-// Remove a reaction
-let! _ = Chat.removeReaction agent convo.Id msgId "\u2764\uFE0F"
+    // Remove it
+    let! _ = Chat.removeReaction agent convo.Id msgId "\u2764\uFE0F"
+    return ()
+}
 ```
 
 ## Managing Conversations
@@ -135,72 +108,58 @@ let! _ = Chat.removeReaction agent convo.Id msgId "\u2764\uFE0F"
 ### List Conversations
 
 ```fsharp
-let! convosResult = Chat.listConvos agent (Some 20L) None
+taskResult {
+    let! page = Chat.listConvos agent (Some 20L) None
 
-match convosResult with
-| Ok page ->
     for c in page.Items do
-        let members =
-            c.Members |> List.map (fun m -> m.DisplayName) |> String.concat ", "
+        let members = c.Members |> List.map (fun m -> m.DisplayName) |> String.concat ", "
         printfn "%s: %s (unread: %d)" c.Id members c.UnreadCount
-| Error e ->
-    printfn "Failed: %A" e
+
+    return page
+}
 ```
 
 Each `ConvoSummary` gives you `Id`, `Members` (a `ProfileSummary list`), `LastMessageText`, `UnreadCount`, and `IsMuted`.
 
-### Get a Conversation by ID
-
-If you already have a conversation ID, fetch its details directly:
+### Other Operations
 
 ```fsharp
-let! convoResult = Chat.getConvo agent convoId
-
-match convoResult with
-| Ok convo -> printfn "Conversation with %d members" convo.Members.Length
-| Error e -> printfn "Failed: %A" e
+taskResult {
+    let! convo = Chat.getConvo agent convoId         // get by ID
+    let! _ = Chat.acceptConvo agent convoId           // accept a request
+    let! _ = Chat.leaveConvo agent convoId            // leave
+    let! _ = Chat.markRead agent convo.Id             // mark one as read
+    let! _ = Chat.markAllRead agent                   // mark all as read
+    let! _ = Chat.muteConvo agent convo.Id            // mute
+    let! _ = Chat.unmuteConvo agent convo.Id          // unmute
+    let! _ = Chat.deleteMessage agent convo.Id msgId  // delete (for you only)
+    return ()
+}
 ```
 
-### Accept / Leave a Conversation
+## Attachments
 
-Accept or leave a conversation (e.g., for moderation or cleanup):
+Image attachments in DMs are not yet supported by the Bluesky API.
+
+## Power Users: Raw XRPC
+
+If you need full control over facets or want to include an embed (e.g., sharing a post into a DM), drop to the raw XRPC wrapper:
 
 ```fsharp
-// Accept a conversation request
-let! _ = Chat.acceptConvo agent convoId
+task {
+    let text = "Check out https://atproto.com!"
+    let! facets = RichText.parse agent text
 
-// Leave a conversation
-let! _ = Chat.leaveConvo agent convoId
+    let! result =
+        ChatBskyConvo.SendMessage.call (AtpAgent.withChatProxy agent)
+            { ConvoId = convo.Id
+              Message =
+                { Text = text
+                  Facets = if facets.IsEmpty then None else Some facets
+                  Embed = None } }
+
+    match result with
+    | Ok msg -> printfn "Sent with custom facets"
+    | Error err -> printfn "Failed: %A" err
+}
 ```
-
-### Mark as Read
-
-```fsharp
-let! _ = Chat.markRead agent convo.Id
-```
-
-Or mark all conversations as read:
-
-```fsharp
-let! _ = Chat.markAllRead agent
-```
-
-### Mute / Unmute
-
-```fsharp
-let! _ = Chat.muteConvo agent convo.Id
-// ...
-let! _ = Chat.unmuteConvo agent convo.Id
-```
-
-### Delete a Message
-
-Deletes a message for yourself only (the other participant still sees it):
-
-```fsharp
-let! _ = Chat.deleteMessage agent convo.Id msgId
-```
-
-## A Note on Attachments
-
-The `MessageInput.Embed` field accepts a `MessageInputEmbedUnion option`. This is a discriminated union with a `Record` case (for sharing a post into a DM via `AppBskyEmbed.Record.Record`) and an `Unknown` fallback for forward compatibility. Image attachments in DMs are not yet part of the official Lexicon schema.

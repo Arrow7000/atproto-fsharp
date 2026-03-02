@@ -132,7 +132,7 @@ let main _ =
         // ── 6. Unlike the reply (keep the like on the original) ──
         step 6 "Unliking the reply"
 
-        let! unlikeResult = Bluesky.undo agent like2
+        let! unlikeResult = Bluesky.undoLike agent like2
 
         match unlikeResult with
         | Ok Undone -> printfn "   OK: Unliked reply"
@@ -147,29 +147,34 @@ let main _ =
         let! profileResult = Bluesky.getProfile agent "adler.dev"
         let adlerProfile = profileResult |> unwrap "Got profile for @adler.dev"
 
-        printfn "   Display name: %s" (adlerProfile.DisplayName |> Option.defaultValue "(none)")
+        printfn "   Display name: %s" adlerProfile.DisplayName
 
         printfn "   DID: %s" (Did.value adlerProfile.Did)
-
-        let isFollowing =
-            adlerProfile.Viewer |> Option.bind (fun v -> v.Following) |> Option.isSome
-
-        printfn "   Currently following: %b" isFollowing
+        printfn "   Currently following: %b" adlerProfile.IsFollowing
 
         do! pause 30
 
         // ── 8. Unfollow @adler.dev ──
         step 8 "Unfollowing @adler.dev"
 
-        match adlerProfile.Viewer |> Option.bind (fun v -> v.Following) with
-        | Some followUri ->
-            let followRef : FollowRef = { Uri = followUri }
-            let! unfollowResult = Bluesky.unfollow agent followRef
+        if adlerProfile.IsFollowing then
+            // Get the follow URI via the raw XRPC (the domain Profile type doesn't expose it)
+            let! rawProfileResult = AppBskyActor.GetProfile.query agent { Actor = "adler.dev" }
 
-            match unfollowResult with
-            | Ok () -> printfn "   OK: Unfollowed @adler.dev"
-            | Error e -> printfn "   FAIL: Unfollow — %A" e
-        | None -> printfn "   Note: Not currently following @adler.dev — skipping"
+            match rawProfileResult with
+            | Ok rawProfile ->
+                match rawProfile.Viewer |> Option.bind (fun v -> v.Following) with
+                | Some followUri ->
+                    let followRef : FollowRef = { Uri = followUri }
+                    let! unfollowResult = Bluesky.unfollow agent followRef
+
+                    match unfollowResult with
+                    | Ok () -> printfn "   OK: Unfollowed @adler.dev"
+                    | Error e -> printfn "   FAIL: Unfollow — %A" e
+                | None -> printfn "   Note: Follow URI not found — skipping"
+            | Error e -> printfn "   FAIL: Raw profile lookup — %A" e
+        else
+            printfn "   Note: Not currently following @adler.dev — skipping"
 
         do! pause 30
 
@@ -203,7 +208,7 @@ let main _ =
 
                 let work =
                     task {
-                        let! r1 = Bluesky.undo agent like1
+                        let! r1 = Bluesky.undoLike agent like1
 
                         match r1 with
                         | Ok Undone -> printfn "   Unliked original post"

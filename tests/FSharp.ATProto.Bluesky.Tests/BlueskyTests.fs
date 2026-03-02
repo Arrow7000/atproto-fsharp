@@ -2033,7 +2033,7 @@ let muteUserTests =
               let agent = voidProcedureAgent (fun req -> captured <- Some req)
 
               let result =
-                  Bluesky.muteUser agent "test.bsky.social"
+                  Bluesky.muteUser agent (parseDid "did:plc:testmute")
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -2048,12 +2048,12 @@ let muteUserTests =
               let agent = voidProcedureAgent (fun req -> captured <- Some req)
 
               let _result =
-                  Bluesky.muteUser agent "spam.bsky.social"
+                  Bluesky.muteUser agent (parseDid "did:plc:spammer")
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
               let body = captured.Value.Content.ReadAsStringAsync().Result
-              Expect.stringContains body "spam.bsky.social" "actor in body" ]
+              Expect.stringContains body "did:plc:spammer" "actor in body" ]
 
 [<Tests>]
 let unmuteUserTests =
@@ -2065,7 +2065,7 @@ let unmuteUserTests =
               let agent = voidProcedureAgent (fun req -> captured <- Some req)
 
               let result =
-                  Bluesky.unmuteUser agent "test.bsky.social"
+                  Bluesky.unmuteUser agent (parseDid "did:plc:testunmute")
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -2080,12 +2080,12 @@ let unmuteUserTests =
               let agent = voidProcedureAgent (fun req -> captured <- Some req)
 
               let _result =
-                  Bluesky.unmuteUser agent "friend.bsky.social"
+                  Bluesky.unmuteUser agent (parseDid "did:plc:friend")
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
               let body = captured.Value.Content.ReadAsStringAsync().Result
-              Expect.stringContains body "friend.bsky.social" "actor in body" ]
+              Expect.stringContains body "did:plc:friend" "actor in body" ]
 
 [<Tests>]
 let muteThreadTests =
@@ -3354,7 +3354,7 @@ let resumeSessionTests =
 
               // Verify the agent uses the provided client by making a request
               let _result =
-                  Bluesky.muteUser agent "test.bsky.social"
+                  Bluesky.muteUser agent (parseDid "did:plc:testmute")
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -3643,3 +3643,110 @@ let upsertProfileTests =
               let err = Expect.wantError result "should fail without session"
               Expect.equal err.StatusCode 401 "status code"
               Expect.equal err.Error (Some "NotLoggedIn") "error code" ]
+
+// ── PostRef SRTP tests ──────────────────────────────────────────────
+
+/// Helper to create a mock TimelinePost with the minimal fields needed
+let private testTimelinePost : TimelinePost =
+    { Uri = parseAtUri "at://did:plc:other/app.bsky.feed.post/tp123"
+      Cid = parseCid "bafyreitpost"
+      Author =
+        { Did = parseDid "did:plc:other"
+          Handle = Handle.parse "other.bsky.social" |> Result.defaultWith failwith
+          DisplayName = "Other"
+          Avatar = None }
+      Text = "Hello from timeline"
+      Facets = []
+      LikeCount = 0L
+      RepostCount = 0L
+      ReplyCount = 0L
+      QuoteCount = 0L
+      IndexedAt = System.DateTimeOffset.UtcNow
+      IsLiked = false
+      IsReposted = false
+      IsBookmarked = false }
+
+[<Tests>]
+let postRefSrtpTests =
+    testList
+        "PostRef SRTP (like/repost accept TimelinePost)"
+        [ testCase "like accepts TimelinePost directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.like agent testTimelinePost |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "app.bsky.feed.like" "like collection"
+              Expect.stringContains body "at://did:plc:other/app.bsky.feed.post/tp123" "uri from TimelinePost"
+              Expect.stringContains body "bafyreitpost" "cid from TimelinePost"
+
+          testCase "repost accepts TimelinePost directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.repost agent testTimelinePost |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "app.bsky.feed.repost" "repost collection"
+              Expect.stringContains body "at://did:plc:other/app.bsky.feed.post/tp123" "uri from TimelinePost"
+              Expect.stringContains body "bafyreitpost" "cid from TimelinePost" ]
+
+// ── Mute typed Did tests ────────────────────────────────────────────
+
+/// Creates a mock agent for void XRPC calls (muteActor, unmuteActor)
+let private voidCallAgent (captureRequest : HttpRequestMessage -> unit) =
+    let agent =
+        createMockAgent (fun req ->
+            captureRequest req
+            jsonResponse HttpStatusCode.OK {| |})
+
+    agent.Session <- Some testSession
+    agent
+
+[<Tests>]
+let muteUserTypedDidTests =
+    testList
+        "Bluesky.muteUser (typed Did)"
+        [ testCase "muteUser sends correct actor DID"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidCallAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.muteUser agent (parseDid "did:plc:muted")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "did:plc:muted" "actor DID in body"
+
+          testCase "muteUserByHandle resolves handle then mutes"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createMockAgent (fun req ->
+                      if req.RequestUri.PathAndQuery.Contains ("resolveHandle") then
+                          jsonResponse HttpStatusCode.OK {| did = "did:plc:resolved-mute" |}
+                      else
+                          captured <- Some req
+                          jsonResponse HttpStatusCode.OK {| |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.muteUserByHandle agent "muted-user.bsky.social"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "did:plc:resolved-mute" "resolved DID used as actor" ]

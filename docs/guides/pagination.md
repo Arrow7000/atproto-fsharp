@@ -2,140 +2,99 @@
 title: Pagination
 category: Guides
 categoryindex: 1
-index: 10
+index: 15
 description: Iterate through cursor-based AT Protocol API results with IAsyncEnumerable
-keywords: pagination, cursor, async, enumerable, timeline, feed
+keywords: pagination, cursor, async, enumerable, timeline, feed, taskResult
 ---
 
 # Pagination
 
-Many AT Protocol endpoints return paginated results. FSharp.ATProto provides pre-built paginators for common use cases and a general `Xrpc.paginate` function for everything else. All paginators return `IAsyncEnumerable<Result<'O, XrpcError>>` -- pages arrive lazily, one at a time, only when you ask for the next one.
+Many AT Protocol endpoints return paginated results. FSharp.ATProto provides single-page convenience functions, pre-built paginators for full iteration, and a general `Xrpc.paginate` function for everything else.
 
-## Quick Start
+All examples below use the `taskResult` computation expression, which short-circuits on errors automatically. See [Error Handling](error-handling.html) for details.
 
-The fastest way to paginate is with a pre-built paginator. Here's how to scroll through your home timeline:
+## Single-Page Queries
+
+Most use cases only need one page. Use the convenience functions in the `Bluesky` module -- they accept an optional page size and an optional cursor, and return a single `Page<'T>`:
 
 ```fsharp
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
-open FSharp.ATProto.Syntax
 
-let pages = Bluesky.paginateTimeline agent (Some 25L)
-let enumerator = pages.GetAsyncEnumerator()
-let mutable hasMore = true
-
-while hasMore do
-    let! moved = enumerator.MoveNextAsync()
-    hasMore <- moved
-    if hasMore then
-        match enumerator.Current with
-        | Ok page ->
-            for item in page.Items do
-                printfn "@%s: %s"
-                    (Handle.value item.Post.Author.Handle)
-                    item.Post.Text
-        | Error e ->
-            printfn "Error: %A" e
-            hasMore <- false
+taskResult {
+    let! page = Bluesky.getTimeline agent (Some 50L) None
+    for item in page.Items do
+        printfn "@%s: %s" item.Post.Author.DisplayName item.Post.Text
+}
 ```
 
-`paginateTimeline` takes just two arguments -- an authenticated agent and an optional page size. Each page contains a list of `FeedItem` values in `.Items`, and the `TimelinePost` within gives you `.Text` directly -- no JSON digging required.
+There are matching single-page functions for most read endpoints: `getFollowers`, `getFollows`, `getAuthorFeed`, `getNotifications`, `searchPosts`, `searchActors`, and more.
 
 ## Pre-Built Paginators
 
-The `Bluesky` module provides three pre-built paginators that handle all the cursor plumbing for you:
+When you need to process an unbounded result set without loading everything into memory, use a paginator. Each returns `IAsyncEnumerable<Result<Page<'T>, XrpcError>>` -- pages arrive lazily, one at a time.
 
-### Timeline
+| Paginator | Signature |
+|-----------|-----------|
+| `Bluesky.paginateTimeline` | `AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>` |
+| `Bluesky.paginateFollowers` | `AtpAgent -> string -> int64 option -> IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>` |
+| `Bluesky.paginateNotifications` | `AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<Notification>, XrpcError>>` |
 
-```fsharp
-Bluesky.paginateTimeline : AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>
-```
-
-```fsharp
-let pages = Bluesky.paginateTimeline agent (Some 25L)
-```
-
-### Followers
-
-```fsharp
-Bluesky.paginateFollowers : AtpAgent -> string -> int64 option -> IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>
-```
-
-```fsharp
-let pages = Bluesky.paginateFollowers agent "my-handle.bsky.social" (Some 50L)
-```
-
-The `actor` parameter is a string that can be either a handle or a DID.
-
-### Notifications
-
-```fsharp
-Bluesky.paginateNotifications : AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<Notification>, XrpcError>>
-```
-
-```fsharp
-let pages = Bluesky.paginateNotifications agent (Some 30L)
-```
-
-For all three, pass `None` as the page size to use the server's default.
+Pass `None` as the page size to use the server's default.
 
 ## Consuming Pages
 
-The paginators return `IAsyncEnumerable`, which you consume with `GetAsyncEnumerator`, `MoveNextAsync`, and `Current`.
-
-### Process All Pages
+Here is how to iterate through all pages of your home timeline:
 
 ```fsharp
-let pages = Bluesky.paginateTimeline agent (Some 25L)
-let enumerator = pages.GetAsyncEnumerator()
-let mutable hasMore = true
+task {
+    let pages = Bluesky.paginateTimeline agent (Some 25L)
+    let enumerator = pages.GetAsyncEnumerator()
 
-while hasMore do
-    let! moved = enumerator.MoveNextAsync()
-    hasMore <- moved
-    if hasMore then
-        match enumerator.Current with
-        | Ok page ->
-            for item in page.Items do
-                printfn "@%s: %s"
-                    (Handle.value item.Post.Author.Handle)
-                    item.Post.Text
-        | Error e ->
-            printfn "Error: %A" e
+    let mutable hasMore = true
+    while hasMore do
+        let! moved = enumerator.MoveNextAsync()
+        if not moved then
             hasMore <- false
+        else
+            match enumerator.Current with
+            | Ok page ->
+                for item in page.Items do
+                    printfn "@%s: %s" item.Post.Author.DisplayName item.Post.Text
+            | Error err ->
+                printfn "Error: %A" err
+                hasMore <- false
+}
 ```
 
-### Take a Fixed Number of Pages
+To take a fixed number of pages, add a counter:
 
 ```fsharp
-let pages = Bluesky.paginateTimeline agent (Some 25L)
-let enumerator = pages.GetAsyncEnumerator()
-let mutable pageCount = 0
+task {
+    let pages = Bluesky.paginateTimeline agent (Some 25L)
+    let enumerator = pages.GetAsyncEnumerator()
 
-while pageCount < 3 do
-    let! moved = enumerator.MoveNextAsync()
-    if moved then
-        match enumerator.Current with
-        | Ok page ->
-            pageCount <- pageCount + 1
-            printfn "Page %d: %d items" pageCount page.Items.Length
-        | Error _ ->
-            pageCount <- 3  // stop on error
-    else
-        pageCount <- 3  // no more pages
+    let mutable pageCount = 0
+    let mutable hasMore = true
+    while hasMore && pageCount < 3 do
+        let! moved = enumerator.MoveNextAsync()
+        if not moved then
+            hasMore <- false
+        else
+            match enumerator.Current with
+            | Ok page ->
+                pageCount <- pageCount + 1
+                printfn "Page %d: %d items" pageCount page.Items.Length
+            | Error _ ->
+                hasMore <- false
+}
 ```
+
+**A note on `IAsyncEnumerable`.** This is a .NET interface, not a native F# type, so consuming it requires manual enumerator management as shown above. If you prefer a more functional style, consider the [FSharp.Control.TaskSeq](https://github.com/fsprojects/FSharp.Control.TaskSeq) NuGet package, which provides `taskSeq {}` computation expressions for async sequences.
 
 ## Custom Pagination
 
-For endpoints that don't have a pre-built paginator, use `Xrpc.paginate` directly. It takes five arguments:
-
-1. The XRPC endpoint name (its `TypeId`)
-2. Initial parameters (with `Cursor = None` to start from the beginning)
-3. A function to extract the cursor from a response
-4. A function to set the cursor on the parameters for the next request
-5. The agent
-
-Here's how to paginate an author's feed:
+For endpoints without a pre-built paginator, use `Xrpc.paginate` directly. It takes five arguments: the endpoint's `TypeId`, initial parameters (with `Cursor = None`), a cursor extractor, a cursor setter, and the agent.
 
 ```fsharp
 let pages =
@@ -149,7 +108,7 @@ let pages =
         agent
 ```
 
-And chat conversations (note the chat proxy agent):
+Chat endpoints need the chat proxy agent:
 
 ```fsharp
 let chatAgent = AtpAgent.withChatProxy agent
@@ -163,30 +122,17 @@ let pages =
         chatAgent
 ```
 
-The pattern is always the same: provide the type parameters, the endpoint TypeId, initial params, a cursor getter, a cursor setter, and the agent. The pre-built paginators are just this pattern pre-wired for common endpoints.
+The pre-built paginators are just this pattern pre-wired for common endpoints.
 
 ## How Cursors Work
 
-The AT Protocol uses opaque cursor strings for pagination. The server includes a `cursor` field in the response when more results are available. When the cursor is `None`, you've reached the end.
+The AT Protocol uses opaque cursor strings for pagination. The server includes a `cursor` field in the response when more results are available. When the cursor is `None`, you have reached the end.
 
 Each call to `MoveNextAsync` on the enumerator:
 
 1. Sends a query with the current parameters (including the cursor from the previous response)
-2. Yields the response as `Ok page` or `Error e`
+2. Yields the response as `Ok page` or `Error err`
 3. Extracts the new cursor from the response for the next iteration
 4. If the cursor is `None` or an error occurs, marks the sequence as finished
 
 You never need to manage cursors yourself -- the paginator handles it all. Pages are fetched lazily, so you only pay for the pages you actually consume.
-
-## Single-Page Queries
-
-If you only need one page of results, use the convenience functions in the `Bluesky` module instead of the full paginator:
-
-```fsharp
-let! result = Bluesky.getTimeline agent (Some 50L) None
-// result : Result<Page<FeedItem>, XrpcError>
-```
-
-These accept an optional page size and an optional cursor string, and return a single `Page<'T>`. There are matching single-page functions for followers (`Bluesky.getFollowers`) and notifications (`Bluesky.getNotifications`) as well.
-
-Pagination is most useful when you want to process a large or unbounded result set without loading everything into memory at once.

@@ -2,7 +2,7 @@
 title: Posts
 category: Guides
 categoryindex: 1
-index: 2
+index: 4
 description: Create, read, quote, reply to, search, and delete Bluesky posts with FSharp.ATProto
 keywords: posts, create, reply, delete, thread, quote, search, bluesky
 ---
@@ -11,7 +11,7 @@ keywords: posts, create, reply, delete, thread, quote, search, bluesky
 
 Posts are the primary content type on Bluesky. FSharp.ATProto gives you convenience methods for the most common operations and generated XRPC wrappers when you need full control.
 
-All examples below assume you have an authenticated `AtpAgent` and these namespaces open:
+All examples use `taskResult {}` for concise error handling. See the [Error Handling guide](error-handling.html) for details.
 
 ```fsharp
 open FSharp.ATProto.Core
@@ -21,119 +21,90 @@ open FSharp.ATProto.Syntax
 
 ## Creating a Post
 
-`Bluesky.post` creates a post with automatic rich text detection. Mentions (`@handle`), links, and hashtags in the text are detected, resolved, and attached as facets -- you do not need to handle any of that yourself:
+`Bluesky.post` creates a post with automatic rich text detection. Mentions, links, and hashtags are detected, resolved, and attached as facets automatically:
 
 ```fsharp
-task {
-    let! result = Bluesky.post agent "Hello from F#! #atproto"
-
-    match result with
-    | Ok postRef ->
-        printfn "Posted: %s" (AtUri.value postRef.Uri)
-    | Error err ->
-        printfn "Failed: %A" err
+taskResult {
+    let! postRef = Bluesky.post agent "Hello from F#! #atproto"
+    printfn "Posted: %s" (AtUri.value postRef.Uri)
+    return postRef
 }
 ```
 
-On success you get a `PostRef` containing the AT-URI and CID of the new post:
+On success you get a `PostRef` containing the [AT-URI](../concepts.html) and CID of the new post. The `Uri` uniquely identifies the post. The `Cid` identifies the exact version. You need both to reply, like, or repost.
+
+At the program boundary, handle the result:
 
 ```fsharp
-type PostRef = { Uri: AtUri; Cid: Cid }
+match! Bluesky.post agent "Hello!" with
+| Ok postRef -> printfn "Posted: %s" (AtUri.value postRef.Uri)
+| Error err -> printfn "Failed: %A" err
 ```
 
-The `Uri` uniquely identifies the post (e.g. `at://did:plc:xxx/app.bsky.feed.post/3k2la3b`). The `Cid` identifies the exact version. You need both to reply, like, or repost.
+Every example below returns `Task<Result<_, XrpcError>>` -- we show only the `taskResult` happy path for brevity.
 
 ## Reading Posts
 
-`Bluesky.getPosts` fetches one or more posts by AT-URI and returns them as `TimelinePost` domain types:
+`Bluesky.getPosts` fetches one or more posts by AT-URI and returns `TimelinePost` domain types:
 
 ```fsharp
-task {
-    let uri =
-        AtUri.parse "at://did:plc:xxx/app.bsky.feed.post/3k2la3b"
-        |> Result.defaultWith failwith
+taskResult {
+    let! posts = Bluesky.getPosts agent [ postRef.Uri ]
 
-    let! result = Bluesky.getPosts agent [ uri ]
-
-    match result with
-    | Ok posts ->
-        for post in posts do
-            printfn "@%s: %s" post.Author.DisplayName post.Text
-            printfn "  Likes: %d  Replies: %d" post.LikeCount post.ReplyCount
-    | Error err ->
-        printfn "Failed: %A" err
+    for post in posts do
+        printfn "@%s: %s" post.Author.DisplayName post.Text
+        printfn "  Likes: %d  Replies: %d" post.LikeCount post.ReplyCount
 }
 ```
 
-`TimelinePost` gives you direct access to all fields -- `Uri`, `Cid`, `Author` (a `ProfileSummary`), `Text`, `Facets`, `LikeCount`, `RepostCount`, `ReplyCount`, `QuoteCount`, `IndexedAt`, `IsLiked`, `IsReposted`, and `IsBookmarked`. No need to dig into record internals.
+`TimelinePost` gives you direct access to `Uri`, `Cid`, `Author`, `Text`, `Facets`, `LikeCount`, `RepostCount`, `ReplyCount`, `QuoteCount`, `IndexedAt`, `IsLiked`, `IsReposted`, and `IsBookmarked`. No need to dig into record internals.
 
-> **Power users**: If you need the raw `AppBskyFeed.Defs.PostView` from the generated types, use `AppBskyFeed.GetPosts.query` directly. `PostView` provides `.Text`, `.Facets`, and `.AsPost` extension properties for convenient access to post content at the raw layer.
+> **Power users**: If you need the raw `AppBskyFeed.Defs.PostView` from the generated types, use `AppBskyFeed.GetPosts.query` directly. `PostView` provides `.Text`, `.Facets`, and `.AsPost` extension properties for convenient access at the raw layer.
 
 ## Quote Posts
 
-`Bluesky.quotePost` creates a post that quotes another post. The quoted post appears as an embedded card below your text:
+`Bluesky.quotePost` creates a post that quotes another. The quoted post appears as an embedded card:
 
 ```fsharp
-task {
-    let! result = Bluesky.quotePost agent "This is a great take" originalPostRef
-
-    match result with
-    | Ok quoteRef ->
-        printfn "Quote posted: %s" (AtUri.value quoteRef.Uri)
-    | Error err ->
-        printfn "Failed: %A" err
+taskResult {
+    let! quoteRef = Bluesky.quotePost agent "This is a great take" originalPostRef
+    printfn "Quote posted: %s" (AtUri.value quoteRef.Uri)
 }
 ```
 
-Like `Bluesky.post`, mentions, links, and hashtags in the text are auto-detected and resolved. The `originalPostRef` is the `PostRef` of the post you want to quote.
+Like `Bluesky.post`, mentions, links, and hashtags in the text are auto-detected.
 
 ### Reading Quotes
 
 `Bluesky.getQuotes` returns a paginated list of posts that quote a given post:
 
 ```fsharp
-task {
-    let! result = Bluesky.getQuotes agent postRef.Uri None None
+taskResult {
+    let! page = Bluesky.getQuotes agent postRef.Uri None None
 
-    match result with
-    | Ok page ->
-        for quote in page.Items do
-            printfn "@%s quoted: %s" quote.Author.DisplayName quote.Text
+    for quote in page.Items do
+        printfn "@%s quoted: %s" quote.Author.DisplayName quote.Text
 
-        match page.Cursor with
-        | Some cursor -> printfn "More quotes available"
-        | None -> printfn "No more quotes"
-    | Error err ->
-        printfn "Failed: %A" err
+    match page.Cursor with
+    | Some _ -> printfn "More quotes available"
+    | None -> printfn "No more quotes"
 }
 ```
 
-The first `int64 option` is the page size limit and the second `string option` is the pagination cursor. Pass `None` for both to use server defaults. See the [Pagination guide](pagination.html) for fetching additional pages.
+The first `int64 option` is the page size limit, the second `string option` is the pagination cursor. Pass `None` for both to use server defaults. See the [Pagination guide](pagination.html) for fetching additional pages.
 
 ## Replying to a Post
 
-`Bluesky.replyTo` creates a reply with automatic rich text detection and automatic thread root resolution. You only need the `PostRef` of the post you are replying to -- the library figures out the thread root for you:
+`Bluesky.replyTo` creates a reply with automatic rich text detection and automatic thread root resolution. Pass the post you are replying to -- the library figures out the thread root:
 
 ```fsharp
-task {
-    let! result = Bluesky.replyTo agent "Great post!" parentRef
-
-    match result with
-    | Ok replyRef ->
-        printfn "Replied: %s" (AtUri.value replyRef.Uri)
-    | Error err ->
-        printfn "Failed: %A" err
+taskResult {
+    let! replyRef = Bluesky.replyTo agent "Great post!" parentRef
+    printfn "Replied: %s" (AtUri.value replyRef.Uri)
 }
 ```
 
 Under the hood, the library fetches the parent post to determine the thread root. If the parent is a top-level post, it becomes both parent and root. If the parent is itself a reply, the original thread root is extracted automatically.
-
-If you have a `PostView` (from a query result), you can build a `PostRef` from it:
-
-```fsharp
-let toPostRef (pv: AppBskyFeed.Defs.PostView) : PostRef =
-    { Uri = pv.Uri; Cid = pv.Cid }
-```
 
 ### Explicit Parent and Root
 
@@ -149,18 +120,14 @@ The parameter order is: agent, text, parent, root.
 
 ### The Simple Way
 
-`Bluesky.getPostThreadView` returns a `ThreadPost option` -- `Some` for a normal accessible thread, `None` for deleted or blocked posts. `ThreadPost` is a domain type with `Post` (a `TimelinePost`), `Parent`, and `Replies`:
+`Bluesky.getPostThreadView` returns a `ThreadPost option` -- `Some` for a normal accessible thread, `None` for deleted or blocked posts:
 
 ```fsharp
-task {
-    let uri =
-        AtUri.parse "at://did:plc:xxx/app.bsky.feed.post/3k2la3b"
-        |> Result.defaultWith failwith
+taskResult {
+    let! threadOpt = Bluesky.getPostThreadView agent postRef.Uri (Some 6L) (Some 3L)
 
-    let! result = Bluesky.getPostThreadView agent uri (Some 6L) (Some 3L)
-
-    match result with
-    | Ok (Some thread) ->
+    match threadOpt with
+    | Some thread ->
         printfn "Post: %s" thread.Post.Text
 
         for reply in thread.Replies do
@@ -171,71 +138,55 @@ task {
                 printfn "  [deleted: %s]" (AtUri.value uri)
             | ThreadNode.Blocked uri ->
                 printfn "  [blocked: %s]" (AtUri.value uri)
-    | Ok None ->
+    | None ->
         printfn "Post is not available (deleted or blocked)"
-    | Error err ->
-        printfn "Failed: %A" err
 }
 ```
 
-The first `int64 option` is the reply depth (how many levels of replies to fetch). The second is the parent height (how many parent posts to include above the target post). Pass `None` for either to use the server default.
+The first `int64 option` is the reply depth. The second is the parent height (how many parent posts above the target). Pass `None` for either to use the server default.
 
 ### Full Pattern Matching
 
-For cases where you need to distinguish between not-found and blocked posts at the top level, use `Bluesky.getPostThread` which returns a `ThreadNode`:
+For cases where you need to distinguish between not-found and blocked at the top level, use `Bluesky.getPostThread` which returns a `ThreadNode`:
 
 ```fsharp
-task {
-    let! result = Bluesky.getPostThread agent uri (Some 6L) (Some 3L)
+taskResult {
+    let! node = Bluesky.getPostThread agent postRef.Uri (Some 6L) (Some 3L)
 
-    match result with
-    | Ok (ThreadNode.Post thread) ->
+    match node with
+    | ThreadNode.Post thread ->
         printfn "Post: %s" thread.Post.Text
 
         // Walk the parent chain
-        let mutable current = thread.Parent
-        while current.IsSome do
-            match current.Value with
-            | ThreadNode.Post p ->
+        let rec walkParents = function
+            | Some (ThreadNode.Post p) ->
                 printfn "  Parent: %s" p.Post.Text
-                current <- p.Parent
-            | _ ->
-                current <- None
-    | Ok (ThreadNode.NotFound uri) ->
+                walkParents p.Parent
+            | _ -> ()
+
+        walkParents thread.Parent
+
+    | ThreadNode.NotFound uri ->
         printfn "Post not found: %s" (AtUri.value uri)
-    | Ok (ThreadNode.Blocked uri) ->
+    | ThreadNode.Blocked uri ->
         printfn "Post is blocked: %s" (AtUri.value uri)
-    | Error err ->
-        printfn "Failed: %A" err
 }
 ```
-
-`ThreadNode` is a discriminated union with three cases: `Post` (containing a `ThreadPost` with nested `Parent` and `Replies`), `NotFound`, and `Blocked`. This gives you full control over how to handle each case in the thread tree.
 
 > **Power users**: For access to the raw `AppBskyFeed.GetPostThread.OutputThreadUnion` (aliased as `ThreadResult`), call `AppBskyFeed.GetPostThread.query` directly.
 
 ## Searching Posts
 
-`Bluesky.searchPosts` runs a full-text search over indexed posts and returns a paginated `Page<TimelinePost>`:
+`Bluesky.searchPosts` runs a full-text search and returns a paginated `Page<TimelinePost>`:
 
 ```fsharp
-task {
-    let! result = Bluesky.searchPosts agent "F# atproto" (Some 10L) None
+taskResult {
+    let! page = Bluesky.searchPosts agent "F# atproto" (Some 10L) None
 
-    match result with
-    | Ok page ->
-        for post in page.Items do
-            printfn "@%s: %s" post.Author.DisplayName post.Text
-
-        match page.Cursor with
-        | Some cursor -> printfn "More results available"
-        | None -> printfn "No more results"
-    | Error err ->
-        printfn "Failed: %A" err
+    for post in page.Items do
+        printfn "@%s: %s" post.Author.DisplayName post.Text
 }
 ```
-
-The first `int64 option` is the page size limit and the second `string option` is the pagination cursor. Pass `None` for both to use server defaults. See the [Pagination guide](pagination.html) for fetching additional pages with the cursor.
 
 > **Power users**: For advanced search filters (author, language, domain, date range, sort order), use `AppBskyFeed.SearchPosts.query` directly with the full parameter record.
 
@@ -244,20 +195,17 @@ The first `int64 option` is the page size limit and the second `string option` i
 `Bluesky.deleteRecord` deletes any record by its AT-URI. Pass the URI from the `PostRef` you received when creating the post:
 
 ```fsharp
-task {
-    let! result = Bluesky.deleteRecord agent postRef.Uri
-
-    match result with
-    | Ok () -> printfn "Deleted"
-    | Error err -> printfn "Failed: %A" err
+taskResult {
+    do! Bluesky.deleteRecord agent postRef.Uri
+    printfn "Deleted"
 }
 ```
 
-The same function works for any record you have created -- likes, reposts, follows, and blocks. Pass the AT-URI that was returned when you created the record.
+The same function works for any record you have created -- likes, reposts, follows, and blocks.
 
 ## Posting with Pre-Resolved Facets
 
-If you have already detected and resolved rich text facets yourself (or want to construct them manually), use `Bluesky.postWithFacets` to skip auto-detection:
+If you have already resolved rich text facets yourself (or want to construct them manually), use `Bluesky.postWithFacets` to skip auto-detection:
 
 ```fsharp
 task {
@@ -270,5 +218,7 @@ task {
     | Error err -> printfn "Failed: %A" err
 }
 ```
+
+Note: `RichText.parse` returns a bare `Task` (it silently drops unresolvable mentions rather than failing), so this example uses `task {}` with a manual match on the `postWithFacets` result.
 
 Pass an empty list for plain text with no facets. See the [Rich Text guide](rich-text.html) for details on the detection and resolution pipeline.
