@@ -23,18 +23,18 @@ open FSharp.ATProto.Syntax
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-let loadEnv (path: string) =
+let loadEnv (path : string) =
     if File.Exists path then
         for line in File.ReadAllLines path do
-            let trimmed = line.Trim()
+            let trimmed = line.Trim ()
 
             if not (String.IsNullOrEmpty trimmed) && not (trimmed.StartsWith "#") then
                 match trimmed.IndexOf '=' with
                 | -1 -> ()
                 | i ->
-                    let key = trimmed.[.. i - 1].Trim()
-                    let value = trimmed.[i + 1 ..].Trim()
-                    Environment.SetEnvironmentVariable(key, value)
+                    let key = trimmed.[.. i - 1].Trim ()
+                    let value = trimmed.[i + 1 ..].Trim ()
+                    Environment.SetEnvironmentVariable (key, value)
 
 let env key =
     match Environment.GetEnvironmentVariable key with
@@ -45,11 +45,11 @@ let step number title =
     printfn ""
     printfn "── Step %d: %s ──" number title
 
-let pause (seconds: int) =
+let pause (seconds : int) =
     task {
         for i in seconds .. -1 .. 1 do
             printf "\r   Waiting %d seconds...  " i
-            do! Task.Delay(1000)
+            do! Task.Delay (1000)
 
         printf "\r                           \r"
     }
@@ -59,14 +59,14 @@ let unwrap label result =
     | Ok v ->
         printfn "   OK: %s" label
         v
-    | Error(e: XrpcError) ->
+    | Error (e : XrpcError) ->
         failwithf "   FAIL: %s — %d %s" label e.StatusCode (e.Message |> Option.defaultValue "(no message)")
 
 // ── Main ─────────────────────────────────────────────────────────────
 
 [<EntryPoint>]
 let main _ =
-    loadEnv (Path.Combine(__SOURCE_DIRECTORY__, ".env"))
+    loadEnv (Path.Combine (__SOURCE_DIRECTORY__, ".env"))
 
     let handle = env "BSKY_HANDLE"
     let password = env "BSKY_PASSWORD"
@@ -93,7 +93,7 @@ let main _ =
         step 2 "Creating a post"
 
         let postText =
-            sprintf "Test drive from FSharp.ATProto! [%s]" (DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"))
+            sprintf "Test drive from FSharp.ATProto! [%s]" (DateTime.UtcNow.ToString ("yyyy-MM-dd HH:mm:ss"))
 
         let! postResult = Bluesky.post agent postText
         let post1 = postResult |> unwrap (sprintf "Posted: \"%s\"" postText)
@@ -163,11 +163,11 @@ let main _ =
 
         match adlerProfile.Viewer |> Option.bind (fun v -> v.Following) with
         | Some followUri ->
-            let followRef: FollowRef = { Uri = followUri }
+            let followRef : FollowRef = { Uri = followUri }
             let! unfollowResult = Bluesky.unfollow agent followRef
 
             match unfollowResult with
-            | Ok() -> printfn "   OK: Unfollowed @adler.dev"
+            | Ok () -> printfn "   OK: Unfollowed @adler.dev"
             | Error e -> printfn "   FAIL: Unfollow — %A" e
         | None -> printfn "   Note: Not currently following @adler.dev — skipping"
 
@@ -197,7 +197,7 @@ let main _ =
         let mutable cleanedUp = 0
 
         let cleanup () =
-            if Interlocked.CompareExchange(&cleanedUp, 1, 0) = 0 then
+            if Interlocked.CompareExchange (&cleanedUp, 1, 0) = 0 then
                 printfn ""
                 printfn "── Cleaning up ──"
 
@@ -213,49 +213,49 @@ let main _ =
                         let! r2 = Bluesky.deleteRecord agent reply1.Uri
 
                         match r2 with
-                        | Ok() -> printfn "   Deleted reply"
+                        | Ok () -> printfn "   Deleted reply"
                         | Error e -> printfn "   Delete reply failed (non-fatal): %A" e
 
                         let! r3 = Bluesky.deleteRecord agent post1.Uri
 
                         match r3 with
-                        | Ok() -> printfn "   Deleted post"
+                        | Ok () -> printfn "   Deleted post"
                         | Error e -> printfn "   Delete post failed (non-fatal): %A" e
                     }
 
-                work.GetAwaiter().GetResult()
+                work.GetAwaiter().GetResult ()
                 printfn ""
                 printfn "   Done — back to initial state (still following @adler.dev)"
                 printfn ""
 
-        let exitSignal = new TaskCompletionSource<unit>()
+        let exitSignal = new TaskCompletionSource<unit> ()
 
         // Ctrl+C (SIGINT)
-        Console.CancelKeyPress.Add(fun args ->
+        Console.CancelKeyPress.Add (fun args ->
             args.Cancel <- true
             cleanup ()
-            exitSignal.TrySetResult(()) |> ignore)
+            exitSignal.TrySetResult (()) |> ignore)
 
         // Normal process exit / SIGTERM via .NET
-        AppDomain.CurrentDomain.ProcessExit.Add(fun _ -> cleanup ())
+        AppDomain.CurrentDomain.ProcessExit.Add (fun _ -> cleanup ())
 
         // SIGTERM (explicit — covers `kill <pid>` and docker stop)
-        PosixSignalRegistration.Create(
+        PosixSignalRegistration.Create (
             PosixSignal.SIGTERM,
             fun ctx ->
                 ctx.Cancel <- true
                 cleanup ()
-                exitSignal.TrySetResult(()) |> ignore
+                exitSignal.TrySetResult (()) |> ignore
         )
         |> ignore
 
         // SIGHUP (terminal closed)
-        PosixSignalRegistration.Create(
+        PosixSignalRegistration.Create (
             PosixSignal.SIGHUP,
             fun ctx ->
                 ctx.Cancel <- true
                 cleanup ()
-                exitSignal.TrySetResult(()) |> ignore
+                exitSignal.TrySetResult (()) |> ignore
         )
         |> ignore
 
@@ -263,4 +263,4 @@ let main _ =
 
         return 0
     }
-    |> fun t -> t.GetAwaiter().GetResult()
+    |> fun t -> t.GetAwaiter().GetResult ()

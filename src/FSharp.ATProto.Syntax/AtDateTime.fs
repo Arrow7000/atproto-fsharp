@@ -16,7 +16,7 @@ type AtDateTime =
     private
     | AtDateTime of string
 
-    override this.ToString() = let (AtDateTime s) = this in s
+    override this.ToString () = let (AtDateTime s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="AtDateTime"/> values.
@@ -33,10 +33,7 @@ module AtDateTime =
     // - Timezone offset: +HH:MM or -HH:MM (not -00:00, not +0000, not +00)
     // - No leading/trailing whitespace
     let private pattern =
-        Regex(
-            @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$",
-            RegexOptions.Compiled
-        )
+        Regex (@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$", RegexOptions.Compiled)
 
     /// <summary>
     /// Extract the string representation of an AT Protocol datetime.
@@ -57,8 +54,12 @@ module AtDateTime =
     /// <c>Ok</c> with a validated <see cref="AtDateTime"/>, or <c>Error</c> with a message describing the validation failure.
     /// Validation failures include: null input, invalid format, or use of the prohibited <c>-00:00</c> offset.
     /// </returns>
-    let parse (s: string) : Result<AtDateTime, string> =
-        if isNull s then Error "DateTime cannot be null"
-        elif not (pattern.IsMatch(s)) then Error (sprintf "Invalid ATProto datetime: %s" s)
-        elif s.EndsWith("-00:00") then Error (sprintf "Invalid ATProto datetime: -00:00 offset not allowed: %s" s)
-        else Ok (AtDateTime s)
+    let parse (s : string) : Result<AtDateTime, string> =
+        if isNull s then
+            Error "DateTime cannot be null"
+        elif not (pattern.IsMatch (s)) then
+            Error (sprintf "Invalid ATProto datetime: %s" s)
+        elif s.EndsWith ("-00:00") then
+            Error (sprintf "Invalid ATProto datetime: -00:00 offset not allowed: %s" s)
+        else
+            Ok (AtDateTime s)

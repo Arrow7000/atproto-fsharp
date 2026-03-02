@@ -17,63 +17,67 @@ module RichText =
     /// </summary>
     type DetectedFacet =
         /// <summary>A mention (@handle) detected in text.</summary>
-        | DetectedMention of byteStart: int * byteEnd: int * handle: string
+        | DetectedMention of byteStart : int * byteEnd : int * handle : string
         /// <summary>A link (http:// or https://) detected in text.</summary>
-        | DetectedLink of byteStart: int * byteEnd: int * uri: string
+        | DetectedLink of byteStart : int * byteEnd : int * uri : string
         /// <summary>A hashtag (#tag) detected in text.</summary>
-        | DetectedTag of byteStart: int * byteEnd: int * tag: string
+        | DetectedTag of byteStart : int * byteEnd : int * tag : string
 
-    let private charIndexToByteIndex (text: string) (charIndex: int) =
-        Encoding.UTF8.GetByteCount(text, 0, charIndex)
+    let private charIndexToByteIndex (text : string) (charIndex : int) = Encoding.UTF8.GetByteCount (text, 0, charIndex)
 
     let private mentionRegex =
-        Regex(@"(?:^|[\s(])(@([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)", RegexOptions.Compiled)
+        Regex (
+            @"(?:^|[\s(])(@([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)",
+            RegexOptions.Compiled
+        )
 
     let private linkRegex =
-        Regex(@"(?:^|[\s(])(https?://[^\s)\]]*)", RegexOptions.Compiled)
+        Regex (@"(?:^|[\s(])(https?://[^\s)\]]*)", RegexOptions.Compiled)
 
     let private hashtagRegex =
-        Regex(@"(?:^|[\s])[#\uFF03](\S*[^\d\s\p{P}]\S*)", RegexOptions.Compiled)
+        Regex (@"(?:^|[\s])[#\uFF03](\S*[^\d\s\p{P}]\S*)", RegexOptions.Compiled)
 
-    let private trailingPunctuation = Regex(@"[.,;:!?]+$", RegexOptions.Compiled)
+    let private trailingPunctuation = Regex (@"[.,;:!?]+$", RegexOptions.Compiled)
 
-    let private detectMentions (text: string) =
-        [ for m in mentionRegex.Matches(text) do
-            // Find the @handle part within the match
-            let fullMatch = m.Value
-            let atIndex = fullMatch.IndexOf('@')
-            let handle = fullMatch.Substring(atIndex + 1)
-            let charStart = m.Index + atIndex
-            let charEnd = charStart + handle.Length + 1 // +1 for @
-            let byteStart = charIndexToByteIndex text charStart
-            let byteEnd = charIndexToByteIndex text charEnd
-            DetectedMention(byteStart, byteEnd, handle) ]
+    let private detectMentions (text : string) =
+        [ for m in mentionRegex.Matches (text) do
+              // Find the @handle part within the match
+              let fullMatch = m.Value
+              let atIndex = fullMatch.IndexOf ('@')
+              let handle = fullMatch.Substring (atIndex + 1)
+              let charStart = m.Index + atIndex
+              let charEnd = charStart + handle.Length + 1 // +1 for @
+              let byteStart = charIndexToByteIndex text charStart
+              let byteEnd = charIndexToByteIndex text charEnd
+              DetectedMention (byteStart, byteEnd, handle) ]
 
-    let private detectLinks (text: string) =
-        [ for m in linkRegex.Matches(text) do
-            let rawUrl =
-                let v = m.Groups.[1].Value
-                trailingPunctuation.Replace(v, "")
-            let charStart = m.Groups.[1].Index
-            // Recalculate end based on cleaned URL
-            let cleanCharEnd = charStart + rawUrl.Length
-            let byteStart = charIndexToByteIndex text charStart
-            let byteEnd = charIndexToByteIndex text cleanCharEnd
-            DetectedLink(byteStart, byteEnd, rawUrl) ]
+    let private detectLinks (text : string) =
+        [ for m in linkRegex.Matches (text) do
+              let rawUrl =
+                  let v = m.Groups.[1].Value
+                  trailingPunctuation.Replace (v, "")
 
-    let private detectHashtags (text: string) =
-        [ for m in hashtagRegex.Matches(text) do
-            let tag = m.Groups.[1].Value |> fun t -> trailingPunctuation.Replace(t, "")
-            if tag.Length > 0 then
-                // Find the # character position
-                let fullMatch = m.Value
-                let hashIndex = fullMatch.IndexOfAny([| '#'; '\uFF03' |])
-                let charStart = m.Index + hashIndex
-                let charEnd = charStart + 1 + tag.Length // +1 for # char
-                // Adjust for fullwidth # which is 3 bytes but 1 char
-                let byteStart = charIndexToByteIndex text charStart
-                let byteEnd = charIndexToByteIndex text charEnd
-                DetectedTag(byteStart, byteEnd, tag) ]
+              let charStart = m.Groups.[1].Index
+              // Recalculate end based on cleaned URL
+              let cleanCharEnd = charStart + rawUrl.Length
+              let byteStart = charIndexToByteIndex text charStart
+              let byteEnd = charIndexToByteIndex text cleanCharEnd
+              DetectedLink (byteStart, byteEnd, rawUrl) ]
+
+    let private detectHashtags (text : string) =
+        [ for m in hashtagRegex.Matches (text) do
+              let tag = m.Groups.[1].Value |> fun t -> trailingPunctuation.Replace (t, "")
+
+              if tag.Length > 0 then
+                  // Find the # character position
+                  let fullMatch = m.Value
+                  let hashIndex = fullMatch.IndexOfAny ([| '#'; '\uFF03' |])
+                  let charStart = m.Index + hashIndex
+                  let charEnd = charStart + 1 + tag.Length // +1 for # char
+                  // Adjust for fullwidth # which is 3 bytes but 1 char
+                  let byteStart = charIndexToByteIndex text charStart
+                  let byteEnd = charIndexToByteIndex text charEnd
+                  DetectedTag (byteStart, byteEnd, tag) ]
 
     /// <summary>
     /// Detect mentions, links, and hashtags in text.
@@ -97,10 +101,11 @@ module RichText =
     /// // Returns [DetectedMention(6, 28, "my-handle.bsky.social"); DetectedTag(30, 38, "atproto")]
     /// </code>
     /// </example>
-    let detect (text: string) : DetectedFacet list =
+    let detect (text : string) : DetectedFacet list =
         let mentions = detectMentions text
         let links = detectLinks text
         let tags = detectHashtags text
+
         mentions @ links @ tags
         |> List.sortBy (fun f ->
             match f with
@@ -114,8 +119,14 @@ module RichText =
     open FSharp.ATProto.Core
     open FSharp.ATProto.Syntax
 
-    let private makeFacet (byteStart: int) (byteEnd: int) (feature: AppBskyRichtext.Facet.FacetFeaturesItem) : AppBskyRichtext.Facet.Facet =
-        { Index = { ByteStart = int64 byteStart; ByteEnd = int64 byteEnd }
+    let private makeFacet
+        (byteStart : int)
+        (byteEnd : int)
+        (feature : AppBskyRichtext.Facet.FacetFeaturesItem)
+        : AppBskyRichtext.Facet.Facet =
+        { Index =
+            { ByteStart = int64 byteStart
+              ByteEnd = int64 byteEnd }
           Features = [ feature ] }
 
     /// <summary>
@@ -129,9 +140,10 @@ module RichText =
     /// A list of <see cref="AppBskyRichtext.Facet.Facet"/> records with resolved features.
     /// Mentions whose handles cannot be resolved are omitted from the result.
     /// </returns>
-    let resolve (agent: AtpAgent) (detected: DetectedFacet list) : Task<AppBskyRichtext.Facet.Facet list> =
+    let resolve (agent : AtpAgent) (detected : DetectedFacet list) : Task<AppBskyRichtext.Facet.Facet list> =
         task {
-            let results = System.Collections.Generic.List<AppBskyRichtext.Facet.Facet>()
+            let results = System.Collections.Generic.List<AppBskyRichtext.Facet.Facet> ()
+
             for facet in detected do
                 match facet with
                 | DetectedMention (s, e, handle) ->
@@ -139,20 +151,22 @@ module RichText =
                     | Error _ -> () // Drop mentions with unparseable handles
                     | Ok handleTyped ->
                         let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handleTyped }
+
                         match result with
                         | Ok output ->
                             let feature = AppBskyRichtext.Facet.FacetFeaturesItem.Mention { Did = output.Did }
-                            results.Add(makeFacet s e feature)
+                            results.Add (makeFacet s e feature)
                         | Error _ -> () // Drop unresolvable mentions
                 | DetectedLink (s, e, uri) ->
                     match FSharp.ATProto.Syntax.Uri.parse uri with
                     | Error _ -> () // Drop links with unparseable URIs
                     | Ok uriTyped ->
                         let feature = AppBskyRichtext.Facet.FacetFeaturesItem.Link { Uri = uriTyped }
-                        results.Add(makeFacet s e feature)
+                        results.Add (makeFacet s e feature)
                 | DetectedTag (s, e, tag) ->
                     let feature = AppBskyRichtext.Facet.FacetFeaturesItem.Tag { Tag = tag }
-                    results.Add(makeFacet s e feature)
+                    results.Add (makeFacet s e feature)
+
             return results |> Seq.toList
         }
 
@@ -169,7 +183,7 @@ module RichText =
     /// let! facets = RichText.parse agent "Hello @my-handle.bsky.social! Check https://example.com #atproto"
     /// </code>
     /// </example>
-    let parse (agent: AtpAgent) (text: string) : Task<AppBskyRichtext.Facet.Facet list> =
+    let parse (agent : AtpAgent) (text : string) : Task<AppBskyRichtext.Facet.Facet list> =
         task {
             let detected = detect text
             return! resolve agent detected
@@ -185,8 +199,8 @@ module RichText =
     /// Grapheme length differs from <see cref="System.String.Length"/> for multi-codepoint
     /// characters such as emoji (e.g., family emoji, flag emoji) and combining character sequences.
     /// </remarks>
-    let graphemeLength (text: string) : int =
-        let info = StringInfo(text)
+    let graphemeLength (text : string) : int =
+        let info = StringInfo (text)
         info.LengthInTextElements
 
     /// <summary>
@@ -195,5 +209,4 @@ module RichText =
     /// </summary>
     /// <param name="text">The text to measure.</param>
     /// <returns>The number of bytes when the text is encoded as UTF-8.</returns>
-    let byteLength (text: string) : int =
-        Encoding.UTF8.GetByteCount(text)
+    let byteLength (text : string) : int = Encoding.UTF8.GetByteCount (text)

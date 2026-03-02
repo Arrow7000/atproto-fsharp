@@ -16,13 +16,13 @@ type Cid =
     private
     | Cid of string
 
-    override this.ToString() = let (Cid s) = this in s
+    override this.ToString () = let (Cid s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Cid"/> values.
 /// </summary>
 module Cid =
-    let private pattern = Regex(@"^[a-zA-Z0-9+/=]{8,256}$", RegexOptions.Compiled)
+    let private pattern = Regex (@"^[a-zA-Z0-9+/=]{8,256}$", RegexOptions.Compiled)
 
     /// <summary>
     /// Extract the string representation of a CID.
@@ -42,11 +42,15 @@ module Cid =
     /// <c>Ok</c> with a validated <see cref="Cid"/>, or <c>Error</c> with a message describing the validation failure.
     /// Validation failures include: null input, CIDv0 format, or invalid syntax.
     /// </returns>
-    let parse (s: string) : Result<Cid, string> =
-        if isNull s then Error "CID cannot be null"
-        elif s.StartsWith("Qmb") then Error "CIDv0 is not supported"
-        elif not (pattern.IsMatch(s)) then Error (sprintf "Invalid CID syntax: %s" s)
-        else Ok (Cid s)
+    let parse (s : string) : Result<Cid, string> =
+        if isNull s then
+            Error "CID cannot be null"
+        elif s.StartsWith ("Qmb") then
+            Error "CIDv0 is not supported"
+        elif not (pattern.IsMatch (s)) then
+            Error (sprintf "Invalid CID syntax: %s" s)
+        else
+            Ok (Cid s)
 
     /// <summary>
     /// Create a CID from a string that has already been validated.
@@ -54,4 +58,4 @@ module Cid =
     /// </summary>
     /// <param name="s">A pre-validated CID string.</param>
     /// <returns>A <see cref="Cid"/> wrapping the string.</returns>
-    let internal fromValidated (s: string) = Cid s
+    let internal fromValidated (s : string) = Cid s

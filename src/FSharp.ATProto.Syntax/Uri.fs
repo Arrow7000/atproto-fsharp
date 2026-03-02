@@ -17,7 +17,7 @@ type Uri =
     private
     | Uri of string
 
-    override this.ToString() = let (Uri s) = this in s
+    override this.ToString () = let (Uri s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Uri"/> values.
@@ -35,7 +35,7 @@ module Uri =
     // Note: "http:" alone is invalid (nothing after colon)
     // Note: scheme must start with a letter (not . or -)
     let private pattern =
-        Regex(@"^[a-zA-Z][a-zA-Z0-9+\-.]*:[^\s]+$", RegexOptions.Compiled)
+        Regex (@"^[a-zA-Z][a-zA-Z0-9+\-.]*:[^\s]+$", RegexOptions.Compiled)
 
     /// <summary>
     /// Extract the string representation of a URI.
@@ -55,8 +55,12 @@ module Uri =
     /// <c>Ok</c> with a validated <see cref="Uri"/>, or <c>Error</c> with a message describing the validation failure.
     /// Validation failures include: null input, exceeding 8192 characters, or invalid URI syntax.
     /// </returns>
-    let parse (s: string) : Result<Uri, string> =
-        if isNull s then Error "URI cannot be null"
-        elif s.Length > 8192 then Error "URI exceeds max length of 8KB"
-        elif not (pattern.IsMatch(s)) then Error (sprintf "Invalid URI: %s" s)
-        else Ok (Uri s)
+    let parse (s : string) : Result<Uri, string> =
+        if isNull s then
+            Error "URI cannot be null"
+        elif s.Length > 8192 then
+            Error "URI exceeds max length of 8KB"
+        elif not (pattern.IsMatch (s)) then
+            Error (sprintf "Invalid URI: %s" s)
+        else
+            Ok (Uri s)

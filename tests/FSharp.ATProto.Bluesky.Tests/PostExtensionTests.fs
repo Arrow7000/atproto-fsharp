@@ -11,7 +11,7 @@ let private parseCid s = Cid.parse s |> Result.defaultWith failwith
 let private parseAtUri s = AtUri.parse s |> Result.defaultWith failwith
 let private parseAtDateTime s = AtDateTime.parse s |> Result.defaultWith failwith
 
-let private dummyAuthor: AppBskyActor.Defs.ProfileViewBasic =
+let private dummyAuthor : AppBskyActor.Defs.ProfileViewBasic =
     { Associated = None
       Avatar = None
       CreatedAt = None
@@ -25,8 +25,8 @@ let private dummyAuthor: AppBskyActor.Defs.ProfileViewBasic =
       Verification = None
       Viewer = None }
 
-let private makePostView (recordJson: string) : AppBskyFeed.Defs.PostView =
-    let record = JsonSerializer.Deserialize<JsonElement>(recordJson)
+let private makePostView (recordJson : string) : AppBskyFeed.Defs.PostView =
+    let record = JsonSerializer.Deserialize<JsonElement> (recordJson)
 
     { Author = dummyAuthor
       BookmarkCount = None
@@ -55,41 +55,49 @@ let private nonPostJson =
 
 [<Tests>]
 let postExtensionTests =
-    testList "PostView extensions" [
-        testCase "Text returns post text from a valid post record" <| fun _ ->
-            let pv = makePostView validPostJson
-            Expect.equal pv.Text "Hello, world!" "should extract text from post"
+    testList
+        "PostView extensions"
+        [ testCase "Text returns post text from a valid post record"
+          <| fun _ ->
+              let pv = makePostView validPostJson
+              Expect.equal pv.Text "Hello, world!" "should extract text from post"
 
-        testCase "Text returns empty string for a non-post record" <| fun _ ->
-            let pv = makePostView nonPostJson
-            Expect.equal pv.Text "" "should return empty string for non-post"
+          testCase "Text returns empty string for a non-post record"
+          <| fun _ ->
+              let pv = makePostView nonPostJson
+              Expect.equal pv.Text "" "should return empty string for non-post"
 
-        testCase "Text returns empty string when record has no text property" <| fun _ ->
-            let pv = makePostView """{"foo":"bar"}"""
-            Expect.equal pv.Text "" "should return empty string when no text property"
+          testCase "Text returns empty string when record has no text property"
+          <| fun _ ->
+              let pv = makePostView """{"foo":"bar"}"""
+              Expect.equal pv.Text "" "should return empty string when no text property"
 
-        testCase "Facets returns facets list when present" <| fun _ ->
-            let pv = makePostView postWithFacetsJson
-            Expect.equal pv.Facets.Length 1 "should have one facet"
-            let facet = pv.Facets.[0]
-            Expect.equal facet.Index.ByteStart 6L "byteStart"
-            Expect.equal facet.Index.ByteEnd 28L "byteEnd"
+          testCase "Facets returns facets list when present"
+          <| fun _ ->
+              let pv = makePostView postWithFacetsJson
+              Expect.equal pv.Facets.Length 1 "should have one facet"
+              let facet = pv.Facets.[0]
+              Expect.equal facet.Index.ByteStart 6L "byteStart"
+              Expect.equal facet.Index.ByteEnd 28L "byteEnd"
 
-        testCase "Facets returns empty list when no facets" <| fun _ ->
-            let pv = makePostView validPostJson
-            Expect.equal pv.Facets [] "should return empty list when no facets"
+          testCase "Facets returns empty list when no facets"
+          <| fun _ ->
+              let pv = makePostView validPostJson
+              Expect.equal pv.Facets [] "should return empty list when no facets"
 
-        testCase "Facets returns empty list for non-post record" <| fun _ ->
-            let pv = makePostView nonPostJson
-            Expect.equal pv.Facets [] "should return empty list for non-post"
+          testCase "Facets returns empty list for non-post record"
+          <| fun _ ->
+              let pv = makePostView nonPostJson
+              Expect.equal pv.Facets [] "should return empty list for non-post"
 
-        testCase "AsPost returns Some for valid post record" <| fun _ ->
-            let pv = makePostView validPostJson
-            Expect.isSome pv.AsPost "should deserialize to Some"
-            let post = pv.AsPost.Value
-            Expect.equal post.Text "Hello, world!" "text should match"
+          testCase "AsPost returns Some for valid post record"
+          <| fun _ ->
+              let pv = makePostView validPostJson
+              Expect.isSome pv.AsPost "should deserialize to Some"
+              let post = pv.AsPost.Value
+              Expect.equal post.Text "Hello, world!" "text should match"
 
-        testCase "AsPost returns None for non-post record" <| fun _ ->
-            let pv = makePostView nonPostJson
-            Expect.isNone pv.AsPost "should return None for non-post"
-    ]
+          testCase "AsPost returns None for non-post record"
+          <| fun _ ->
+              let pv = makePostView nonPostJson
+              Expect.isNone pv.AsPost "should return None for non-post" ]

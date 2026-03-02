@@ -15,14 +15,17 @@ type Nsid =
     private
     | Nsid of string
 
-    override this.ToString() = let (Nsid s) = this in s
+    override this.ToString () = let (Nsid s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Nsid"/> values.
 /// </summary>
 module Nsid =
     let private pattern =
-        Regex(@"^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(\.[a-zA-Z]([a-zA-Z0-9]{0,62})?)$", RegexOptions.Compiled)
+        Regex (
+            @"^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(\.[a-zA-Z]([a-zA-Z0-9]{0,62})?)$",
+            RegexOptions.Compiled
+        )
 
     /// <summary>
     /// Extract the string representation of an NSID.
@@ -52,22 +55,26 @@ module Nsid =
     /// | Error e -> printfn "Invalid: %s" e
     /// </code>
     /// </example>
-    let parse (s: string) : Result<Nsid, string> =
-        if isNull s then Error "NSID cannot be null"
-        elif s.Length > 317 then Error (sprintf "NSID exceeds max length of 317: %d" s.Length)
-        elif not (pattern.IsMatch(s)) then Error (sprintf "Invalid NSID syntax: %s" s)
-        else Ok (Nsid s)
+    let parse (s : string) : Result<Nsid, string> =
+        if isNull s then
+            Error "NSID cannot be null"
+        elif s.Length > 317 then
+            Error (sprintf "NSID exceeds max length of 317: %d" s.Length)
+        elif not (pattern.IsMatch (s)) then
+            Error (sprintf "Invalid NSID syntax: %s" s)
+        else
+            Ok (Nsid s)
 
     /// <summary>
     /// Extract the authority (reversed domain name) portion of an NSID.
     /// </summary>
     /// <param name="nsid">The NSID to extract the authority from.</param>
     /// <returns>The authority string (e.g. <c>"app.bsky.feed"</c> for NSID <c>"app.bsky.feed.post"</c>).</returns>
-    let authority (Nsid s) = let i = s.LastIndexOf('.') in s.Substring(0, i)
+    let authority (Nsid s) = let i = s.LastIndexOf ('.') in s.Substring (0, i)
 
     /// <summary>
     /// Extract the name (final segment) of an NSID.
     /// </summary>
     /// <param name="nsid">The NSID to extract the name from.</param>
     /// <returns>The name string (e.g. <c>"post"</c> for NSID <c>"app.bsky.feed.post"</c>).</returns>
-    let name (Nsid s) = let i = s.LastIndexOf('.') in s.Substring(i + 1)
+    let name (Nsid s) = let i = s.LastIndexOf ('.') in s.Substring (i + 1)

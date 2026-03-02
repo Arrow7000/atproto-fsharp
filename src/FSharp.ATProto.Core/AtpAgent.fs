@@ -23,9 +23,14 @@ module AtpAgent =
     /// let agent = AtpAgent.create "https://bsky.social"
     /// </code>
     /// </example>
-    let create (baseUrl: string) : AtpAgent =
-        let uri = if baseUrl.EndsWith("/") then Uri(baseUrl) else Uri(baseUrl + "/")
-        { HttpClient = new HttpClient()
+    let create (baseUrl : string) : AtpAgent =
+        let uri =
+            if baseUrl.EndsWith ("/") then
+                Uri (baseUrl)
+            else
+                Uri (baseUrl + "/")
+
+        { HttpClient = new HttpClient ()
           BaseUrl = uri
           Session = None
           ExtraHeaders = [] }
@@ -46,8 +51,13 @@ module AtpAgent =
     /// let agent = AtpAgent.createWithClient client "https://bsky.social"
     /// </code>
     /// </example>
-    let createWithClient (httpClient: HttpClient) (baseUrl: string) : AtpAgent =
-        let uri = if baseUrl.EndsWith("/") then Uri(baseUrl) else Uri(baseUrl + "/")
+    let createWithClient (httpClient : HttpClient) (baseUrl : string) : AtpAgent =
+        let uri =
+            if baseUrl.EndsWith ("/") then
+                Uri (baseUrl)
+            else
+                Uri (baseUrl + "/")
+
         { HttpClient = httpClient
           BaseUrl = uri
           Session = None
@@ -63,8 +73,9 @@ module AtpAgent =
     /// The returned agent shares the same <see cref="System.Net.Http.HttpClient"/> and session
     /// as the original. Changes to the session on either agent are independent (the record is copied).
     /// </remarks>
-    let withChatProxy (agent: AtpAgent) : AtpAgent =
-        { agent with ExtraHeaders = ("atproto-proxy", "did:web:api.bsky.chat#bsky_chat") :: agent.ExtraHeaders }
+    let withChatProxy (agent : AtpAgent) : AtpAgent =
+        { agent with
+            ExtraHeaders = ("atproto-proxy", "did:web:api.bsky.chat#bsky_chat") :: agent.ExtraHeaders }
 
     /// <summary>
     /// Logs in to a PDS with an identifier and app password.
@@ -91,15 +102,25 @@ module AtpAgent =
     /// | Error e -> printfn "Login failed: %A" e.Message
     /// </code>
     /// </example>
-    let login (identifier: string) (password: string) (agent: AtpAgent) : Task<Result<AtpSession, XrpcError>> =
+    let login (identifier : string) (password : string) (agent : AtpAgent) : Task<Result<AtpSession, XrpcError>> =
         task {
-            let input = {| identifier = identifier; password = password |}
-            let! result = Xrpc.procedure<{| identifier: string; password: string |}, AtpSession>
-                            "com.atproto.server.createSession" input agent
+            let input =
+                {| identifier = identifier
+                   password = password |}
+
+            let! result =
+                Xrpc.procedure<
+                    {| identifier : string
+                       password : string |},
+                    AtpSession
+                 >
+                    "com.atproto.server.createSession"
+                    input
+                    agent
+
             match result with
             | Ok session ->
                 agent.Session <- Some session
                 return Ok session
-            | Error e ->
-                return Error e
+            | Error e -> return Error e
         }

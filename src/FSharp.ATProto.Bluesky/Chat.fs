@@ -15,12 +15,9 @@ module Chat =
 
     /// Ensures the agent has the chat proxy header. Idempotent: does not add a
     /// duplicate header if one is already present.
-    let private ensureChatProxy (agent: AtpAgent) : AtpAgent =
-        let hasProxy =
-            agent.ExtraHeaders
-            |> List.exists (fun (k, _) -> k = "atproto-proxy")
-        if hasProxy then agent
-        else AtpAgent.withChatProxy agent
+    let private ensureChatProxy (agent : AtpAgent) : AtpAgent =
+        let hasProxy = agent.ExtraHeaders |> List.exists (fun (k, _) -> k = "atproto-proxy")
+        if hasProxy then agent else AtpAgent.withChatProxy agent
 
     /// <summary>
     /// List the authenticated user's conversations, ordered by most recent activity.
@@ -29,10 +26,17 @@ module Chat =
     /// <param name="limit">Maximum number of conversations to return. Pass <c>None</c> for the server default.</param>
     /// <param name="cursor">Pagination cursor from a previous response. Pass <c>None</c> for the first page.</param>
     /// <returns>The list of conversations with pagination info, or an <see cref="XrpcError"/>.</returns>
-    let listConvos (agent: AtpAgent) (limit: int64 option) (cursor: string option)
+    let listConvos
+        (agent : AtpAgent)
+        (limit : int64 option)
+        (cursor : string option)
         : Task<Result<ChatBskyConvo.ListConvos.Output, XrpcError>> =
-        ChatBskyConvo.ListConvos.query (ensureChatProxy agent)
-            { Limit = limit; Cursor = cursor; ReadState = None; Status = None }
+        ChatBskyConvo.ListConvos.query
+            (ensureChatProxy agent)
+            { Limit = limit
+              Cursor = cursor
+              ReadState = None
+              Status = None }
 
     /// <summary>
     /// Get an existing conversation with the specified members, or create a new one if none exists.
@@ -40,10 +44,11 @@ module Chat =
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="members">A list of DIDs of the conversation members (excluding the authenticated user, who is added automatically).</param>
     /// <returns>The conversation details, or an <see cref="XrpcError"/>.</returns>
-    let getConvoForMembers (agent: AtpAgent) (members: Did list)
+    let getConvoForMembers
+        (agent : AtpAgent)
+        (members : Did list)
         : Task<Result<ChatBskyConvo.GetConvoForMembers.Output, XrpcError>> =
-        ChatBskyConvo.GetConvoForMembers.query (ensureChatProxy agent)
-            { Members = members }
+        ChatBskyConvo.GetConvoForMembers.query (ensureChatProxy agent) { Members = members }
 
     /// <summary>
     /// Send a plain text message to a conversation.
@@ -52,11 +57,18 @@ module Chat =
     /// <param name="convoId">The ID of the conversation to send the message to.</param>
     /// <param name="text">The message text content.</param>
     /// <returns>The sent message details, or an <see cref="XrpcError"/>.</returns>
-    let sendMessage (agent: AtpAgent) (convoId: string) (text: string)
+    let sendMessage
+        (agent : AtpAgent)
+        (convoId : string)
+        (text : string)
         : Task<Result<ChatBskyConvo.SendMessage.Output, XrpcError>> =
-        ChatBskyConvo.SendMessage.call (ensureChatProxy agent)
+        ChatBskyConvo.SendMessage.call
+            (ensureChatProxy agent)
             { ConvoId = convoId
-              Message = { Text = text; Facets = None; Embed = None } }
+              Message =
+                { Text = text
+                  Facets = None
+                  Embed = None } }
 
     /// <summary>
     /// Get messages in a conversation, ordered by most recent first.
@@ -66,10 +78,17 @@ module Chat =
     /// <param name="limit">Maximum number of messages to return. Pass <c>None</c> for the server default.</param>
     /// <param name="cursor">Pagination cursor from a previous response. Pass <c>None</c> for the most recent messages.</param>
     /// <returns>The list of messages with pagination info, or an <see cref="XrpcError"/>.</returns>
-    let getMessages (agent: AtpAgent) (convoId: string) (limit: int64 option) (cursor: string option)
+    let getMessages
+        (agent : AtpAgent)
+        (convoId : string)
+        (limit : int64 option)
+        (cursor : string option)
         : Task<Result<ChatBskyConvo.GetMessages.Output, XrpcError>> =
-        ChatBskyConvo.GetMessages.query (ensureChatProxy agent)
-            { ConvoId = convoId; Limit = limit; Cursor = cursor }
+        ChatBskyConvo.GetMessages.query
+            (ensureChatProxy agent)
+            { ConvoId = convoId
+              Limit = limit
+              Cursor = cursor }
 
     /// <summary>
     /// Delete a message from a conversation for the authenticated user only.
@@ -79,10 +98,15 @@ module Chat =
     /// <param name="convoId">The ID of the conversation containing the message.</param>
     /// <param name="messageId">The ID of the message to delete.</param>
     /// <returns>The deleted message details, or an <see cref="XrpcError"/>.</returns>
-    let deleteMessage (agent: AtpAgent) (convoId: string) (messageId: string)
+    let deleteMessage
+        (agent : AtpAgent)
+        (convoId : string)
+        (messageId : string)
         : Task<Result<ChatBskyConvo.DeleteMessageForSelf.Output, XrpcError>> =
-        ChatBskyConvo.DeleteMessageForSelf.call (ensureChatProxy agent)
-            { ConvoId = convoId; MessageId = messageId }
+        ChatBskyConvo.DeleteMessageForSelf.call
+            (ensureChatProxy agent)
+            { ConvoId = convoId
+              MessageId = messageId }
 
     /// <summary>
     /// Mark a conversation as read up to the latest message.
@@ -90,20 +114,16 @@ module Chat =
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="convoId">The ID of the conversation to mark as read.</param>
     /// <returns>The updated conversation details, or an <see cref="XrpcError"/>.</returns>
-    let markRead (agent: AtpAgent) (convoId: string)
-        : Task<Result<ChatBskyConvo.UpdateRead.Output, XrpcError>> =
-        ChatBskyConvo.UpdateRead.call (ensureChatProxy agent)
-            { ConvoId = convoId; MessageId = None }
+    let markRead (agent : AtpAgent) (convoId : string) : Task<Result<ChatBskyConvo.UpdateRead.Output, XrpcError>> =
+        ChatBskyConvo.UpdateRead.call (ensureChatProxy agent) { ConvoId = convoId; MessageId = None }
 
     /// <summary>
     /// Mark all conversations as read.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <returns>The result of the operation, or an <see cref="XrpcError"/>.</returns>
-    let markAllRead (agent: AtpAgent)
-        : Task<Result<ChatBskyConvo.UpdateAllRead.Output, XrpcError>> =
-        ChatBskyConvo.UpdateAllRead.call (ensureChatProxy agent)
-            { Status = None }
+    let markAllRead (agent : AtpAgent) : Task<Result<ChatBskyConvo.UpdateAllRead.Output, XrpcError>> =
+        ChatBskyConvo.UpdateAllRead.call (ensureChatProxy agent) { Status = None }
 
     /// <summary>
     /// Mute a conversation. Muted conversations do not generate notifications.
@@ -111,10 +131,8 @@ module Chat =
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="convoId">The ID of the conversation to mute.</param>
     /// <returns>The updated conversation details, or an <see cref="XrpcError"/>.</returns>
-    let muteConvo (agent: AtpAgent) (convoId: string)
-        : Task<Result<ChatBskyConvo.MuteConvo.Output, XrpcError>> =
-        ChatBskyConvo.MuteConvo.call (ensureChatProxy agent)
-            { ConvoId = convoId }
+    let muteConvo (agent : AtpAgent) (convoId : string) : Task<Result<ChatBskyConvo.MuteConvo.Output, XrpcError>> =
+        ChatBskyConvo.MuteConvo.call (ensureChatProxy agent) { ConvoId = convoId }
 
     /// <summary>
     /// Unmute a previously muted conversation, restoring notifications.
@@ -122,7 +140,5 @@ module Chat =
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="convoId">The ID of the conversation to unmute.</param>
     /// <returns>The updated conversation details, or an <see cref="XrpcError"/>.</returns>
-    let unmuteConvo (agent: AtpAgent) (convoId: string)
-        : Task<Result<ChatBskyConvo.UnmuteConvo.Output, XrpcError>> =
-        ChatBskyConvo.UnmuteConvo.call (ensureChatProxy agent)
-            { ConvoId = convoId }
+    let unmuteConvo (agent : AtpAgent) (convoId : string) : Task<Result<ChatBskyConvo.UnmuteConvo.Output, XrpcError>> =
+        ChatBskyConvo.UnmuteConvo.call (ensureChatProxy agent) { ConvoId = convoId }

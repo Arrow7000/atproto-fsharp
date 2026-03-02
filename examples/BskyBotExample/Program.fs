@@ -97,16 +97,13 @@ let main _ =
 
                 let! tl = Bluesky.getTimeline agent (Some 10L) None
 
-                printfn
-                    "Timeline: %d posts (cursor: %s)"
-                    tl.Feed.Length
-                    (tl.Cursor |> Option.defaultValue "(end)")
+                printfn "Timeline: %d posts (cursor: %s)" tl.Feed.Length (tl.Cursor |> Option.defaultValue "(end)")
 
                 for item in tl.Feed do
                     let prefix =
                         match item.Reason with
-                        | Some(AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonRepost _) -> "[repost] "
-                        | Some(AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin _) -> "[pinned] "
+                        | Some (AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonRepost _) -> "[repost] "
+                        | Some (AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin _) -> "[pinned] "
                         | _ -> ""
 
                     let text = item.Post.Text
@@ -143,7 +140,7 @@ let main _ =
 
                 match Uri.parse "https://example.com" with
                 | Ok linkUri ->
-                    let manualFacets: AppBskyRichtext.Facet.Facet list =
+                    let manualFacets : AppBskyRichtext.Facet.Facet list =
                         [ { Index =
                               { ByteStart = linkStart
                                 ByteEnd = linkEnd }
@@ -166,7 +163,7 @@ let main _ =
                 if tl.Feed.Length > 0 then
                     let parentPost = tl.Feed.[0].Post
 
-                    let parentRef: PostRef =
+                    let parentRef : PostRef =
                         { Uri = parentPost.Uri
                           Cid = parentPost.Cid }
 
@@ -289,8 +286,7 @@ let main _ =
                         | AppBskyNotification.ListNotifications.NotificationReason.Mention -> "mention"
                         | AppBskyNotification.ListNotifications.NotificationReason.Reply -> "reply"
                         | AppBskyNotification.ListNotifications.NotificationReason.Quote -> "quote"
-                        | AppBskyNotification.ListNotifications.NotificationReason.Unknown s ->
-                            sprintf "unknown(%s)" s
+                        | AppBskyNotification.ListNotifications.NotificationReason.Unknown s -> sprintf "unknown(%s)" s
                         | other -> sprintf "%A" other
 
                     printfn "  [%s] from @%s (read: %b)" reasonStr (Handle.value notif.Author.Handle) notif.IsRead
@@ -313,16 +309,18 @@ let main _ =
                         printfn
                             "Thread root: @%s — %s"
                             (Handle.value tvp.Post.Author.Handle)
-                            (if postText.Length > 50 then postText.[..49] + "..." else postText)
+                            (if postText.Length > 50 then
+                                 postText.[..49] + "..."
+                             else
+                                 postText)
 
                         match tvp.Parent with
-                        | Some(AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost parent) ->
+                        | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost parent) ->
                             printfn "  Parent by @%s" (Handle.value parent.Post.Author.Handle)
-                        | Some(AppBskyFeed.Defs.ThreadViewPostParentUnion.NotFoundPost _) ->
+                        | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.NotFoundPost _) ->
                             printfn "  Parent not found (deleted?)"
-                        | Some(AppBskyFeed.Defs.ThreadViewPostParentUnion.BlockedPost _) ->
-                            printfn "  Parent blocked"
-                        | Some(AppBskyFeed.Defs.ThreadViewPostParentUnion.Unknown(tag, _)) ->
+                        | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.BlockedPost _) -> printfn "  Parent blocked"
+                        | Some (AppBskyFeed.Defs.ThreadViewPostParentUnion.Unknown (tag, _)) ->
                             printfn "  Parent unknown type: %s" tag
                         | None -> printfn "  (top-level post, no parent)"
 
@@ -346,7 +344,7 @@ let main _ =
                     | ThreadResult.ThreadViewPost _ -> printfn "Raw thread: ThreadViewPost"
                     | ThreadResult.NotFoundPost _ -> printfn "Raw thread: NotFoundPost"
                     | ThreadResult.BlockedPost _ -> printfn "Raw thread: BlockedPost"
-                    | ThreadResult.Unknown(tag, _) -> printfn "Raw thread unknown: %s" tag
+                    | ThreadResult.Unknown (tag, _) -> printfn "Raw thread unknown: %s" tag
                 else
                     printfn "(no timeline posts to fetch thread for)"
 
@@ -384,11 +382,13 @@ let main _ =
                         printfn
                             "  [%s] %s"
                             (Did.value mv.Sender.Did)
-                            (if mv.Text.Length > 40 then mv.Text.[..39] + "..." else mv.Text)
+                            (if mv.Text.Length > 40 then
+                                 mv.Text.[..39] + "..."
+                             else
+                                 mv.Text)
                     | ChatBskyConvo.GetMessages.OutputMessagesItem.DeletedMessageView dv ->
                         printfn "  [deleted by %s]" (Did.value dv.Sender.Did)
-                    | ChatBskyConvo.GetMessages.OutputMessagesItem.Unknown(tag, _) ->
-                        printfn "  [unknown: %s]" tag
+                    | ChatBskyConvo.GetMessages.OutputMessagesItem.Unknown (tag, _) -> printfn "  [unknown: %s]" tag
 
                 let! readResult = Chat.markRead agent convo.Id
                 printfn "Marked read: unread=%d" readResult.Convo.UnreadCount
@@ -431,7 +431,7 @@ let main _ =
             }
 
         match workflowResult with
-        | Ok() -> ()
+        | Ok () -> ()
         | Error e ->
             printfn "\nWorkflow error:"
             printfn "  Status: %d" e.StatusCode
@@ -472,10 +472,7 @@ let main _ =
         let! didResult = Identity.resolveDid agent session.Did
 
         match didResult with
-        | Ok id ->
-            printfn
-                "Resolved DID -> PDS: %s"
-                (id.PdsEndpoint |> Option.map Uri.value |> Option.defaultValue "?")
+        | Ok id -> printfn "Resolved DID -> PDS: %s" (id.PdsEndpoint |> Option.map Uri.value |> Option.defaultValue "?")
         | Error e -> printfn "resolveDid failed: %A" e
 
         let! handleResult = Identity.resolveHandle agent session.Handle
@@ -487,7 +484,7 @@ let main _ =
         let sampleDoc =
             """{"id":"did:plc:ewvi7nxzyoun6zhxrhs64oiz","alsoKnownAs":["at://atproto.com"],"service":[{"id":"did:plc:ewvi7nxzyoun6zhxrhs64oiz#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://bsky.network"}]}"""
 
-        let docElement = JsonSerializer.Deserialize<JsonElement>(sampleDoc)
+        let docElement = JsonSerializer.Deserialize<JsonElement> (sampleDoc)
 
         match Identity.parseDidDocument docElement with
         | Ok parsed ->
@@ -511,9 +508,9 @@ let main _ =
 
         for d in detected do
             match d with
-            | RichText.DetectedMention(s, e, h) -> printfn "  Mention: @%s [byte %d..%d]" h s e
-            | RichText.DetectedLink(s, e, u) -> printfn "  Link: %s [byte %d..%d]" u s e
-            | RichText.DetectedTag(s, e, t) -> printfn "  Tag: #%s [byte %d..%d]" t s e
+            | RichText.DetectedMention (s, e, h) -> printfn "  Mention: @%s [byte %d..%d]" h s e
+            | RichText.DetectedLink (s, e, u) -> printfn "  Link: %s [byte %d..%d]" u s e
+            | RichText.DetectedTag (s, e, t) -> printfn "  Tag: #%s [byte %d..%d]" t s e
 
         let! resolved = RichText.resolve agent detected
         printfn "Resolved %d facets (unresolvable mentions dropped)" resolved.Length
@@ -546,11 +543,11 @@ let main _ =
         let timelinePages = Bluesky.paginateTimeline agent (Some 5L)
 
         let mutable pageNum = 0
-        let enumerator = timelinePages.GetAsyncEnumerator()
+        let enumerator = timelinePages.GetAsyncEnumerator ()
         let mutable hasMore = true
 
         while hasMore && pageNum < 3 do
-            let! moved = enumerator.MoveNextAsync()
+            let! moved = enumerator.MoveNextAsync ()
             hasMore <- moved
 
             if hasMore then
@@ -572,8 +569,8 @@ let main _ =
         let followerPages =
             Bluesky.paginateFollowers agent (Handle.value session.Handle) (Some 10L)
 
-        let followerEnum = followerPages.GetAsyncEnumerator()
-        let! hasFirst = followerEnum.MoveNextAsync()
+        let followerEnum = followerPages.GetAsyncEnumerator ()
+        let! hasFirst = followerEnum.MoveNextAsync ()
 
         if hasFirst then
             match followerEnum.Current with
@@ -600,9 +597,7 @@ let main _ =
             printfn "  CID: %s" (Cid.value blob.Ref)
             printfn "  Size: %d bytes, MIME: %s" blob.Size blob.MimeType
 
-            printfn
-                "  JSON: %s"
-                (blob.Json.ToString() |> fun s -> if s.Length > 80 then s.[..79] + "..." else s)
+            printfn "  JSON: %s" (blob.Json.ToString () |> fun s -> if s.Length > 80 then s.[..79] + "..." else s)
         | Error e -> printfn "Upload failed (expected with dummy data): %A" e
 
         let! multiImgPost =
@@ -641,12 +636,12 @@ let main _ =
 
         match badIdentity with
         | Ok _ -> printfn "Unexpectedly succeeded"
-        | Error(IdentityError.XrpcError xe) ->
+        | Error (IdentityError.XrpcError xe) ->
             printfn "Identity XRPC error: %d — %s" xe.StatusCode (xe.Message |> Option.defaultValue "(none)")
-        | Error(IdentityError.DocumentParseError msg) -> printfn "Identity parse error: %s" msg
+        | Error (IdentityError.DocumentParseError msg) -> printfn "Identity parse error: %s" msg
 
         // ─────────────────────────────────────────────────────────────
         section "Done!"
         return 0
     }
-    |> fun t -> t.GetAwaiter().GetResult()
+    |> fun t -> t.GetAwaiter().GetResult ()

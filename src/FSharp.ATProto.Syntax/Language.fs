@@ -16,7 +16,7 @@ type Language =
     private
     | Language of string
 
-    override this.ToString() = let (Language s) = this in s
+    override this.ToString () = let (Language s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Language"/> values.
@@ -32,7 +32,7 @@ module Language =
     // Invalid: jaja (4 lowercase), JA (uppercase primary), j (single letter that's not 'i'),
     //          ja- (trailing hyphen), a-DE (single letter that's not 'i'), 123, .
     let private pattern =
-        Regex(@"^(i|[a-z]{2,3})(-[a-zA-Z0-9]+)*$", RegexOptions.Compiled)
+        Regex (@"^(i|[a-z]{2,3})(-[a-zA-Z0-9]+)*$", RegexOptions.Compiled)
 
     /// <summary>
     /// Extract the string representation of a language tag.
@@ -53,7 +53,10 @@ module Language =
     /// <c>Ok</c> with a validated <see cref="Language"/>, or <c>Error</c> with a message describing the validation failure.
     /// Validation failures include: null input or invalid language tag syntax.
     /// </returns>
-    let parse (s: string) : Result<Language, string> =
-        if isNull s then Error "Language cannot be null"
-        elif not (pattern.IsMatch(s)) then Error (sprintf "Invalid language tag: %s" s)
-        else Ok (Language s)
+    let parse (s : string) : Result<Language, string> =
+        if isNull s then
+            Error "Language cannot be null"
+        elif not (pattern.IsMatch (s)) then
+            Error (sprintf "Invalid language tag: %s" s)
+        else
+            Ok (Language s)

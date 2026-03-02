@@ -14,14 +14,17 @@ type Handle =
     private
     | Handle of string
 
-    override this.ToString() = let (Handle s) = this in s
+    override this.ToString () = let (Handle s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Handle"/> values.
 /// </summary>
 module Handle =
     let private pattern =
-        Regex(@"^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$", RegexOptions.Compiled)
+        Regex (
+            @"^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+            RegexOptions.Compiled
+        )
 
     /// <summary>
     /// Extract the string representation of a handle.
@@ -50,8 +53,12 @@ module Handle =
     /// | Error e -> printfn "Invalid: %s" e
     /// </code>
     /// </example>
-    let parse (s: string) : Result<Handle, string> =
-        if isNull s then Error "Handle cannot be null"
-        elif s.Length > 253 then Error (sprintf "Handle exceeds max length of 253: %d" s.Length)
-        elif not (pattern.IsMatch(s)) then Error (sprintf "Invalid handle syntax: %s" s)
-        else Ok (Handle s)
+    let parse (s : string) : Result<Handle, string> =
+        if isNull s then
+            Error "Handle cannot be null"
+        elif s.Length > 253 then
+            Error (sprintf "Handle exceeds max length of 253: %d" s.Length)
+        elif not (pattern.IsMatch (s)) then
+            Error (sprintf "Invalid handle syntax: %s" s)
+        else
+            Ok (Handle s)

@@ -7,67 +7,60 @@ open FSharp.ATProto.Syntax
 // JSON helper functions
 // ---------------------------------------------------------------------------
 
-let private tryGetString (el: JsonElement) (prop: string) : string option =
-    match el.TryGetProperty(prop) with
-    | true, v when v.ValueKind = JsonValueKind.String -> Some(v.GetString())
+let private tryGetString (el : JsonElement) (prop : string) : string option =
+    match el.TryGetProperty (prop) with
+    | true, v when v.ValueKind = JsonValueKind.String -> Some (v.GetString ())
     | _ -> None
 
-let private tryGetInt64 (el: JsonElement) (prop: string) : int64 option =
-    match el.TryGetProperty(prop) with
-    | true, v when v.ValueKind = JsonValueKind.Number -> Some(v.GetInt64())
+let private tryGetInt64 (el : JsonElement) (prop : string) : int64 option =
+    match el.TryGetProperty (prop) with
+    | true, v when v.ValueKind = JsonValueKind.Number -> Some (v.GetInt64 ())
     | _ -> None
 
-let private tryGetInt (el: JsonElement) (prop: string) : int option =
-    match el.TryGetProperty(prop) with
-    | true, v when v.ValueKind = JsonValueKind.Number -> Some(v.GetInt32())
+let private tryGetInt (el : JsonElement) (prop : string) : int option =
+    match el.TryGetProperty (prop) with
+    | true, v when v.ValueKind = JsonValueKind.Number -> Some (v.GetInt32 ())
     | _ -> None
 
-let private tryGetBool (el: JsonElement) (prop: string) : bool option =
-    match el.TryGetProperty(prop) with
+let private tryGetBool (el : JsonElement) (prop : string) : bool option =
+    match el.TryGetProperty (prop) with
     | true, v when v.ValueKind = JsonValueKind.True -> Some true
     | true, v when v.ValueKind = JsonValueKind.False -> Some false
     | _ -> None
 
-let private getStringList (el: JsonElement) (prop: string) : string list =
-    match el.TryGetProperty(prop) with
-    | true, v when v.ValueKind = JsonValueKind.Array ->
-        [ for item in v.EnumerateArray() -> item.GetString() ]
+let private getStringList (el : JsonElement) (prop : string) : string list =
+    match el.TryGetProperty (prop) with
+    | true, v when v.ValueKind = JsonValueKind.Array -> [ for item in v.EnumerateArray () -> item.GetString () ]
     | _ -> []
 
-let private tryGetStringList (el: JsonElement) (prop: string) : string list option =
-    match el.TryGetProperty(prop) with
-    | true, v when v.ValueKind = JsonValueKind.Array ->
-        Some [ for item in v.EnumerateArray() -> item.GetString() ]
+let private tryGetStringList (el : JsonElement) (prop : string) : string list option =
+    match el.TryGetProperty (prop) with
+    | true, v when v.ValueKind = JsonValueKind.Array -> Some [ for item in v.EnumerateArray () -> item.GetString () ]
     | _ -> None
 
-let private tryGetInt64List (el: JsonElement) (prop: string) : int64 list option =
-    match el.TryGetProperty(prop) with
-    | true, v when v.ValueKind = JsonValueKind.Array ->
-        Some [ for item in v.EnumerateArray() -> item.GetInt64() ]
+let private tryGetInt64List (el : JsonElement) (prop : string) : int64 list option =
+    match el.TryGetProperty (prop) with
+    | true, v when v.ValueKind = JsonValueKind.Array -> Some [ for item in v.EnumerateArray () -> item.GetInt64 () ]
     | _ -> None
 
-let private getStringMap (el: JsonElement) (prop: string) : Map<string, string> =
-    match el.TryGetProperty(prop) with
+let private getStringMap (el : JsonElement) (prop : string) : Map<string, string> =
+    match el.TryGetProperty (prop) with
     | true, v when v.ValueKind = JsonValueKind.Object ->
-        v.EnumerateObject()
-        |> Seq.fold (fun acc kv -> Map.add (kv.Name) (kv.Value.GetString()) acc) Map.empty
+        v.EnumerateObject ()
+        |> Seq.fold (fun acc kv -> Map.add (kv.Name) (kv.Value.GetString ()) acc) Map.empty
     | _ -> Map.empty
 
 // ---------------------------------------------------------------------------
 // Ref resolution
 // ---------------------------------------------------------------------------
 
-let private resolveRef (docId: string) (ref: string) : string =
-    if ref.StartsWith("#") then
-        docId + ref
-    else
-        ref
+let private resolveRef (docId : string) (ref : string) : string = if ref.StartsWith ("#") then docId + ref else ref
 
 // ---------------------------------------------------------------------------
 // String format parsing
 // ---------------------------------------------------------------------------
 
-let private parseStringFormat (s: string) : Result<LexStringFormat, string> =
+let private parseStringFormat (s : string) : Result<LexStringFormat, string> =
     match s with
     | "did" -> Ok LexStringFormat.Did
     | "handle" -> Ok LexStringFormat.Handle
@@ -80,19 +73,19 @@ let private parseStringFormat (s: string) : Result<LexStringFormat, string> =
     | "uri" -> Ok LexStringFormat.Uri
     | "tid" -> Ok LexStringFormat.Tid
     | "record-key" -> Ok LexStringFormat.RecordKey
-    | other -> Error(sprintf "Unknown string format: %s" other)
+    | other -> Error (sprintf "Unknown string format: %s" other)
 
 // ---------------------------------------------------------------------------
 // Type parsing (recursive)
 // ---------------------------------------------------------------------------
 
-let rec private parseType (docId: string) (el: JsonElement) : Result<LexType, string> =
+let rec private parseType (docId : string) (el : JsonElement) : Result<LexType, string> =
     match tryGetString el "type" with
     | None -> Error "Missing 'type' field"
     | Some typ ->
         match typ with
         | "boolean" ->
-            Ok(
+            Ok (
                 LexType.Boolean
                     { Description = tryGetString el "description"
                       Default = tryGetBool el "default"
@@ -100,7 +93,7 @@ let rec private parseType (docId: string) (el: JsonElement) : Result<LexType, st
             )
 
         | "integer" ->
-            Ok(
+            Ok (
                 LexType.Integer
                     { Description = tryGetString el "description"
                       Default = tryGetInt64 el "default"
@@ -119,7 +112,7 @@ let rec private parseType (docId: string) (el: JsonElement) : Result<LexType, st
             match fmt with
             | Error e -> Error e
             | Ok fmtVal ->
-                Ok(
+                Ok (
                     LexType.String
                         { Description = tryGetString el "description"
                           Default = tryGetString el "default"
@@ -134,7 +127,7 @@ let rec private parseType (docId: string) (el: JsonElement) : Result<LexType, st
                 )
 
         | "bytes" ->
-            Ok(
+            Ok (
                 LexType.Bytes
                     { Description = tryGetString el "description"
                       MinLength = tryGetInt el "minLength"
@@ -144,7 +137,7 @@ let rec private parseType (docId: string) (el: JsonElement) : Result<LexType, st
         | "cid-link" -> Ok LexType.CidLink
 
         | "blob" ->
-            Ok(
+            Ok (
                 LexType.Blob
                     { Description = tryGetString el "description"
                       Accept = tryGetStringList el "accept"
@@ -152,7 +145,7 @@ let rec private parseType (docId: string) (el: JsonElement) : Result<LexType, st
             )
 
         | "array" ->
-            match el.TryGetProperty("items") with
+            match el.TryGetProperty ("items") with
             | false, _ -> Error "Array type missing 'items' field"
             | true, itemsEl ->
                 parseType docId itemsEl
@@ -171,19 +164,18 @@ let rec private parseType (docId: string) (el: JsonElement) : Result<LexType, st
             match tryGetString el "ref" with
             | None -> Error "Ref type missing 'ref' field"
             | Some r ->
-                Ok(
+                Ok (
                     LexType.Ref
                         { Description = tryGetString el "description"
                           Ref = resolveRef docId r }
                 )
 
         | "union" ->
-            let refs =
-                getStringList el "refs" |> List.map (resolveRef docId)
+            let refs = getStringList el "refs" |> List.map (resolveRef docId)
 
             let closed = tryGetBool el "closed" |> Option.defaultValue false
 
-            Ok(
+            Ok (
                 LexType.Union
                     { Description = tryGetString el "description"
                       Refs = refs
@@ -194,7 +186,7 @@ let rec private parseType (docId: string) (el: JsonElement) : Result<LexType, st
 
         | "token" ->
             // Tokens used as a field type act as strings with no constraints
-            Ok(
+            Ok (
                 LexType.String
                     { Description = tryGetString el "description"
                       Default = None
@@ -208,21 +200,21 @@ let rec private parseType (docId: string) (el: JsonElement) : Result<LexType, st
                       MaxGraphemes = None }
             )
 
-        | other -> Error(sprintf "Unknown type: %s" other)
+        | other -> Error (sprintf "Unknown type: %s" other)
 
 // ---------------------------------------------------------------------------
 // Object / Params parsing
 // ---------------------------------------------------------------------------
 
-and private parseObject (docId: string) (el: JsonElement) : Result<LexObject, string> =
+and private parseObject (docId : string) (el : JsonElement) : Result<LexObject, string> =
     let propsResult =
-        match el.TryGetProperty("properties") with
+        match el.TryGetProperty ("properties") with
         | false, _ -> Ok Map.empty
         | true, propsEl ->
             let mutable err = None
             let mutable props = Map.empty
 
-            for kv in propsEl.EnumerateObject() do
+            for kv in propsEl.EnumerateObject () do
                 if err.IsNone then
                     match parseType docId kv.Value with
                     | Ok t -> props <- Map.add kv.Name t props
@@ -241,15 +233,15 @@ and private parseObject (docId: string) (el: JsonElement) : Result<LexObject, st
               Required = getStringList el "required"
               Nullable = getStringList el "nullable" }
 
-and private parseParams (docId: string) (el: JsonElement) : Result<LexParams, string> =
+and private parseParams (docId : string) (el : JsonElement) : Result<LexParams, string> =
     let propsResult =
-        match el.TryGetProperty("properties") with
+        match el.TryGetProperty ("properties") with
         | false, _ -> Ok Map.empty
         | true, propsEl ->
             let mutable err = None
             let mutable props = Map.empty
 
-            for kv in propsEl.EnumerateObject() do
+            for kv in propsEl.EnumerateObject () do
                 if err.IsNone then
                     match parseType docId kv.Value with
                     | Ok t -> props <- Map.add kv.Name t props
@@ -271,11 +263,11 @@ and private parseParams (docId: string) (el: JsonElement) : Result<LexParams, st
 // Record, Query, Procedure, Subscription parsing
 // ---------------------------------------------------------------------------
 
-let private parseRecord (docId: string) (el: JsonElement) : Result<LexRecord, string> =
+let private parseRecord (docId : string) (el : JsonElement) : Result<LexRecord, string> =
     match tryGetString el "key" with
     | None -> Error "Record missing 'key' field"
     | Some key ->
-        match el.TryGetProperty("record") with
+        match el.TryGetProperty ("record") with
         | false, _ -> Error "Record missing 'record' field"
         | true, recordEl ->
             match tryGetString recordEl "type" with
@@ -287,12 +279,12 @@ let private parseRecord (docId: string) (el: JsonElement) : Result<LexRecord, st
                       Record = obj })
             | _ -> Error "Record's 'record' field must have \"type\": \"object\""
 
-let private parseBody (docId: string) (el: JsonElement) : Result<LexBody, string> =
+let private parseBody (docId : string) (el : JsonElement) : Result<LexBody, string> =
     match tryGetString el "encoding" with
     | None -> Error "Body missing 'encoding' field"
     | Some encoding ->
         let schemaResult =
-            match el.TryGetProperty("schema") with
+            match el.TryGetProperty ("schema") with
             | false, _ -> Ok None
             | true, schemaEl -> parseType docId schemaEl |> Result.map Some
 
@@ -304,22 +296,22 @@ let private parseBody (docId: string) (el: JsonElement) : Result<LexBody, string
                   Encoding = encoding
                   Schema = schema }
 
-let private parseErrors (el: JsonElement) : LexError list =
-    match el.TryGetProperty("errors") with
+let private parseErrors (el : JsonElement) : LexError list =
+    match el.TryGetProperty ("errors") with
     | false, _ -> []
     | true, errArr ->
-        [ for item in errArr.EnumerateArray() ->
-              { Name = item.GetProperty("name").GetString()
+        [ for item in errArr.EnumerateArray () ->
+              { Name = item.GetProperty("name").GetString ()
                 Description = tryGetString item "description" } ]
 
-let private parseQuery (docId: string) (el: JsonElement) : Result<LexQuery, string> =
+let private parseQuery (docId : string) (el : JsonElement) : Result<LexQuery, string> =
     let paramsResult =
-        match el.TryGetProperty("parameters") with
+        match el.TryGetProperty ("parameters") with
         | false, _ -> Ok None
         | true, pEl -> parseParams docId pEl |> Result.map Some
 
     let outputResult =
-        match el.TryGetProperty("output") with
+        match el.TryGetProperty ("output") with
         | false, _ -> Ok None
         | true, oEl -> parseBody docId oEl |> Result.map Some
 
@@ -333,19 +325,19 @@ let private parseQuery (docId: string) (el: JsonElement) : Result<LexQuery, stri
               Output = o
               Errors = parseErrors el }
 
-let private parseProcedure (docId: string) (el: JsonElement) : Result<LexProcedure, string> =
+let private parseProcedure (docId : string) (el : JsonElement) : Result<LexProcedure, string> =
     let paramsResult =
-        match el.TryGetProperty("parameters") with
+        match el.TryGetProperty ("parameters") with
         | false, _ -> Ok None
         | true, pEl -> parseParams docId pEl |> Result.map Some
 
     let inputResult =
-        match el.TryGetProperty("input") with
+        match el.TryGetProperty ("input") with
         | false, _ -> Ok None
         | true, iEl -> parseBody docId iEl |> Result.map Some
 
     let outputResult =
-        match el.TryGetProperty("output") with
+        match el.TryGetProperty ("output") with
         | false, _ -> Ok None
         | true, oEl -> parseBody docId oEl |> Result.map Some
 
@@ -361,11 +353,8 @@ let private parseProcedure (docId: string) (el: JsonElement) : Result<LexProcedu
               Output = o
               Errors = parseErrors el }
 
-let private parseSubscriptionMessage
-    (docId: string)
-    (el: JsonElement)
-    : Result<LexSubscriptionMessage, string> =
-    match el.TryGetProperty("schema") with
+let private parseSubscriptionMessage (docId : string) (el : JsonElement) : Result<LexSubscriptionMessage, string> =
+    match el.TryGetProperty ("schema") with
     | false, _ -> Error "Subscription message missing 'schema' field"
     | true, schemaEl ->
         parseType docId schemaEl
@@ -377,14 +366,14 @@ let private parseSubscriptionMessage
                       Schema = u }
             | _ -> Error "Subscription message schema must be a union type")
 
-let private parseSubscription (docId: string) (el: JsonElement) : Result<LexSubscription, string> =
+let private parseSubscription (docId : string) (el : JsonElement) : Result<LexSubscription, string> =
     let paramsResult =
-        match el.TryGetProperty("parameters") with
+        match el.TryGetProperty ("parameters") with
         | false, _ -> Ok None
         | true, pEl -> parseParams docId pEl |> Result.map Some
 
     let messageResult =
-        match el.TryGetProperty("message") with
+        match el.TryGetProperty ("message") with
         | false, _ -> Ok None
         | true, mEl -> parseSubscriptionMessage docId mEl |> Result.map Some
 
@@ -402,7 +391,7 @@ let private parseSubscription (docId: string) (el: JsonElement) : Result<LexSubs
 // Permission set parsing
 // ---------------------------------------------------------------------------
 
-let private parsePermission (el: JsonElement) : Result<LexPermission, string> =
+let private parsePermission (el : JsonElement) : Result<LexPermission, string> =
     match tryGetString el "resource" with
     | None -> Error "Permission missing 'resource' field"
     | Some resource ->
@@ -414,18 +403,18 @@ let private parsePermission (el: JsonElement) : Result<LexPermission, string> =
               Aud = tryGetString el "aud"
               InheritAud = tryGetBool el "inheritAud" }
 
-let private parsePermissionSet (el: JsonElement) : Result<LexPermissionSet, string> =
+let private parsePermissionSet (el : JsonElement) : Result<LexPermissionSet, string> =
     match tryGetString el "title" with
     | None -> Error "Permission set missing 'title' field"
     | Some title ->
         let permsResult =
-            match el.TryGetProperty("permissions") with
+            match el.TryGetProperty ("permissions") with
             | false, _ -> Ok []
             | true, permsArr ->
                 let mutable err = None
                 let mutable perms = []
 
-                for item in permsArr.EnumerateArray() do
+                for item in permsArr.EnumerateArray () do
                     if err.IsNone then
                         match parsePermission item with
                         | Ok p -> perms <- perms @ [ p ]
@@ -449,52 +438,45 @@ let private parsePermissionSet (el: JsonElement) : Result<LexPermissionSet, stri
 // Definition parsing
 // ---------------------------------------------------------------------------
 
-let private parseDef
-    (docId: string)
-    (defName: string)
-    (el: JsonElement)
-    : Result<string * LexDef, string> =
+let private parseDef (docId : string) (defName : string) (el : JsonElement) : Result<string * LexDef, string> =
     match tryGetString el "type" with
-    | None -> Error(sprintf "Definition '%s' missing 'type' field" defName)
+    | None -> Error (sprintf "Definition '%s' missing 'type' field" defName)
     | Some typ ->
         let requireMain () =
             if defName <> "main" then
-                Error(sprintf "'%s' type must be the 'main' definition, found in '%s'" typ defName)
+                Error (sprintf "'%s' type must be the 'main' definition, found in '%s'" typ defName)
             else
-                Ok()
+                Ok ()
 
         match typ with
         | "record" ->
             match requireMain () with
             | Error e -> Error e
-            | Ok() -> parseRecord docId el |> Result.map (fun r -> defName, LexDef.Record r)
+            | Ok () -> parseRecord docId el |> Result.map (fun r -> defName, LexDef.Record r)
 
         | "query" ->
             match requireMain () with
             | Error e -> Error e
-            | Ok() -> parseQuery docId el |> Result.map (fun q -> defName, LexDef.Query q)
+            | Ok () -> parseQuery docId el |> Result.map (fun q -> defName, LexDef.Query q)
 
         | "procedure" ->
             match requireMain () with
             | Error e -> Error e
-            | Ok() -> parseProcedure docId el |> Result.map (fun p -> defName, LexDef.Procedure p)
+            | Ok () -> parseProcedure docId el |> Result.map (fun p -> defName, LexDef.Procedure p)
 
         | "subscription" ->
             match requireMain () with
             | Error e -> Error e
-            | Ok() ->
+            | Ok () ->
                 parseSubscription docId el
                 |> Result.map (fun s -> defName, LexDef.Subscription s)
 
         | "permission-set" ->
             match requireMain () with
             | Error e -> Error e
-            | Ok() ->
-                parsePermissionSet el
-                |> Result.map (fun ps -> defName, LexDef.PermissionSet ps)
+            | Ok () -> parsePermissionSet el |> Result.map (fun ps -> defName, LexDef.PermissionSet ps)
 
-        | "token" ->
-            Ok(defName, LexDef.Token { Description = tryGetString el "description" })
+        | "token" -> Ok (defName, LexDef.Token { Description = tryGetString el "description" })
 
         | "ref" -> Error "ref cannot be a top-level definition"
 
@@ -509,30 +491,30 @@ let private parseDef
 // Document parsing (public API)
 // ---------------------------------------------------------------------------
 
-let parseElement (el: JsonElement) : Result<LexiconDoc, string> =
+let parseElement (el : JsonElement) : Result<LexiconDoc, string> =
     // Validate 'lexicon' field: must exist, must be Number, must be 1
-    match el.TryGetProperty("lexicon") with
+    match el.TryGetProperty ("lexicon") with
     | false, _ -> Error "Missing 'lexicon' field"
     | true, lexVal ->
         if lexVal.ValueKind <> JsonValueKind.Number then
             Error "Field 'lexicon' must be a number"
         else
-            let lexVersion = lexVal.GetInt32()
+            let lexVersion = lexVal.GetInt32 ()
 
             if lexVersion <> 1 then
-                Error(sprintf "Unsupported lexicon version: %d" lexVersion)
+                Error (sprintf "Unsupported lexicon version: %d" lexVersion)
             else
                 // Validate 'id' field: must exist, must be String, must be valid NSID
-                match el.TryGetProperty("id") with
+                match el.TryGetProperty ("id") with
                 | false, _ -> Error "Missing 'id' field"
                 | true, idVal ->
                     if idVal.ValueKind <> JsonValueKind.String then
                         Error "Field 'id' must be a string"
                     else
-                        let idStr = idVal.GetString()
+                        let idStr = idVal.GetString ()
 
                         match Nsid.parse idStr with
-                        | Error e -> Error(sprintf "Invalid NSID in 'id': %s" e)
+                        | Error e -> Error (sprintf "Invalid NSID in 'id': %s" e)
                         | Ok nsid ->
                             let docId = Nsid.value nsid
 
@@ -542,16 +524,16 @@ let parseElement (el: JsonElement) : Result<LexiconDoc, string> =
 
                             // Parse defs
                             let defsResult =
-                                match el.TryGetProperty("defs") with
+                                match el.TryGetProperty ("defs") with
                                 | false, _ -> Ok Map.empty
                                 | true, defsEl ->
                                     let mutable err = None
                                     let mutable defs = Map.empty
 
-                                    for kv in defsEl.EnumerateObject() do
+                                    for kv in defsEl.EnumerateObject () do
                                         if err.IsNone then
                                             match parseDef docId kv.Name kv.Value with
-                                            | Ok(name, def) -> defs <- Map.add name def defs
+                                            | Ok (name, def) -> defs <- Map.add name def defs
                                             | Error e -> err <- Some e
 
                                     match err with
@@ -568,9 +550,9 @@ let parseElement (el: JsonElement) : Result<LexiconDoc, string> =
                                       Description = description
                                       Defs = defs }
 
-let parse (json: string) : Result<LexiconDoc, string> =
+let parse (json : string) : Result<LexiconDoc, string> =
     try
-        let doc = JsonDocument.Parse(json)
+        let doc = JsonDocument.Parse (json)
         parseElement doc.RootElement
     with ex ->
-        Error(sprintf "Failed to parse JSON: %s" ex.Message)
+        Error (sprintf "Failed to parse JSON: %s" ex.Message)

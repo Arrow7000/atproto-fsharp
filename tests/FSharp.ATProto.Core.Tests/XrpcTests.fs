@@ -9,150 +9,193 @@ open FSharp.ATProto.Core
 open FSharp.ATProto.Syntax
 
 // Test types
-type TestParams = { Actor: string }
+type TestParams = { Actor : string }
 
 type TestOutput =
     { [<JsonPropertyName("displayName")>]
-      DisplayName: string
+      DisplayName : string
       [<JsonPropertyName("followersCount")>]
-      FollowersCount: int64 }
+      FollowersCount : int64 }
 
 type TestInput =
     { [<JsonPropertyName("repo")>]
-      Repo: string
+      Repo : string
       [<JsonPropertyName("collection")>]
-      Collection: string }
+      Collection : string }
 
 type TestProcOutput =
     { [<JsonPropertyName("uri")>]
-      Uri: string }
+      Uri : string }
 
-let makeAgent (handler: HttpRequestMessage -> HttpResponseMessage) =
-    let client = new HttpClient(new TestHelpers.MockHandler(handler))
+let makeAgent (handler : HttpRequestMessage -> HttpResponseMessage) =
+    let client = new HttpClient (new TestHelpers.MockHandler (handler))
+
     { HttpClient = client
-      BaseUrl = System.Uri("https://bsky.social/")
+      BaseUrl = System.Uri ("https://bsky.social/")
       Session = None
       ExtraHeaders = [] }
 
 [<Tests>]
 let queryTests =
-    testList "Xrpc.query" [
-        testCase "sends GET with query params and deserializes response" <| fun () ->
-            let mutable capturedRequest: HttpRequestMessage option = None
-            let agent = makeAgent (fun req ->
-                capturedRequest <- Some req
-                TestHelpers.jsonResponse HttpStatusCode.OK
-                    {| displayName = "Alice"; followersCount = 42 |})
+    testList
+        "Xrpc.query"
+        [ testCase "sends GET with query params and deserializes response"
+          <| fun () ->
+              let mutable capturedRequest : HttpRequestMessage option = None
 
-            let result =
-                Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile"
-                    { Actor = "my-handle.bsky.social" } agent
-                |> Async.AwaitTask |> Async.RunSynchronously
+              let agent =
+                  makeAgent (fun req ->
+                      capturedRequest <- Some req
 
-            let req = capturedRequest.Value
-            Expect.equal req.Method HttpMethod.Get "should be GET"
-            Expect.stringContains (string req.RequestUri) "xrpc/app.bsky.actor.getProfile" "correct path"
-            Expect.stringContains (string req.RequestUri) "actor=my-handle.bsky.social" "has query param"
+                      TestHelpers.jsonResponse
+                          HttpStatusCode.OK
+                          {| displayName = "Alice"
+                             followersCount = 42 |})
 
-            match result with
-            | Ok output ->
-                Expect.equal output.DisplayName "Alice" "display name"
-                Expect.equal output.FollowersCount 42L "followers count"
-            | Error e -> failtest $"Expected Ok, got Error: {e}"
+              let result =
+                  Xrpc.query<TestParams, TestOutput>
+                      "app.bsky.actor.getProfile"
+                      { Actor = "my-handle.bsky.social" }
+                      agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
 
-        testCase "returns XrpcError on 400" <| fun () ->
-            let agent = makeAgent (fun _ ->
-                TestHelpers.jsonResponse HttpStatusCode.BadRequest
-                    {| error = "InvalidRequest"; message = "Bad param" |})
+              let req = capturedRequest.Value
+              Expect.equal req.Method HttpMethod.Get "should be GET"
+              Expect.stringContains (string req.RequestUri) "xrpc/app.bsky.actor.getProfile" "correct path"
+              Expect.stringContains (string req.RequestUri) "actor=my-handle.bsky.social" "has query param"
 
-            let result =
-                Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile"
-                    { Actor = "bad" } agent
-                |> Async.AwaitTask |> Async.RunSynchronously
+              match result with
+              | Ok output ->
+                  Expect.equal output.DisplayName "Alice" "display name"
+                  Expect.equal output.FollowersCount 42L "followers count"
+              | Error e -> failtest $"Expected Ok, got Error: {e}"
 
-            match result with
-            | Error e ->
-                Expect.equal e.StatusCode 400 "status code"
-                Expect.equal e.Error (Some "InvalidRequest") "error name"
-                Expect.equal e.Message (Some "Bad param") "error message"
-            | Ok _ -> failtest "Expected Error, got Ok"
+          testCase "returns XrpcError on 400"
+          <| fun () ->
+              let agent =
+                  makeAgent (fun _ ->
+                      TestHelpers.jsonResponse
+                          HttpStatusCode.BadRequest
+                          {| error = "InvalidRequest"
+                             message = "Bad param" |})
 
-        testCase "returns XrpcError on 500 with no body" <| fun () ->
-            let agent = makeAgent (fun _ ->
-                TestHelpers.emptyResponse HttpStatusCode.InternalServerError)
+              let result =
+                  Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile" { Actor = "bad" } agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
 
-            let result =
-                Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile"
-                    { Actor = "x" } agent
-                |> Async.AwaitTask |> Async.RunSynchronously
+              match result with
+              | Error e ->
+                  Expect.equal e.StatusCode 400 "status code"
+                  Expect.equal e.Error (Some "InvalidRequest") "error name"
+                  Expect.equal e.Message (Some "Bad param") "error message"
+              | Ok _ -> failtest "Expected Error, got Ok"
 
-            match result with
-            | Error e ->
-                Expect.equal e.StatusCode 500 "status code"
-                Expect.equal e.Error None "no error name"
-            | Ok _ -> failtest "Expected Error, got Ok"
+          testCase "returns XrpcError on 500 with no body"
+          <| fun () ->
+              let agent =
+                  makeAgent (fun _ -> TestHelpers.emptyResponse HttpStatusCode.InternalServerError)
 
-        testCase "includes auth header when session exists" <| fun () ->
-            let mutable capturedRequest: HttpRequestMessage option = None
-            let agent =
-                { makeAgent (fun req ->
-                    capturedRequest <- Some req
-                    TestHelpers.jsonResponse HttpStatusCode.OK
-                        {| displayName = "A"; followersCount = 0 |})
-                  with Session = Some { AccessJwt = "tok123"; RefreshJwt = "ref"; Did = Did.parse "did:plc:x" |> Result.defaultWith failwith; Handle = Handle.parse "a.bsky.social" |> Result.defaultWith failwith } }
+              let result =
+                  Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile" { Actor = "x" } agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
 
-            Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile"
-                { Actor = "a" } agent
-            |> Async.AwaitTask |> Async.RunSynchronously |> ignore
+              match result with
+              | Error e ->
+                  Expect.equal e.StatusCode 500 "status code"
+                  Expect.equal e.Error None "no error name"
+              | Ok _ -> failtest "Expected Error, got Ok"
 
-            let authHeader = capturedRequest.Value.Headers.Authorization
-            Expect.isNotNull authHeader "auth header present"
-            Expect.equal authHeader.Scheme "Bearer" "Bearer scheme"
-            Expect.equal authHeader.Parameter "tok123" "token value"
-    ]
+          testCase "includes auth header when session exists"
+          <| fun () ->
+              let mutable capturedRequest : HttpRequestMessage option = None
+
+              let agent =
+                  { makeAgent (fun req ->
+                        capturedRequest <- Some req
+
+                        TestHelpers.jsonResponse
+                            HttpStatusCode.OK
+                            {| displayName = "A"
+                               followersCount = 0 |}) with
+                      Session =
+                          Some
+                              { AccessJwt = "tok123"
+                                RefreshJwt = "ref"
+                                Did = Did.parse "did:plc:x" |> Result.defaultWith failwith
+                                Handle = Handle.parse "a.bsky.social" |> Result.defaultWith failwith } }
+
+              Xrpc.query<TestParams, TestOutput> "app.bsky.actor.getProfile" { Actor = "a" } agent
+              |> Async.AwaitTask
+              |> Async.RunSynchronously
+              |> ignore
+
+              let authHeader = capturedRequest.Value.Headers.Authorization
+              Expect.isNotNull authHeader "auth header present"
+              Expect.equal authHeader.Scheme "Bearer" "Bearer scheme"
+              Expect.equal authHeader.Parameter "tok123" "token value" ]
 
 [<Tests>]
 let procedureTests =
-    testList "Xrpc.procedure" [
-        testCase "sends POST with JSON body and deserializes response" <| fun () ->
-            let mutable capturedRequest: HttpRequestMessage option = None
-            let mutable capturedBody: string option = None
-            let agent = makeAgent (fun req ->
-                capturedRequest <- Some req
-                capturedBody <- Some (req.Content.ReadAsStringAsync().Result)
-                TestHelpers.jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:x/app.bsky.feed.post/abc" |})
+    testList
+        "Xrpc.procedure"
+        [ testCase "sends POST with JSON body and deserializes response"
+          <| fun () ->
+              let mutable capturedRequest : HttpRequestMessage option = None
+              let mutable capturedBody : string option = None
 
-            let result =
-                Xrpc.procedure<TestInput, TestProcOutput> "com.atproto.repo.createRecord"
-                    { Repo = "did:plc:x"; Collection = "app.bsky.feed.post" } agent
-                |> Async.AwaitTask |> Async.RunSynchronously
+              let agent =
+                  makeAgent (fun req ->
+                      capturedRequest <- Some req
+                      capturedBody <- Some (req.Content.ReadAsStringAsync().Result)
+                      TestHelpers.jsonResponse HttpStatusCode.OK {| uri = "at://did:plc:x/app.bsky.feed.post/abc" |})
 
-            let req = capturedRequest.Value
-            Expect.equal req.Method HttpMethod.Post "should be POST"
-            Expect.stringContains (string req.RequestUri) "xrpc/com.atproto.repo.createRecord" "correct path"
+              let result =
+                  Xrpc.procedure<TestInput, TestProcOutput>
+                      "com.atproto.repo.createRecord"
+                      { Repo = "did:plc:x"
+                        Collection = "app.bsky.feed.post" }
+                      agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
 
-            let bodyJson = JsonDocument.Parse(capturedBody.Value)
-            Expect.equal (bodyJson.RootElement.GetProperty("repo").GetString()) "did:plc:x" "repo in body"
-            Expect.equal (bodyJson.RootElement.GetProperty("collection").GetString()) "app.bsky.feed.post" "collection in body"
+              let req = capturedRequest.Value
+              Expect.equal req.Method HttpMethod.Post "should be POST"
+              Expect.stringContains (string req.RequestUri) "xrpc/com.atproto.repo.createRecord" "correct path"
 
-            match result with
-            | Ok output ->
-                Expect.equal output.Uri "at://did:plc:x/app.bsky.feed.post/abc" "uri"
-            | Error e -> failtest $"Expected Ok, got Error: {e}"
+              let bodyJson = JsonDocument.Parse (capturedBody.Value)
+              Expect.equal (bodyJson.RootElement.GetProperty("repo").GetString ()) "did:plc:x" "repo in body"
 
-        testCase "returns XrpcError on 401" <| fun () ->
-            let agent = makeAgent (fun _ ->
-                TestHelpers.jsonResponse HttpStatusCode.Unauthorized
-                    {| error = "AuthenticationRequired"; message = "Not logged in" |})
+              Expect.equal
+                  (bodyJson.RootElement.GetProperty("collection").GetString ())
+                  "app.bsky.feed.post"
+                  "collection in body"
 
-            let result =
-                Xrpc.procedure<TestInput, TestProcOutput> "com.atproto.repo.createRecord"
-                    { Repo = "x"; Collection = "y" } agent
-                |> Async.AwaitTask |> Async.RunSynchronously
+              match result with
+              | Ok output -> Expect.equal output.Uri "at://did:plc:x/app.bsky.feed.post/abc" "uri"
+              | Error e -> failtest $"Expected Ok, got Error: {e}"
 
-            match result with
-            | Error e ->
-                Expect.equal e.StatusCode 401 "status code"
-                Expect.equal e.Error (Some "AuthenticationRequired") "error name"
-            | Ok _ -> failtest "Expected Error, got Ok"
-    ]
+          testCase "returns XrpcError on 401"
+          <| fun () ->
+              let agent =
+                  makeAgent (fun _ ->
+                      TestHelpers.jsonResponse
+                          HttpStatusCode.Unauthorized
+                          {| error = "AuthenticationRequired"
+                             message = "Not logged in" |})
+
+              let result =
+                  Xrpc.procedure<TestInput, TestProcOutput>
+                      "com.atproto.repo.createRecord"
+                      { Repo = "x"; Collection = "y" }
+                      agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              match result with
+              | Error e ->
+                  Expect.equal e.StatusCode 401 "status code"
+                  Expect.equal e.Error (Some "AuthenticationRequired") "error name"
+              | Ok _ -> failtest "Expected Error, got Ok" ]

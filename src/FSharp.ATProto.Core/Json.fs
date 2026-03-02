@@ -10,24 +10,25 @@ open Microsoft.FSharp.Reflection
 /// Reads/writes string values, mapping known strings to fieldless DU cases
 /// (via <c>[&lt;JsonName&gt;]</c> attributes) and unknown strings to the <c>Unknown of string</c> fallback case.
 /// </summary>
-type KnownValueConverter<'T when 'T: equality>() =
-    inherit JsonConverter<'T>()
+type KnownValueConverter<'T when 'T : equality> () =
+    inherit JsonConverter<'T> ()
 
-    static let cases = FSharpType.GetUnionCases(typeof<'T>)
+    static let cases = FSharpType.GetUnionCases (typeof<'T>)
 
     static let knownCases =
         cases
         |> Array.choose (fun case ->
             if case.GetFields().Length = 0 then
                 let jsonName =
-                    case.GetCustomAttributesData()
-                    |> Seq.tryFind (fun a -> a.AttributeType.Name.Contains("JsonName"))
+                    case.GetCustomAttributesData ()
+                    |> Seq.tryFind (fun a -> a.AttributeType.Name.Contains ("JsonName"))
                     |> Option.bind (fun a ->
                         a.ConstructorArguments
                         |> Seq.tryHead
                         |> Option.map (fun arg -> arg.Value :?> string))
                     |> Option.defaultValue case.Name
-                Some(jsonName, FSharpValue.MakeUnion(case, [||]) :?> 'T)
+
+                Some (jsonName, FSharpValue.MakeUnion (case, [||]) :?> 'T)
             else
                 None)
 
@@ -40,29 +41,28 @@ type KnownValueConverter<'T when 'T: equality>() =
 
     static let stringToCase = knownCases |> dict
 
-    static let caseToString =
-        knownCases |> Array.map (fun (s, v) -> (v, s)) |> dict
+    static let caseToString = knownCases |> Array.map (fun (s, v) -> (v, s)) |> dict
 
-    override _.Read(reader, _typeToConvert, _options) =
-        let s = reader.GetString()
+    override _.Read (reader, _typeToConvert, _options) =
+        let s = reader.GetString ()
 
-        match stringToCase.TryGetValue(s) with
+        match stringToCase.TryGetValue (s) with
         | true, value -> value
         | false, _ ->
             match unknownCase with
-            | Some case -> FSharpValue.MakeUnion(case, [| box s |]) :?> 'T
+            | Some case -> FSharpValue.MakeUnion (case, [| box s |]) :?> 'T
             | None -> failwithf "Unknown value '%s' for type %s" s typeof<'T>.Name
 
-    override _.Write(writer, value, _options) =
-        match caseToString.TryGetValue(value) with
-        | true, s -> writer.WriteStringValue(s)
+    override _.Write (writer, value, _options) =
+        match caseToString.TryGetValue (value) with
+        | true, s -> writer.WriteStringValue (s)
         | false, _ ->
-            let (_case, fields) = FSharpValue.GetUnionFields(value, typeof<'T>)
+            let (_case, fields) = FSharpValue.GetUnionFields (value, typeof<'T>)
 
             if fields.Length = 1 then
-                writer.WriteStringValue(fields.[0] :?> string)
+                writer.WriteStringValue (fields.[0] :?> string)
             else
-                writer.WriteStringValue(string value)
+                writer.WriteStringValue (string value)
 
 /// <summary>
 /// Shared JSON serialization configuration for the AT Protocol.
@@ -83,17 +83,21 @@ module Json =
     /// This singleton instance is shared across the <see cref="Xrpc"/> module and all serialization in the library.
     /// </remarks>
     let options =
-        let opts = JsonSerializerOptions(PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
+        let opts = JsonSerializerOptions (PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
         opts.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull
-        opts.Converters.Add(JsonFSharpConverter(JsonFSharpOptions.Default().WithUnionInternalTag().WithUnionNamedFields()))
-        opts.Converters.Add(DidConverter())
-        opts.Converters.Add(HandleConverter())
-        opts.Converters.Add(AtUriConverter())
-        opts.Converters.Add(CidConverter())
-        opts.Converters.Add(NsidConverter())
-        opts.Converters.Add(TidConverter())
-        opts.Converters.Add(RecordKeyConverter())
-        opts.Converters.Add(AtDateTimeConverter())
-        opts.Converters.Add(LanguageConverter())
-        opts.Converters.Add(SyntaxUriConverter())
+
+        opts.Converters.Add (
+            JsonFSharpConverter (JsonFSharpOptions.Default().WithUnionInternalTag().WithUnionNamedFields ())
+        )
+
+        opts.Converters.Add (DidConverter ())
+        opts.Converters.Add (HandleConverter ())
+        opts.Converters.Add (AtUriConverter ())
+        opts.Converters.Add (CidConverter ())
+        opts.Converters.Add (NsidConverter ())
+        opts.Converters.Add (TidConverter ())
+        opts.Converters.Add (RecordKeyConverter ())
+        opts.Converters.Add (AtDateTimeConverter ())
+        opts.Converters.Add (LanguageConverter ())
+        opts.Converters.Add (SyntaxUriConverter ())
         opts

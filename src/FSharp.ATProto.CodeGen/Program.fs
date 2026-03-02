@@ -5,7 +5,7 @@ open System.IO
 open FSharp.ATProto.Lexicon
 open FSharp.ATProto.CodeGen.NamespaceGen
 
-let private parseArgs (args: string array) : Result<string * string, string> =
+let private parseArgs (args : string array) : Result<string * string, string> =
     let mutable lexdir = None
     let mutable outdir = None
     let mutable i = 0
@@ -18,11 +18,10 @@ let private parseArgs (args: string array) : Result<string * string, string> =
         | "--outdir" when i + 1 < args.Length ->
             outdir <- Some args.[i + 1]
             i <- i + 2
-        | other ->
-            i <- i + 1
+        | other -> i <- i + 1
 
     match lexdir, outdir with
-    | Some l, Some o -> Ok(l, o)
+    | Some l, Some o -> Ok (l, o)
     | None, _ -> Error "Missing required argument: --lexdir <path>"
     | _, None -> Error "Missing required argument: --outdir <path>"
 
@@ -33,11 +32,10 @@ let main args =
         eprintfn "Error: %s" msg
         eprintfn "Usage: FSharp.ATProto.CodeGen --lexdir <path> --outdir <path>"
         1
-    | Ok(lexdir, outdir) ->
+    | Ok (lexdir, outdir) ->
         // Find all *.json files recursively
         let jsonFiles =
-            Directory.GetFiles(lexdir, "*.json", SearchOption.AllDirectories)
-            |> Array.sort
+            Directory.GetFiles (lexdir, "*.json", SearchOption.AllDirectories) |> Array.sort
 
         printfn "Found %d lexicon JSON files in %s" jsonFiles.Length lexdir
 
@@ -46,13 +44,13 @@ let main args =
         let mutable failures = 0
 
         for file in jsonFiles do
-            let json = File.ReadAllText(file)
+            let json = File.ReadAllText (file)
 
             match LexiconParser.parse json with
             | Ok doc -> parsed <- doc :: parsed
             | Error err ->
                 failures <- failures + 1
-                eprintfn "  WARNING: Failed to parse %s: %s" (Path.GetRelativePath(lexdir, file)) err
+                eprintfn "  WARNING: Failed to parse %s: %s" (Path.GetRelativePath (lexdir, file)) err
 
         let docs = List.rev parsed
         printfn "Successfully parsed %d lexicons (%d failures)" docs.Length failures
@@ -62,12 +60,12 @@ let main args =
         printfn "Generated %d namespace files" files.Length
 
         // Ensure output directory exists
-        Directory.CreateDirectory(outdir) |> ignore
+        Directory.CreateDirectory (outdir) |> ignore
 
         // Write each file
         for (fileName, content) in files do
-            let filePath = Path.Combine(outdir, fileName)
-            File.WriteAllText(filePath, content)
+            let filePath = Path.Combine (outdir, fileName)
+            File.WriteAllText (filePath, content)
             printfn "  Wrote %s" fileName
 
         // Print Compile entries for .fsproj

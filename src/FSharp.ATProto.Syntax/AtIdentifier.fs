@@ -20,7 +20,8 @@ module AtIdentifier =
     /// </summary>
     /// <param name="identifier">The AT identifier to extract the value from.</param>
     /// <returns>The identifier string, whether it is a DID or handle.</returns>
-    let value = function
+    let value =
+        function
         | AtDid d -> Did.value d
         | AtHandle h -> Handle.value h
 
@@ -35,7 +36,7 @@ module AtIdentifier =
     /// <c>Ok</c> with an <see cref="AtIdentifier"/> wrapping either <c>AtDid</c> or <c>AtHandle</c>,
     /// or <c>Error</c> if the string is neither a valid DID nor a valid handle.
     /// </returns>
-    let parse (s: string) : Result<AtIdentifier, string> =
+    let parse (s : string) : Result<AtIdentifier, string> =
         match Did.parse s with
         | Ok d -> Ok (AtDid d)
         | Error _ ->

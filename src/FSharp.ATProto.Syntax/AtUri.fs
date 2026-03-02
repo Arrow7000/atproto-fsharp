@@ -14,7 +14,7 @@ type AtUri =
     private
     | AtUri of string
 
-    override this.ToString() = let (AtUri s) = this in s
+    override this.ToString () = let (AtUri s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="AtUri"/> values.
@@ -28,16 +28,14 @@ module AtUri =
     let value (AtUri s) = s
 
     /// Split the path portion of a validated AT-URI into its segments.
-    let private segments (AtUri s) =
-        s.Substring(5).Split('/', 3)
+    let private segments (AtUri s) = s.Substring(5).Split ('/', 3)
 
     /// <summary>
     /// Extract the authority segment (DID or handle) from an AT-URI.
     /// </summary>
     /// <param name="atUri">The AT-URI to extract the authority from.</param>
     /// <returns>The authority string (e.g. <c>"did:plc:z72i7hdynmk6r22z27h6tvur"</c> or <c>"my-handle.bsky.social"</c>).</returns>
-    let authority atUri =
-        (segments atUri).[0]
+    let authority atUri = (segments atUri).[0]
 
     /// <summary>
     /// Extract the collection NSID segment from an AT-URI, if present.
@@ -78,21 +76,32 @@ module AtUri =
     /// | Error e -> printfn "Invalid: %s" e
     /// </code>
     /// </example>
-    let parse (s: string) : Result<AtUri, string> =
-        if isNull s then Error "AT-URI cannot be null"
-        elif s.Length > 8192 then Error "AT-URI exceeds max length of 8KB"
-        elif not (s.StartsWith("at://")) then Error "AT-URI must start with 'at://'"
-        elif s.Contains('?') || s.Contains('#') then Error "AT-URI must not contain query or fragment"
+    let parse (s : string) : Result<AtUri, string> =
+        if isNull s then
+            Error "AT-URI cannot be null"
+        elif s.Length > 8192 then
+            Error "AT-URI exceeds max length of 8KB"
+        elif not (s.StartsWith ("at://")) then
+            Error "AT-URI must start with 'at://'"
+        elif s.Contains ('?') || s.Contains ('#') then
+            Error "AT-URI must not contain query or fragment"
         else
-            let rest = s.Substring(5)
-            if rest.Length = 0 then Error "AT-URI must have an authority"
-            elif rest.EndsWith("/") then Error "AT-URI must not have a trailing slash"
+            let rest = s.Substring (5)
+
+            if rest.Length = 0 then
+                Error "AT-URI must have an authority"
+            elif rest.EndsWith ("/") then
+                Error "AT-URI must not have a trailing slash"
             else
-                let parts = rest.Split('/', 3)
+                let parts = rest.Split ('/', 3)
                 let authorityStr = parts.[0]
+
                 let authorityResult =
-                    if authorityStr.StartsWith("did:") then Did.parse authorityStr |> Result.map ignore
-                    else Handle.parse authorityStr |> Result.map ignore
+                    if authorityStr.StartsWith ("did:") then
+                        Did.parse authorityStr |> Result.map ignore
+                    else
+                        Handle.parse authorityStr |> Result.map ignore
+
                 match authorityResult with
                 | Error e -> Error (sprintf "Invalid AT-URI authority: %s" e)
                 | Ok _ ->
@@ -104,5 +113,7 @@ module AtUri =
                                 match RecordKey.parse parts.[2] with
                                 | Error e -> Error (sprintf "Invalid AT-URI record key: %s" e)
                                 | Ok _ -> Ok (AtUri s)
-                            else Ok (AtUri s)
-                    else Ok (AtUri s)
+                            else
+                                Ok (AtUri s)
+                    else
+                        Ok (AtUri s)

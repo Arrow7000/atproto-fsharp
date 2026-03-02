@@ -24,37 +24,43 @@ module Identity =
     /// A resolved AT Protocol identity containing the DID and optional metadata extracted from the DID document.
     /// </summary>
     type AtprotoIdentity =
-        { /// <summary>The decentralized identifier (e.g., <c>did:plc:z72i7hdynmk6r22z27h6tvur</c>).</summary>
-          Did: Did
-          /// <summary>The handle claimed in the DID document's <c>alsoKnownAs</c> field, if present and verified.</summary>
-          Handle: Handle option
-          /// <summary>The PDS (Personal Data Server) endpoint URL from the DID document's service entries.</summary>
-          PdsEndpoint: Uri option
-          /// <summary>The atproto signing key in multibase encoding from the DID document's verification methods.</summary>
-          SigningKey: string option }
+        {
+            /// <summary>The decentralized identifier (e.g., <c>did:plc:z72i7hdynmk6r22z27h6tvur</c>).</summary>
+            Did : Did
+            /// <summary>The handle claimed in the DID document's <c>alsoKnownAs</c> field, if present and verified.</summary>
+            Handle : Handle option
+            /// <summary>The PDS (Personal Data Server) endpoint URL from the DID document's service entries.</summary>
+            PdsEndpoint : Uri option
+            /// <summary>The atproto signing key in multibase encoding from the DID document's verification methods.</summary>
+            SigningKey : string option
+        }
 
-    let private tryGetString (element: JsonElement) (prop: string) =
-        match element.TryGetProperty(prop) with
-        | true, v when v.ValueKind = JsonValueKind.String -> Some(v.GetString())
+    let private tryGetString (element : JsonElement) (prop : string) =
+        match element.TryGetProperty (prop) with
+        | true, v when v.ValueKind = JsonValueKind.String -> Some (v.GetString ())
         | _ -> None
 
-    let private tryGetArray (element: JsonElement) (prop: string) =
-        match element.TryGetProperty(prop) with
-        | true, v when v.ValueKind = JsonValueKind.Array -> Some(v.EnumerateArray() |> Seq.toList)
+    let private tryGetArray (element : JsonElement) (prop : string) =
+        match element.TryGetProperty (prop) with
+        | true, v when v.ValueKind = JsonValueKind.Array -> Some (v.EnumerateArray () |> Seq.toList)
         | _ -> None
 
-    let private extractHandle (doc: JsonElement) =
+    let private extractHandle (doc : JsonElement) =
         tryGetArray doc "alsoKnownAs"
         |> Option.bind (fun entries ->
             entries
             |> List.tryPick (fun e ->
                 if e.ValueKind = JsonValueKind.String then
-                    let s = e.GetString()
-                    if s.StartsWith("at://") then Some(s.Substring(5))
-                    else None
-                else None))
+                    let s = e.GetString ()
 
-    let private extractPdsEndpoint (doc: JsonElement) =
+                    if s.StartsWith ("at://") then
+                        Some (s.Substring (5))
+                    else
+                        None
+                else
+                    None))
+
+    let private extractPdsEndpoint (doc : JsonElement) =
         tryGetArray doc "service"
         |> Option.bind (fun services ->
             services
@@ -62,20 +68,21 @@ module Identity =
                 let id = tryGetString svc "id"
                 let typ = tryGetString svc "type"
                 let endpoint = tryGetString svc "serviceEndpoint"
+
                 match id, typ, endpoint with
-                | Some id, Some "AtprotoPersonalDataServer", Some ep
-                    when id.EndsWith("#atproto_pds") -> Some ep
+                | Some id, Some "AtprotoPersonalDataServer", Some ep when id.EndsWith ("#atproto_pds") -> Some ep
                 | _ -> None))
 
-    let private extractSigningKey (doc: JsonElement) =
+    let private extractSigningKey (doc : JsonElement) =
         tryGetArray doc "verificationMethod"
         |> Option.bind (fun methods ->
             methods
             |> List.tryPick (fun vm ->
                 let id = tryGetString vm "id"
                 let key = tryGetString vm "publicKeyMultibase"
+
                 match id, key with
-                | Some id, Some k when id.EndsWith("#atproto") -> Some k
+                | Some id, Some k when id.EndsWith ("#atproto") -> Some k
                 | _ -> None))
 
     /// <summary>
@@ -88,7 +95,7 @@ module Identity =
     /// <c>Ok</c> with the parsed identity, or <c>Error</c> if the document is missing the required <c>id</c> field.
     /// Optional fields (handle, PDS endpoint, signing key) are <c>None</c> if absent from the document.
     /// </returns>
-    let parseDidDocument (doc: JsonElement) : Result<AtprotoIdentity, string> =
+    let parseDidDocument (doc : JsonElement) : Result<AtprotoIdentity, string> =
         match tryGetString doc "id" with
         | None -> Error "DID document missing 'id' field"
         | Some didStr ->
@@ -96,15 +103,17 @@ module Identity =
             | Error e -> Error (sprintf "Invalid DID in document: %s" e)
             | Ok did ->
                 let handle =
-                    extractHandle doc
-                    |> Option.bind (fun h -> Handle.parse h |> Result.toOption)
+                    extractHandle doc |> Option.bind (fun h -> Handle.parse h |> Result.toOption)
+
                 let pdsEndpoint =
                     extractPdsEndpoint doc
                     |> Option.bind (fun ep -> Uri.parse ep |> Result.toOption)
-                Ok { Did = did
-                     Handle = handle
-                     PdsEndpoint = pdsEndpoint
-                     SigningKey = extractSigningKey doc }
+
+                Ok
+                    { Did = did
+                      Handle = handle
+                      PdsEndpoint = pdsEndpoint
+                      SigningKey = extractSigningKey doc }
 
     let private plcDirectoryUrl = "https://plc.directory"
 
@@ -120,28 +129,32 @@ module Identity =
     /// <c>Ok</c> with the parsed identity on success, or <c>Error</c> with an <see cref="IdentityError"/>
     /// on HTTP failure or unsupported DID method.
     /// </returns>
-    let resolveDid (agent: AtpAgent) (did: Did) : Task<Result<AtprotoIdentity, IdentityError>> =
+    let resolveDid (agent : AtpAgent) (did : Did) : Task<Result<AtprotoIdentity, IdentityError>> =
         task {
             let didStr = Did.value did
-            if didStr.StartsWith("did:plc:") then
+
+            if didStr.StartsWith ("did:plc:") then
                 let url = $"{plcDirectoryUrl}/{didStr}"
-                let! response = agent.HttpClient.GetAsync(url)
+                let! response = agent.HttpClient.GetAsync (url)
+
                 if response.IsSuccessStatusCode then
-                    let! json = response.Content.ReadAsStringAsync()
-                    let doc = JsonSerializer.Deserialize<JsonElement>(json)
+                    let! json = response.Content.ReadAsStringAsync ()
+                    let doc = JsonSerializer.Deserialize<JsonElement> (json)
                     return parseDidDocument doc |> Result.mapError DocumentParseError
                 else
                     return Error (DocumentParseError $"PLC directory returned {int response.StatusCode} for {didStr}")
-            elif didStr.StartsWith("did:web:") then
-                let domain = didStr.Substring(8)
+            elif didStr.StartsWith ("did:web:") then
+                let domain = didStr.Substring (8)
                 let url = $"https://{domain}/.well-known/did.json"
-                let! response = agent.HttpClient.GetAsync(url)
+                let! response = agent.HttpClient.GetAsync (url)
+
                 if response.IsSuccessStatusCode then
-                    let! json = response.Content.ReadAsStringAsync()
-                    let doc = JsonSerializer.Deserialize<JsonElement>(json)
+                    let! json = response.Content.ReadAsStringAsync ()
+                    let doc = JsonSerializer.Deserialize<JsonElement> (json)
                     return parseDidDocument doc |> Result.mapError DocumentParseError
                 else
-                    return Error (DocumentParseError $"did:web resolution returned {int response.StatusCode} for {didStr}")
+                    return
+                        Error (DocumentParseError $"did:web resolution returned {int response.StatusCode} for {didStr}")
             else
                 return Error (DocumentParseError $"Unsupported DID method: {didStr}")
         }
@@ -155,7 +168,7 @@ module Identity =
     /// <c>Ok</c> with the resolved <see cref="Did"/> on success, or <c>Error</c> with an <see cref="IdentityError"/>
     /// if the handle cannot be resolved.
     /// </returns>
-    let resolveHandle (agent: AtpAgent) (handle: Handle) : Task<Result<Did, IdentityError>> =
+    let resolveHandle (agent : AtpAgent) (handle : Handle) : Task<Result<Did, IdentityError>> =
         task {
             let! result = ComAtprotoIdentity.ResolveHandle.query agent { Handle = handle }
             return result |> Result.map (fun o -> o.Did) |> Result.mapError XrpcError
@@ -189,14 +202,16 @@ module Identity =
     /// | Error msg -> printfn "Resolution failed: %A" msg
     /// </code>
     /// </example>
-    let resolveIdentity (agent: AtpAgent) (identifier: string) : Task<Result<AtprotoIdentity, IdentityError>> =
+    let resolveIdentity (agent : AtpAgent) (identifier : string) : Task<Result<AtprotoIdentity, IdentityError>> =
         task {
-            let isDid = identifier.StartsWith("did:")
+            let isDid = identifier.StartsWith ("did:")
+
             if isDid then
                 match Did.parse identifier with
                 | Error e -> return Error (DocumentParseError $"Invalid DID: {e}")
                 | Ok did ->
                     let! identity = resolveDid agent did
+
                     match identity with
                     | Error e -> return Error e
                     | Ok id ->
@@ -204,6 +219,7 @@ module Identity =
                         | None -> return Ok id
                         | Some handle ->
                             let! reverseResult = resolveHandle agent handle
+
                             match reverseResult with
                             | Ok reverseDid when reverseDid = did -> return Ok id
                             | _ -> return Ok { id with Handle = None }
@@ -213,14 +229,18 @@ module Identity =
                 | Error e -> return Error (DocumentParseError $"Invalid handle: {e}")
                 | Ok handleTyped ->
                     let! handleResult = resolveHandle agent handleTyped
+
                     match handleResult with
                     | Error e -> return Error e
                     | Ok did ->
                         let! identity = resolveDid agent did
+
                         match identity with
                         | Error e -> return Error e
                         | Ok id ->
                             // Bidirectional: check DID doc's handle matches
-                            if id.Handle = Some handleTyped then return Ok id
-                            else return Ok { id with Handle = None }
+                            if id.Handle = Some handleTyped then
+                                return Ok id
+                            else
+                                return Ok { id with Handle = None }
         }

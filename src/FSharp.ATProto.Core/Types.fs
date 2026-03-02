@@ -15,12 +15,14 @@ open FSharp.ATProto.Syntax
 /// and rate-limit errors automatically.
 /// </remarks>
 type XrpcError =
-    { /// <summary>The HTTP status code returned by the server (e.g. 400, 401, 429, 500).</summary>
-      StatusCode: int
-      /// <summary>The machine-readable error code from the response body (e.g. "ExpiredToken", "InvalidRequest"), or <c>None</c> if absent.</summary>
-      Error: string option
-      /// <summary>A human-readable error message from the response body, or <c>None</c> if absent.</summary>
-      Message: string option }
+    {
+        /// <summary>The HTTP status code returned by the server (e.g. 400, 401, 429, 500).</summary>
+        StatusCode : int
+        /// <summary>The machine-readable error code from the response body (e.g. "ExpiredToken", "InvalidRequest"), or <c>None</c> if absent.</summary>
+        Error : string option
+        /// <summary>A human-readable error message from the response body, or <c>None</c> if absent.</summary>
+        Message : string option
+    }
 
 /// <summary>
 /// An authenticated session with an AT Protocol Personal Data Server (PDS).
@@ -32,14 +34,16 @@ type XrpcError =
 /// expired access tokens using the refresh JWT.
 /// </remarks>
 type AtpSession =
-    { /// <summary>The short-lived JWT used to authenticate XRPC requests.</summary>
-      AccessJwt: string
-      /// <summary>The longer-lived JWT used to refresh the session when the access token expires.</summary>
-      RefreshJwt: string
-      /// <summary>The DID (Decentralized Identifier) of the authenticated user (e.g. "did:plc:xyz123").</summary>
-      Did: Did
-      /// <summary>The handle of the authenticated user (e.g. "my-handle.bsky.social").</summary>
-      Handle: Handle }
+    {
+        /// <summary>The short-lived JWT used to authenticate XRPC requests.</summary>
+        AccessJwt : string
+        /// <summary>The longer-lived JWT used to refresh the session when the access token expires.</summary>
+        RefreshJwt : string
+        /// <summary>The DID (Decentralized Identifier) of the authenticated user (e.g. "did:plc:xyz123").</summary>
+        Did : Did
+        /// <summary>The handle of the authenticated user (e.g. "my-handle.bsky.social").</summary>
+        Handle : Handle
+    }
 
 /// <summary>
 /// Client agent for communicating with an AT Protocol Personal Data Server (PDS).
@@ -57,18 +61,20 @@ type AtpSession =
 /// </code>
 /// </example>
 type AtpAgent =
-    { /// <summary>The <see cref="System.Net.Http.HttpClient"/> used for all HTTP requests to the PDS.</summary>
-      HttpClient: HttpClient
-      /// <summary>The base URL of the PDS, always ending with a trailing slash (e.g. "https://bsky.social/").</summary>
-      BaseUrl: System.Uri
-      /// <summary>
-      /// The current authenticated session, or <c>None</c> if not logged in.
-      /// This field is mutable and is updated automatically by <see cref="AtpAgent.login"/>
-      /// and by the automatic token refresh logic in <see cref="Xrpc"/>.
-      /// </summary>
-      mutable Session: AtpSession option
-      /// <summary>
-      /// Additional HTTP headers sent with every request (e.g. the <c>atproto-proxy</c> header
-      /// for Bluesky Chat service proxying).
-      /// </summary>
-      ExtraHeaders: (string * string) list }
+    {
+        /// <summary>The <see cref="System.Net.Http.HttpClient"/> used for all HTTP requests to the PDS.</summary>
+        HttpClient : HttpClient
+        /// <summary>The base URL of the PDS, always ending with a trailing slash (e.g. "https://bsky.social/").</summary>
+        BaseUrl : System.Uri
+        /// <summary>
+        /// The current authenticated session, or <c>None</c> if not logged in.
+        /// This field is mutable and is updated automatically by <see cref="AtpAgent.login"/>
+        /// and by the automatic token refresh logic in <see cref="Xrpc"/>.
+        /// </summary>
+        mutable Session : AtpSession option
+        /// <summary>
+        /// Additional HTTP headers sent with every request (e.g. the <c>atproto-proxy</c> header
+        /// for Bluesky Chat service proxying).
+        /// </summary>
+        ExtraHeaders : (string * string) list
+    }

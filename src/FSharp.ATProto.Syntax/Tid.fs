@@ -16,13 +16,14 @@ type Tid =
     private
     | Tid of string
 
-    override this.ToString() = let (Tid s) = this in s
+    override this.ToString () = let (Tid s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="Tid"/> values.
 /// </summary>
 module Tid =
-    let private pattern = Regex(@"^[234567abcdefghij][234567abcdefghijklmnopqrstuvwxyz]{12}$", RegexOptions.Compiled)
+    let private pattern =
+        Regex (@"^[234567abcdefghij][234567abcdefghijklmnopqrstuvwxyz]{12}$", RegexOptions.Compiled)
 
     /// <summary>
     /// Extract the string representation of a TID.
@@ -43,12 +44,12 @@ module Tid =
     /// <c>Ok</c> with a validated <see cref="Tid"/>, or <c>Error</c> with a message describing the validation failure.
     /// Validation failures include: null input, incorrect length (must be exactly 13), or invalid characters.
     /// </returns>
-    let parse (s: string) : Result<Tid, string> =
+    let parse (s : string) : Result<Tid, string> =
         if isNull s then
             Error "TID cannot be null"
         elif s.Length <> 13 then
             Error (sprintf "TID must be exactly 13 characters, got %d" s.Length)
-        elif not (pattern.IsMatch(s)) then
+        elif not (pattern.IsMatch (s)) then
             Error (sprintf "Invalid TID: %s" s)
         else
             Ok (Tid s)

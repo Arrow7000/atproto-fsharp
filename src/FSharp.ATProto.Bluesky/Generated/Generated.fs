@@ -11,7 +11,8 @@ module AppBsky =
 
 module AppBskyRichtext =
     module Facet =
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type FacetFeaturesItem =
             | [<JsonName("app.bsky.richtext.facet#mention")>] Mention of Facet.Mention
             | [<JsonName("app.bsky.richtext.facet#link")>] Link of Facet.Link
@@ -21,54 +22,54 @@ module AppBskyRichtext =
         /// Annotation of a sub-string within rich text.
         type Facet =
             { [<JsonPropertyName("features")>]
-              Features: FacetFeaturesItem list
+              Features : FacetFeaturesItem list
               [<JsonPropertyName("index")>]
-              Index: Facet.ByteSlice }
+              Index : Facet.ByteSlice }
 
         /// Specifies the sub-string range a facet feature applies to. Start index is inclusive, end index is exclusive. Indices are zero-indexed, counting bytes of the UTF-8 encoded text. NOTE: some languages, like Javascript, use UTF-16 or Unicode codepoints for string slice indexing; in these languages, convert to byte arrays before working with facets.
         type ByteSlice =
             { [<JsonPropertyName("byteEnd")>]
-              ByteEnd: int64
+              ByteEnd : int64
               [<JsonPropertyName("byteStart")>]
-              ByteStart: int64 }
+              ByteStart : int64 }
 
         /// Facet feature for a URL. The text URL may have been simplified or truncated, but the facet reference should be a complete URL.
         type Link =
             { [<JsonPropertyName("uri")>]
-              Uri: Uri }
+              Uri : Uri }
 
         /// Facet feature for mention of another account. The text is usually a handle, including a '@' prefix, but the facet reference is a DID.
         type Mention =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         /// Facet feature for a hashtag. The text usually includes a '#' prefix, but the facet reference should not (except in the case of 'double hash tags').
         type Tag =
             { [<JsonPropertyName("tag")>]
-              Tag: string }
+              Tag : string }
 
 module ComAtprotoLabel =
     module Defs =
         /// Metadata tag on an atproto resource (eg, repo or record).
         type Label =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("cts")>]
-              Cts: AtDateTime
+              Cts : AtDateTime
               [<JsonPropertyName("exp")>]
-              Exp: AtDateTime option
+              Exp : AtDateTime option
               [<JsonPropertyName("neg")>]
-              Neg: bool option
+              Neg : bool option
               [<JsonPropertyName("sig")>]
-              Sig: byte[] option
+              Sig : byte[] option
               [<JsonPropertyName("src")>]
-              Src: Did
+              Src : Did
               [<JsonPropertyName("uri")>]
-              Uri: Uri
+              Uri : Uri
               [<JsonPropertyName("val")>]
-              Val: string
+              Val : string
               [<JsonPropertyName("ver")>]
-              Ver: int64 option }
+              Ver : int64 option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<LabelValue>>)>]
         type LabelValue =
@@ -109,59 +110,62 @@ module ComAtprotoLabel =
         /// Declares a label value and its expected interpretations and behaviors.
         type LabelValueDefinition =
             { [<JsonPropertyName("adultOnly")>]
-              AdultOnly: bool option
+              AdultOnly : bool option
               [<JsonPropertyName("blurs")>]
-              Blurs: LabelValueDefinitionBlurs
+              Blurs : LabelValueDefinitionBlurs
               [<JsonPropertyName("defaultSetting")>]
-              DefaultSetting: LabelValueDefinitionDefaultSetting option
+              DefaultSetting : LabelValueDefinitionDefaultSetting option
               [<JsonPropertyName("identifier")>]
-              Identifier: string
+              Identifier : string
               [<JsonPropertyName("locales")>]
-              Locales: Defs.LabelValueDefinitionStrings list
+              Locales : Defs.LabelValueDefinitionStrings list
               [<JsonPropertyName("severity")>]
-              Severity: LabelValueDefinitionSeverity }
+              Severity : LabelValueDefinitionSeverity }
 
         /// Strings which describe the label in the UI, localized into a specific language.
         type LabelValueDefinitionStrings =
             { [<JsonPropertyName("description")>]
-              Description: string
+              Description : string
               [<JsonPropertyName("lang")>]
-              Lang: Language
+              Lang : Language
               [<JsonPropertyName("name")>]
-              Name: string }
+              Name : string }
 
         /// Metadata tag on an atproto record, published by the author within the record. Note that schemas should use #selfLabels, not #selfLabel.
         type SelfLabel =
             { [<JsonPropertyName("val")>]
-              Val: string }
+              Val : string }
 
         /// Metadata tags on an atproto record, published by the author within the record.
         type SelfLabels =
             { [<JsonPropertyName("values")>]
-              Values: Defs.SelfLabel list }
+              Values : Defs.SelfLabel list }
 
     module QueryLabels =
         [<Literal>]
         let TypeId = "com.atproto.label.queryLabels"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("sources")>]
-              Sources: Did list option
+              Sources : Did list option
               [<JsonPropertyName("uriPatterns")>]
-              UriPatterns: string list }
+              UriPatterns : string list }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("labels")>]
-              Labels: Defs.Label list }
+              Labels : Defs.Label list }
 
     module SubscribeLabels =
         [<Literal>]
@@ -169,9 +173,10 @@ module ComAtprotoLabel =
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: int64 option }
+              Cursor : int64 option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type Message =
             | [<JsonName("com.atproto.label.subscribeLabels#labels")>] Labels of SubscribeLabels.Labels
             | [<JsonName("com.atproto.label.subscribeLabels#info")>] Info of SubscribeLabels.Info
@@ -188,25 +193,29 @@ module ComAtprotoLabel =
 
         type Info =
             { [<JsonPropertyName("message")>]
-              Message: string option
+              Message : string option
               [<JsonPropertyName("name")>]
-              Name: InfoName }
+              Name : InfoName }
 
         type Labels =
             { [<JsonPropertyName("labels")>]
-              Labels: Defs.Label list
+              Labels : Defs.Label list
               [<JsonPropertyName("seq")>]
-              Seq: int64 }
+              Seq : int64 }
 
 module ComAtprotoRepo =
     module ApplyWrites =
         [<Literal>]
         let TypeId = "com.atproto.repo.applyWrites"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type InputWritesItem =
             | [<JsonName("com.atproto.repo.applyWrites#create")>] Create of ApplyWrites.Create
             | [<JsonName("com.atproto.repo.applyWrites#update")>] Update of ApplyWrites.Update
@@ -214,15 +223,16 @@ module ComAtprotoRepo =
 
         type Input =
             { [<JsonPropertyName("repo")>]
-              Repo: string
+              Repo : string
               [<JsonPropertyName("swapCommit")>]
-              SwapCommit: Cid option
+              SwapCommit : Cid option
               [<JsonPropertyName("validate")>]
-              Validate: bool option
+              Validate : bool option
               [<JsonPropertyName("writes")>]
-              Writes: InputWritesItem list }
+              Writes : InputWritesItem list }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputResultsItem =
             | [<JsonName("com.atproto.repo.applyWrites#createResult")>] CreateResult of ApplyWrites.CreateResult
             | [<JsonName("com.atproto.repo.applyWrites#updateResult")>] UpdateResult of ApplyWrites.UpdateResult
@@ -230,9 +240,9 @@ module ComAtprotoRepo =
 
         type Output =
             { [<JsonPropertyName("commit")>]
-              Commit: Defs.CommitMeta option
+              Commit : Defs.CommitMeta option
               [<JsonPropertyName("results")>]
-              Results: OutputResultsItem list option }
+              Results : OutputResultsItem list option }
 
         module Errors =
             [<Literal>]
@@ -241,11 +251,11 @@ module ComAtprotoRepo =
         /// Operation which creates a new record.
         type Create =
             { [<JsonPropertyName("collection")>]
-              Collection: Nsid
+              Collection : Nsid
               [<JsonPropertyName("rkey")>]
-              Rkey: RecordKey option
+              Rkey : RecordKey option
               [<JsonPropertyName("value")>]
-              Value: JsonElement }
+              Value : JsonElement }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<CreateResultValidationStatus>>)>]
         type CreateResultValidationStatus =
@@ -255,29 +265,29 @@ module ComAtprotoRepo =
 
         type CreateResult =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("validationStatus")>]
-              ValidationStatus: CreateResultValidationStatus option }
+              ValidationStatus : CreateResultValidationStatus option }
 
         /// Operation which deletes an existing record.
         type Delete =
             { [<JsonPropertyName("collection")>]
-              Collection: Nsid
+              Collection : Nsid
               [<JsonPropertyName("rkey")>]
-              Rkey: RecordKey }
+              Rkey : RecordKey }
 
         type DeleteResult = JsonElement
 
         /// Operation which updates an existing record.
         type Update =
             { [<JsonPropertyName("collection")>]
-              Collection: Nsid
+              Collection : Nsid
               [<JsonPropertyName("rkey")>]
-              Rkey: RecordKey
+              Rkey : RecordKey
               [<JsonPropertyName("value")>]
-              Value: JsonElement }
+              Value : JsonElement }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<UpdateResultValidationStatus>>)>]
         type UpdateResultValidationStatus =
@@ -287,32 +297,35 @@ module ComAtprotoRepo =
 
         type UpdateResult =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("validationStatus")>]
-              ValidationStatus: UpdateResultValidationStatus option }
+              ValidationStatus : UpdateResultValidationStatus option }
 
     module CreateRecord =
         [<Literal>]
         let TypeId = "com.atproto.repo.createRecord"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("collection")>]
-              Collection: Nsid
+              Collection : Nsid
               [<JsonPropertyName("record")>]
-              Record: JsonElement
+              Record : JsonElement
               [<JsonPropertyName("repo")>]
-              Repo: string
+              Repo : string
               [<JsonPropertyName("rkey")>]
-              Rkey: RecordKey option
+              Rkey : RecordKey option
               [<JsonPropertyName("swapCommit")>]
-              SwapCommit: Cid option
+              SwapCommit : Cid option
               [<JsonPropertyName("validate")>]
-              Validate: bool option }
+              Validate : bool option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OutputValidationStatus>>)>]
         type OutputValidationStatus =
@@ -322,13 +335,13 @@ module ComAtprotoRepo =
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("commit")>]
-              Commit: Defs.CommitMeta option
+              Commit : Defs.CommitMeta option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("validationStatus")>]
-              ValidationStatus: OutputValidationStatus option }
+              ValidationStatus : OutputValidationStatus option }
 
         module Errors =
             [<Literal>]
@@ -337,32 +350,35 @@ module ComAtprotoRepo =
     module Defs =
         type CommitMeta =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("rev")>]
-              Rev: Tid }
+              Rev : Tid }
 
     module DeleteRecord =
         [<Literal>]
         let TypeId = "com.atproto.repo.deleteRecord"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("collection")>]
-              Collection: Nsid
+              Collection : Nsid
               [<JsonPropertyName("repo")>]
-              Repo: string
+              Repo : string
               [<JsonPropertyName("rkey")>]
-              Rkey: RecordKey
+              Rkey : RecordKey
               [<JsonPropertyName("swapCommit")>]
-              SwapCommit: Cid option
+              SwapCommit : Cid option
               [<JsonPropertyName("swapRecord")>]
-              SwapRecord: Cid option }
+              SwapRecord : Cid option }
 
         type Output =
             { [<JsonPropertyName("commit")>]
-              Commit: Defs.CommitMeta option }
+              Commit : Defs.CommitMeta option }
 
         module Errors =
             [<Literal>]
@@ -372,49 +388,55 @@ module ComAtprotoRepo =
         [<Literal>]
         let TypeId = "com.atproto.repo.describeRepo"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("repo")>]
-              Repo: string }
+              Repo : string }
 
         type Output =
             { [<JsonPropertyName("collections")>]
-              Collections: Nsid list
+              Collections : Nsid list
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("didDoc")>]
-              DidDoc: JsonElement
+              DidDoc : JsonElement
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("handleIsCorrect")>]
-              HandleIsCorrect: bool }
+              HandleIsCorrect : bool }
 
     module GetRecord =
         [<Literal>]
         let TypeId = "com.atproto.repo.getRecord"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("collection")>]
-              Collection: Nsid
+              Collection : Nsid
               [<JsonPropertyName("repo")>]
-              Repo: string
+              Repo : string
               [<JsonPropertyName("rkey")>]
-              Rkey: RecordKey }
+              Rkey : RecordKey }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("value")>]
-              Value: JsonElement }
+              Value : JsonElement }
 
         module Errors =
             [<Literal>]
@@ -428,82 +450,91 @@ module ComAtprotoRepo =
         [<Literal>]
         let TypeId = "com.atproto.repo.listMissingBlobs"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("blobs")>]
-              Blobs: ListMissingBlobs.RecordBlob list
+              Blobs : ListMissingBlobs.RecordBlob list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
         type RecordBlob =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("recordUri")>]
-              RecordUri: AtUri }
+              RecordUri : AtUri }
 
     module ListRecords =
         [<Literal>]
         let TypeId = "com.atproto.repo.listRecords"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("collection")>]
-              Collection: Nsid
+              Collection : Nsid
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("repo")>]
-              Repo: string
+              Repo : string
               [<JsonPropertyName("reverse")>]
-              Reverse: bool option }
+              Reverse : bool option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("records")>]
-              Records: ListRecords.Record list }
+              Records : ListRecords.Record list }
 
         type Record =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("value")>]
-              Value: JsonElement }
+              Value : JsonElement }
 
     module PutRecord =
         [<Literal>]
         let TypeId = "com.atproto.repo.putRecord"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("collection")>]
-              Collection: Nsid
+              Collection : Nsid
               [<JsonPropertyName("record")>]
-              Record: JsonElement
+              Record : JsonElement
               [<JsonPropertyName("repo")>]
-              Repo: string
+              Repo : string
               [<JsonPropertyName("rkey")>]
-              Rkey: RecordKey
+              Rkey : RecordKey
               [<JsonPropertyName("swapCommit")>]
-              SwapCommit: Cid option
+              SwapCommit : Cid option
               [<JsonPropertyName("swapRecord")>]
-              SwapRecord: Cid option
+              SwapRecord : Cid option
               [<JsonPropertyName("validate")>]
-              Validate: bool option }
+              Validate : bool option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OutputValidationStatus>>)>]
         type OutputValidationStatus =
@@ -513,13 +544,13 @@ module ComAtprotoRepo =
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("commit")>]
-              Commit: Defs.CommitMeta option
+              Commit : Defs.CommitMeta option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("validationStatus")>]
-              ValidationStatus: OutputValidationStatus option }
+              ValidationStatus : OutputValidationStatus option }
 
         module Errors =
             [<Literal>]
@@ -528,9 +559,9 @@ module ComAtprotoRepo =
     module StrongRef =
         type StrongRef =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
     module UploadBlob =
         [<Literal>]
@@ -538,7 +569,7 @@ module ComAtprotoRepo =
 
         type Output =
             { [<JsonPropertyName("blob")>]
-              Blob: JsonElement }
+              Blob : JsonElement }
 
 module AppBskyGraph =
     module Block =
@@ -548,9 +579,9 @@ module AppBskyGraph =
         /// Record declaring a 'block' relationship against another account. NOTE: blocks are public in Bluesky; see blog posts for details.
         type Block =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("subject")>]
-              Subject: Did }
+              Subject : Did }
 
     module Defs =
         [<Literal>]
@@ -558,9 +589,9 @@ module AppBskyGraph =
 
         type ListItemView =
             { [<JsonPropertyName("subject")>]
-              Subject: AppBskyActor.Defs.ProfileView
+              Subject : AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ListPurpose>>)>]
         type ListPurpose =
@@ -571,55 +602,55 @@ module AppBskyGraph =
 
         type ListView =
             { [<JsonPropertyName("avatar")>]
-              Avatar: Uri option
+              Avatar : Uri option
               [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("creator")>]
-              Creator: AppBskyActor.Defs.ProfileView
+              Creator : AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("descriptionFacets")>]
-              DescriptionFacets: AppBskyRichtext.Facet.Facet list option
+              DescriptionFacets : AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("listItemCount")>]
-              ListItemCount: int64 option
+              ListItemCount : int64 option
               [<JsonPropertyName("name")>]
-              Name: string
+              Name : string
               [<JsonPropertyName("purpose")>]
-              Purpose: Defs.ListPurpose
+              Purpose : Defs.ListPurpose
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("viewer")>]
-              Viewer: Defs.ListViewerState option }
+              Viewer : Defs.ListViewerState option }
 
         type ListViewBasic =
             { [<JsonPropertyName("avatar")>]
-              Avatar: Uri option
+              Avatar : Uri option
               [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime option
+              IndexedAt : AtDateTime option
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("listItemCount")>]
-              ListItemCount: int64 option
+              ListItemCount : int64 option
               [<JsonPropertyName("name")>]
-              Name: string
+              Name : string
               [<JsonPropertyName("purpose")>]
-              Purpose: Defs.ListPurpose
+              Purpose : Defs.ListPurpose
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("viewer")>]
-              Viewer: Defs.ListViewerState option }
+              Viewer : Defs.ListViewerState option }
 
         type ListViewerState =
             { [<JsonPropertyName("blocked")>]
-              Blocked: AtUri option
+              Blocked : AtUri option
               [<JsonPropertyName("muted")>]
-              Muted: bool option }
+              Muted : bool option }
 
         [<Literal>]
         let Modlist = "app.bsky.graph.defs#modlist"
@@ -627,9 +658,9 @@ module AppBskyGraph =
         /// indicates that a handle or DID could not be resolved
         type NotFoundActor =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("notFound")>]
-              NotFound: bool }
+              NotFound : bool }
 
         [<Literal>]
         let Referencelist = "app.bsky.graph.defs#referencelist"
@@ -637,63 +668,63 @@ module AppBskyGraph =
         /// lists the bi-directional graph relationships between one actor (not indicated in the object), and the target actors (the DID included in the object)
         type Relationship =
             { [<JsonPropertyName("blockedBy")>]
-              BlockedBy: AtUri option
+              BlockedBy : AtUri option
               [<JsonPropertyName("blockedByList")>]
-              BlockedByList: AtUri option
+              BlockedByList : AtUri option
               [<JsonPropertyName("blocking")>]
-              Blocking: AtUri option
+              Blocking : AtUri option
               [<JsonPropertyName("blockingByList")>]
-              BlockingByList: AtUri option
+              BlockingByList : AtUri option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("followedBy")>]
-              FollowedBy: AtUri option
+              FollowedBy : AtUri option
               [<JsonPropertyName("following")>]
-              Following: AtUri option }
+              Following : AtUri option }
 
         type StarterPackView =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("creator")>]
-              Creator: AppBskyActor.Defs.ProfileViewBasic
+              Creator : AppBskyActor.Defs.ProfileViewBasic
               [<JsonPropertyName("feeds")>]
-              Feeds: AppBskyFeed.Defs.GeneratorView list option
+              Feeds : AppBskyFeed.Defs.GeneratorView list option
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("joinedAllTimeCount")>]
-              JoinedAllTimeCount: int64 option
+              JoinedAllTimeCount : int64 option
               [<JsonPropertyName("joinedWeekCount")>]
-              JoinedWeekCount: int64 option
+              JoinedWeekCount : int64 option
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("list")>]
-              List: Defs.ListViewBasic option
+              List : Defs.ListViewBasic option
               [<JsonPropertyName("listItemsSample")>]
-              ListItemsSample: Defs.ListItemView list option
+              ListItemsSample : Defs.ListItemView list option
               [<JsonPropertyName("record")>]
-              Record: JsonElement
+              Record : JsonElement
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         type StarterPackViewBasic =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("creator")>]
-              Creator: AppBskyActor.Defs.ProfileViewBasic
+              Creator : AppBskyActor.Defs.ProfileViewBasic
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("joinedAllTimeCount")>]
-              JoinedAllTimeCount: int64 option
+              JoinedAllTimeCount : int64 option
               [<JsonPropertyName("joinedWeekCount")>]
-              JoinedWeekCount: int64 option
+              JoinedWeekCount : int64 option
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("listItemCount")>]
-              ListItemCount: int64 option
+              ListItemCount : int64 option
               [<JsonPropertyName("record")>]
-              Record: JsonElement
+              Record : JsonElement
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
     module Follow =
         [<Literal>]
@@ -702,187 +733,214 @@ module AppBskyGraph =
         /// Record declaring a social 'follow' relationship of another account. Duplicate follows will be ignored by the AppView.
         type Follow =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("subject")>]
-              Subject: Did
+              Subject : Did
               [<JsonPropertyName("via")>]
-              Via: ComAtprotoRepo.StrongRef.StrongRef option }
+              Via : ComAtprotoRepo.StrongRef.StrongRef option }
 
     module GetActorStarterPacks =
         [<Literal>]
         let TypeId = "app.bsky.graph.getActorStarterPacks"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("starterPacks")>]
-              StarterPacks: Defs.StarterPackViewBasic list }
+              StarterPacks : Defs.StarterPackViewBasic list }
 
     module GetBlocks =
         [<Literal>]
         let TypeId = "app.bsky.graph.getBlocks"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("blocks")>]
-              Blocks: AppBskyActor.Defs.ProfileView list
+              Blocks : AppBskyActor.Defs.ProfileView list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
     module GetFollowers =
         [<Literal>]
         let TypeId = "app.bsky.graph.getFollowers"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("followers")>]
-              Followers: AppBskyActor.Defs.ProfileView list
+              Followers : AppBskyActor.Defs.ProfileView list
               [<JsonPropertyName("subject")>]
-              Subject: AppBskyActor.Defs.ProfileView }
+              Subject : AppBskyActor.Defs.ProfileView }
 
     module GetFollows =
         [<Literal>]
         let TypeId = "app.bsky.graph.getFollows"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("follows")>]
-              Follows: AppBskyActor.Defs.ProfileView list
+              Follows : AppBskyActor.Defs.ProfileView list
               [<JsonPropertyName("subject")>]
-              Subject: AppBskyActor.Defs.ProfileView }
+              Subject : AppBskyActor.Defs.ProfileView }
 
     module GetKnownFollowers =
         [<Literal>]
         let TypeId = "app.bsky.graph.getKnownFollowers"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("followers")>]
-              Followers: AppBskyActor.Defs.ProfileView list
+              Followers : AppBskyActor.Defs.ProfileView list
               [<JsonPropertyName("subject")>]
-              Subject: AppBskyActor.Defs.ProfileView }
+              Subject : AppBskyActor.Defs.ProfileView }
 
     module GetList =
         [<Literal>]
         let TypeId = "app.bsky.graph.getList"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("list")>]
-              List: AtUri }
+              List : AtUri }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("items")>]
-              Items: Defs.ListItemView list
+              Items : Defs.ListItemView list
               [<JsonPropertyName("list")>]
-              List: Defs.ListView }
+              List : Defs.ListView }
 
     module GetListBlocks =
         [<Literal>]
         let TypeId = "app.bsky.graph.getListBlocks"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("lists")>]
-              Lists: Defs.ListView list }
+              Lists : Defs.ListView list }
 
     module GetListMutes =
         [<Literal>]
         let TypeId = "app.bsky.graph.getListMutes"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("lists")>]
-              Lists: Defs.ListView list }
+              Lists : Defs.ListView list }
 
     module GetLists =
         [<Literal>]
         let TypeId = "app.bsky.graph.getLists"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsPurposesItem>>)>]
@@ -893,25 +951,28 @@ module AppBskyGraph =
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("purposes")>]
-              Purposes: ParamsPurposesItem list option }
+              Purposes : ParamsPurposesItem list option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("lists")>]
-              Lists: Defs.ListView list }
+              Lists : Defs.ListView list }
 
     module GetListsWithMembership =
         [<Literal>]
         let TypeId = "app.bsky.graph.getListsWithMembership"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsPurposesItem>>)>]
@@ -922,60 +983,67 @@ module AppBskyGraph =
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("purposes")>]
-              Purposes: ParamsPurposesItem list option }
+              Purposes : ParamsPurposesItem list option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("listsWithMembership")>]
-              ListsWithMembership: GetListsWithMembership.ListWithMembership list }
+              ListsWithMembership : GetListsWithMembership.ListWithMembership list }
 
         /// A list and an optional list item indicating membership of a target user to that list.
         type ListWithMembership =
             { [<JsonPropertyName("list")>]
-              List: Defs.ListView
+              List : Defs.ListView
               [<JsonPropertyName("listItem")>]
-              ListItem: Defs.ListItemView option }
+              ListItem : Defs.ListItemView option }
 
     module GetMutes =
         [<Literal>]
         let TypeId = "app.bsky.graph.getMutes"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("mutes")>]
-              Mutes: AppBskyActor.Defs.ProfileView list }
+              Mutes : AppBskyActor.Defs.ProfileView list }
 
     module GetRelationships =
         [<Literal>]
         let TypeId = "app.bsky.graph.getRelationships"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("others")>]
-              Others: string list option }
+              Others : string list option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputRelationshipsItem =
             | [<JsonName("app.bsky.graph.defs#relationship")>] Relationship of Defs.Relationship
             | [<JsonName("app.bsky.graph.defs#notFoundActor")>] NotFoundActor of Defs.NotFoundActor
@@ -983,9 +1051,9 @@ module AppBskyGraph =
 
         type Output =
             { [<JsonPropertyName("actor")>]
-              Actor: Did option
+              Actor : Did option
               [<JsonPropertyName("relationships")>]
-              Relationships: OutputRelationshipsItem list }
+              Relationships : OutputRelationshipsItem list }
 
         module Errors =
             [<Literal>]
@@ -995,86 +1063,99 @@ module AppBskyGraph =
         [<Literal>]
         let TypeId = "app.bsky.graph.getStarterPack"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("starterPack")>]
-              StarterPack: AtUri }
+              StarterPack : AtUri }
 
         type Output =
             { [<JsonPropertyName("starterPack")>]
-              StarterPack: Defs.StarterPackView }
+              StarterPack : Defs.StarterPackView }
 
     module GetStarterPacks =
         [<Literal>]
         let TypeId = "app.bsky.graph.getStarterPacks"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("uris")>]
-              Uris: AtUri list }
+              Uris : AtUri list }
 
         type Output =
             { [<JsonPropertyName("starterPacks")>]
-              StarterPacks: Defs.StarterPackViewBasic list }
+              StarterPacks : Defs.StarterPackViewBasic list }
 
     module GetStarterPacksWithMembership =
         [<Literal>]
         let TypeId = "app.bsky.graph.getStarterPacksWithMembership"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("starterPacksWithMembership")>]
-              StarterPacksWithMembership: GetStarterPacksWithMembership.StarterPackWithMembership list }
+              StarterPacksWithMembership : GetStarterPacksWithMembership.StarterPackWithMembership list }
 
         /// A starter pack and an optional list item indicating membership of a target user to that starter pack.
         type StarterPackWithMembership =
             { [<JsonPropertyName("listItem")>]
-              ListItem: Defs.ListItemView option
+              ListItem : Defs.ListItemView option
               [<JsonPropertyName("starterPack")>]
-              StarterPack: Defs.StarterPackView }
+              StarterPack : Defs.StarterPackView }
 
     module GetSuggestedFollowsByActor =
         [<Literal>]
         let TypeId = "app.bsky.graph.getSuggestedFollowsByActor"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string }
+              Actor : string }
 
         type Output =
             { [<JsonPropertyName("isFallback")>]
-              IsFallback: bool option
+              IsFallback : bool option
               [<JsonPropertyName("recId")>]
-              RecId: int64 option
+              RecId : int64 option
               [<JsonPropertyName("recIdStr")>]
-              RecIdStr: string option
+              RecIdStr : string option
               [<JsonPropertyName("suggestions")>]
-              Suggestions: AppBskyActor.Defs.ProfileView list }
+              Suggestions : AppBskyActor.Defs.ProfileView list }
 
     module List =
         [<Literal>]
         let TypeId = "app.bsky.graph.list"
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ListLabelsUnion =
             | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
             | Unknown of string * System.Text.Json.JsonElement
@@ -1082,19 +1163,19 @@ module AppBskyGraph =
         /// Record representing a list of accounts (actors). Scope includes both moderation-oriented lists and curration-oriented lists.
         type List =
             { [<JsonPropertyName("avatar")>]
-              Avatar: JsonElement option
+              Avatar : JsonElement option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("descriptionFacets")>]
-              DescriptionFacets: AppBskyRichtext.Facet.Facet list option
+              DescriptionFacets : AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("labels")>]
-              Labels: ListLabelsUnion option
+              Labels : ListLabelsUnion option
               [<JsonPropertyName("name")>]
-              Name: string
+              Name : string
               [<JsonPropertyName("purpose")>]
-              Purpose: Defs.ListPurpose }
+              Purpose : Defs.ListPurpose }
 
     module Listblock =
         [<Literal>]
@@ -1103,9 +1184,9 @@ module AppBskyGraph =
         /// Record representing a block relationship against an entire an entire list of accounts (actors).
         type Listblock =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("subject")>]
-              Subject: AtUri }
+              Subject : AtUri }
 
     module Listitem =
         [<Literal>]
@@ -1114,65 +1195,77 @@ module AppBskyGraph =
         /// Record representing an account's inclusion on a specific list. The AppView will ignore duplicate listitem records.
         type Listitem =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("list")>]
-              List: AtUri
+              List : AtUri
               [<JsonPropertyName("subject")>]
-              Subject: Did }
+              Subject : Did }
 
     module MuteActor =
         [<Literal>]
         let TypeId = "app.bsky.graph.muteActor"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("actor")>]
-              Actor: string }
+              Actor : string }
 
     module MuteActorList =
         [<Literal>]
         let TypeId = "app.bsky.graph.muteActorList"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("list")>]
-              List: AtUri }
+              List : AtUri }
 
     module MuteThread =
         [<Literal>]
         let TypeId = "app.bsky.graph.muteThread"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("root")>]
-              Root: AtUri }
+              Root : AtUri }
 
     module SearchStarterPacks =
         [<Literal>]
         let TypeId = "app.bsky.graph.searchStarterPacks"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("q")>]
-              Q: string }
+              Q : string }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("starterPacks")>]
-              StarterPacks: Defs.StarterPackViewBasic list }
+              StarterPacks : Defs.StarterPackViewBasic list }
 
     module Starterpack =
         [<Literal>]
@@ -1181,54 +1274,63 @@ module AppBskyGraph =
         /// Record defining a starter pack of actors and feeds for new users.
         type Starterpack =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("descriptionFacets")>]
-              DescriptionFacets: AppBskyRichtext.Facet.Facet list option
+              DescriptionFacets : AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("feeds")>]
-              Feeds: Starterpack.FeedItem list option
+              Feeds : Starterpack.FeedItem list option
               [<JsonPropertyName("list")>]
-              List: AtUri
+              List : AtUri
               [<JsonPropertyName("name")>]
-              Name: string }
+              Name : string }
 
         type FeedItem =
             { [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
     module UnmuteActor =
         [<Literal>]
         let TypeId = "app.bsky.graph.unmuteActor"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("actor")>]
-              Actor: string }
+              Actor : string }
 
     module UnmuteActorList =
         [<Literal>]
         let TypeId = "app.bsky.graph.unmuteActorList"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("list")>]
-              List: AtUri }
+              List : AtUri }
 
     module UnmuteThread =
         [<Literal>]
         let TypeId = "app.bsky.graph.unmuteThread"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("root")>]
-              Root: AtUri }
+              Root : AtUri }
 
     module Verification =
         [<Literal>]
@@ -1237,29 +1339,29 @@ module AppBskyGraph =
         /// Record declaring a verification relationship between two accounts. Verifications are only considered valid by an app if issued by an account the app considers trusted.
         type Verification =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("displayName")>]
-              DisplayName: string
+              DisplayName : string
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("subject")>]
-              Subject: Did }
+              Subject : Did }
 
 module AppBskyFeed =
     module Defs =
         type BlockedAuthor =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("viewer")>]
-              Viewer: AppBskyActor.Defs.ViewerState option }
+              Viewer : AppBskyActor.Defs.ViewerState option }
 
         type BlockedPost =
             { [<JsonPropertyName("author")>]
-              Author: Defs.BlockedAuthor
+              Author : Defs.BlockedAuthor
               [<JsonPropertyName("blocked")>]
-              Blocked: bool
+              Blocked : bool
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         [<Literal>]
         let ClickthroughAuthor = "app.bsky.feed.defs#clickthroughAuthor"
@@ -1279,7 +1381,8 @@ module AppBskyFeed =
         [<Literal>]
         let ContentModeVideo = "app.bsky.feed.defs#contentModeVideo"
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type FeedViewPostReasonUnion =
             | [<JsonName("app.bsky.feed.defs#reasonRepost")>] ReasonRepost of Defs.ReasonRepost
             | [<JsonName("app.bsky.feed.defs#reasonPin")>] ReasonPin of Defs.ReasonPin
@@ -1287,15 +1390,15 @@ module AppBskyFeed =
 
         type FeedViewPost =
             { [<JsonPropertyName("feedContext")>]
-              FeedContext: string option
+              FeedContext : string option
               [<JsonPropertyName("post")>]
-              Post: Defs.PostView
+              Post : Defs.PostView
               [<JsonPropertyName("reason")>]
-              Reason: FeedViewPostReasonUnion option
+              Reason : FeedViewPostReasonUnion option
               [<JsonPropertyName("reply")>]
-              Reply: Defs.ReplyRef option
+              Reply : Defs.ReplyRef option
               [<JsonPropertyName("reqId")>]
-              ReqId: string option }
+              ReqId : string option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<GeneratorViewContentMode>>)>]
         type GeneratorViewContentMode =
@@ -1305,37 +1408,37 @@ module AppBskyFeed =
 
         type GeneratorView =
             { [<JsonPropertyName("acceptsInteractions")>]
-              AcceptsInteractions: bool option
+              AcceptsInteractions : bool option
               [<JsonPropertyName("avatar")>]
-              Avatar: Uri option
+              Avatar : Uri option
               [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("contentMode")>]
-              ContentMode: GeneratorViewContentMode option
+              ContentMode : GeneratorViewContentMode option
               [<JsonPropertyName("creator")>]
-              Creator: AppBskyActor.Defs.ProfileView
+              Creator : AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("descriptionFacets")>]
-              DescriptionFacets: AppBskyRichtext.Facet.Facet list option
+              DescriptionFacets : AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("displayName")>]
-              DisplayName: string
+              DisplayName : string
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("likeCount")>]
-              LikeCount: int64 option
+              LikeCount : int64 option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("viewer")>]
-              Viewer: Defs.GeneratorViewerState option }
+              Viewer : Defs.GeneratorViewerState option }
 
         type GeneratorViewerState =
             { [<JsonPropertyName("like")>]
-              Like: AtUri option }
+              Like : AtUri option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InteractionEvent>>)>]
         type InteractionEvent =
@@ -1355,13 +1458,13 @@ module AppBskyFeed =
 
         type Interaction =
             { [<JsonPropertyName("event")>]
-              Event: InteractionEvent option
+              Event : InteractionEvent option
               [<JsonPropertyName("feedContext")>]
-              FeedContext: string option
+              FeedContext : string option
               [<JsonPropertyName("item")>]
-              Item: AtUri option
+              Item : AtUri option
               [<JsonPropertyName("reqId")>]
-              ReqId: string option }
+              ReqId : string option }
 
         [<Literal>]
         let InteractionLike = "app.bsky.feed.defs#interactionLike"
@@ -1383,11 +1486,12 @@ module AppBskyFeed =
 
         type NotFoundPost =
             { [<JsonPropertyName("notFound")>]
-              NotFound: bool
+              NotFound : bool
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type PostViewEmbedUnion =
             | [<JsonName("app.bsky.embed.images#view")>] View of AppBskyEmbed.Images.View
             | [<JsonName("app.bsky.embed.video#view")>] View2 of AppBskyEmbed.Video.View
@@ -1398,49 +1502,50 @@ module AppBskyFeed =
 
         type PostView =
             { [<JsonPropertyName("author")>]
-              Author: AppBskyActor.Defs.ProfileViewBasic
+              Author : AppBskyActor.Defs.ProfileViewBasic
               [<JsonPropertyName("bookmarkCount")>]
-              BookmarkCount: int64 option
+              BookmarkCount : int64 option
               [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("debug")>]
-              Debug: JsonElement option
+              Debug : JsonElement option
               [<JsonPropertyName("embed")>]
-              Embed: PostViewEmbedUnion option
+              Embed : PostViewEmbedUnion option
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("likeCount")>]
-              LikeCount: int64 option
+              LikeCount : int64 option
               [<JsonPropertyName("quoteCount")>]
-              QuoteCount: int64 option
+              QuoteCount : int64 option
               [<JsonPropertyName("record")>]
-              Record: JsonElement
+              Record : JsonElement
               [<JsonPropertyName("replyCount")>]
-              ReplyCount: int64 option
+              ReplyCount : int64 option
               [<JsonPropertyName("repostCount")>]
-              RepostCount: int64 option
+              RepostCount : int64 option
               [<JsonPropertyName("threadgate")>]
-              Threadgate: Defs.ThreadgateView option
+              Threadgate : Defs.ThreadgateView option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("viewer")>]
-              Viewer: Defs.ViewerState option }
+              Viewer : Defs.ViewerState option }
 
         type ReasonPin = JsonElement
 
         type ReasonRepost =
             { [<JsonPropertyName("by")>]
-              By: AppBskyActor.Defs.ProfileViewBasic
+              By : AppBskyActor.Defs.ProfileViewBasic
               [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("uri")>]
-              Uri: AtUri option }
+              Uri : AtUri option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ReplyRefParentUnion =
             | [<JsonName("app.bsky.feed.defs#postView")>] PostView of Defs.PostView
             | [<JsonName("app.bsky.feed.defs#notFoundPost")>] NotFoundPost of Defs.NotFoundPost
@@ -1449,11 +1554,11 @@ module AppBskyFeed =
 
         type ReplyRef =
             { [<JsonPropertyName("grandparentAuthor")>]
-              GrandparentAuthor: AppBskyActor.Defs.ProfileViewBasic option
+              GrandparentAuthor : AppBskyActor.Defs.ProfileViewBasic option
               [<JsonPropertyName("parent")>]
-              Parent: ReplyRefParentUnion
+              Parent : ReplyRefParentUnion
               [<JsonPropertyName("root")>]
-              Root: ReplyRefParentUnion }
+              Root : ReplyRefParentUnion }
 
         [<Literal>]
         let RequestLess = "app.bsky.feed.defs#requestLess"
@@ -1461,7 +1566,8 @@ module AppBskyFeed =
         [<Literal>]
         let RequestMore = "app.bsky.feed.defs#requestMore"
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type SkeletonFeedPostReasonUnion =
             | [<JsonName("app.bsky.feed.defs#skeletonReasonRepost")>] SkeletonReasonRepost of Defs.SkeletonReasonRepost
             | [<JsonName("app.bsky.feed.defs#skeletonReasonPin")>] SkeletonReasonPin of Defs.SkeletonReasonPin
@@ -1469,24 +1575,25 @@ module AppBskyFeed =
 
         type SkeletonFeedPost =
             { [<JsonPropertyName("feedContext")>]
-              FeedContext: string option
+              FeedContext : string option
               [<JsonPropertyName("post")>]
-              Post: AtUri
+              Post : AtUri
               [<JsonPropertyName("reason")>]
-              Reason: SkeletonFeedPostReasonUnion option }
+              Reason : SkeletonFeedPostReasonUnion option }
 
         type SkeletonReasonPin = JsonElement
 
         type SkeletonReasonRepost =
             { [<JsonPropertyName("repost")>]
-              Repost: AtUri }
+              Repost : AtUri }
 
         /// Metadata about this post within the context of the thread it is in.
         type ThreadContext =
             { [<JsonPropertyName("rootAuthorLike")>]
-              RootAuthorLike: AtUri option }
+              RootAuthorLike : AtUri option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ThreadViewPostParentUnion =
             | [<JsonName("app.bsky.feed.defs#threadViewPost")>] ThreadViewPost of Defs.ThreadViewPost
             | [<JsonName("app.bsky.feed.defs#notFoundPost")>] NotFoundPost of Defs.NotFoundPost
@@ -1495,65 +1602,67 @@ module AppBskyFeed =
 
         type ThreadViewPost =
             { [<JsonPropertyName("parent")>]
-              Parent: ThreadViewPostParentUnion option
+              Parent : ThreadViewPostParentUnion option
               [<JsonPropertyName("post")>]
-              Post: Defs.PostView
+              Post : Defs.PostView
               [<JsonPropertyName("replies")>]
-              Replies: ThreadViewPostParentUnion list option
+              Replies : ThreadViewPostParentUnion list option
               [<JsonPropertyName("threadContext")>]
-              ThreadContext: Defs.ThreadContext option }
+              ThreadContext : Defs.ThreadContext option }
 
         type ThreadgateView =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("lists")>]
-              Lists: AppBskyGraph.Defs.ListViewBasic list option
+              Lists : AppBskyGraph.Defs.ListViewBasic list option
               [<JsonPropertyName("record")>]
-              Record: JsonElement option
+              Record : JsonElement option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri option }
+              Uri : AtUri option }
 
         /// Metadata about the requesting account's relationship with the subject content. Only has meaningful content for authed requests.
         type ViewerState =
             { [<JsonPropertyName("bookmarked")>]
-              Bookmarked: bool option
+              Bookmarked : bool option
               [<JsonPropertyName("embeddingDisabled")>]
-              EmbeddingDisabled: bool option
+              EmbeddingDisabled : bool option
               [<JsonPropertyName("like")>]
-              Like: AtUri option
+              Like : AtUri option
               [<JsonPropertyName("pinned")>]
-              Pinned: bool option
+              Pinned : bool option
               [<JsonPropertyName("replyDisabled")>]
-              ReplyDisabled: bool option
+              ReplyDisabled : bool option
               [<JsonPropertyName("repost")>]
-              Repost: AtUri option
+              Repost : AtUri option
               [<JsonPropertyName("threadMuted")>]
-              ThreadMuted: bool option }
+              ThreadMuted : bool option }
 
     module DescribeFeedGenerator =
         [<Literal>]
         let TypeId = "app.bsky.feed.describeFeedGenerator"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("feeds")>]
-              Feeds: DescribeFeedGenerator.Feed list
+              Feeds : DescribeFeedGenerator.Feed list
               [<JsonPropertyName("links")>]
-              Links: DescribeFeedGenerator.Links option }
+              Links : DescribeFeedGenerator.Links option }
 
         type Feed =
             { [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         type Links =
             { [<JsonPropertyName("privacyPolicy")>]
-              PrivacyPolicy: string option
+              PrivacyPolicy : string option
               [<JsonPropertyName("termsOfService")>]
-              TermsOfService: string option }
+              TermsOfService : string option }
 
     module Generator =
         [<Literal>]
@@ -1566,7 +1675,8 @@ module AppBskyFeed =
             | Unknown of string
 
         /// Self-label values
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type GeneratorLabelsUnion =
             | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
             | Unknown of string * System.Text.Json.JsonElement
@@ -1574,65 +1684,71 @@ module AppBskyFeed =
         /// Record declaring of the existence of a feed generator, and containing metadata about it. The record can exist in any repository.
         type Generator =
             { [<JsonPropertyName("acceptsInteractions")>]
-              AcceptsInteractions: bool option
+              AcceptsInteractions : bool option
               [<JsonPropertyName("avatar")>]
-              Avatar: JsonElement option
+              Avatar : JsonElement option
               [<JsonPropertyName("contentMode")>]
-              ContentMode: GeneratorContentMode option
+              ContentMode : GeneratorContentMode option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("descriptionFacets")>]
-              DescriptionFacets: AppBskyRichtext.Facet.Facet list option
+              DescriptionFacets : AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("displayName")>]
-              DisplayName: string
+              DisplayName : string
               [<JsonPropertyName("labels")>]
-              Labels: GeneratorLabelsUnion option }
+              Labels : GeneratorLabelsUnion option }
 
     module GetActorFeeds =
         [<Literal>]
         let TypeId = "app.bsky.feed.getActorFeeds"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("feeds")>]
-              Feeds: Defs.GeneratorView list }
+              Feeds : Defs.GeneratorView list }
 
     module GetActorLikes =
         [<Literal>]
         let TypeId = "app.bsky.feed.getActorLikes"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("feed")>]
-              Feed: Defs.FeedViewPost list }
+              Feed : Defs.FeedViewPost list }
 
         module Errors =
             [<Literal>]
@@ -1645,7 +1761,10 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getAuthorFeed"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsFilter>>)>]
@@ -1659,21 +1778,21 @@ module AppBskyFeed =
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string
+              Actor : string
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("filter")>]
-              Filter: ParamsFilter option
+              Filter : ParamsFilter option
               [<JsonPropertyName("includePins")>]
-              IncludePins: bool option
+              IncludePins : bool option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("feed")>]
-              Feed: Defs.FeedViewPost list }
+              Feed : Defs.FeedViewPost list }
 
         module Errors =
             [<Literal>]
@@ -1686,22 +1805,25 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getFeed"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("feed")>]
-              Feed: AtUri
+              Feed : AtUri
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("feed")>]
-              Feed: Defs.FeedViewPost list }
+              Feed : Defs.FeedViewPost list }
 
         module Errors =
             [<Literal>]
@@ -1711,58 +1833,67 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getFeedGenerator"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("feed")>]
-              Feed: AtUri }
+              Feed : AtUri }
 
         type Output =
             { [<JsonPropertyName("isOnline")>]
-              IsOnline: bool
+              IsOnline : bool
               [<JsonPropertyName("isValid")>]
-              IsValid: bool
+              IsValid : bool
               [<JsonPropertyName("view")>]
-              View: Defs.GeneratorView }
+              View : Defs.GeneratorView }
 
     module GetFeedGenerators =
         [<Literal>]
         let TypeId = "app.bsky.feed.getFeedGenerators"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("feeds")>]
-              Feeds: AtUri list }
+              Feeds : AtUri list }
 
         type Output =
             { [<JsonPropertyName("feeds")>]
-              Feeds: Defs.GeneratorView list }
+              Feeds : Defs.GeneratorView list }
 
     module GetFeedSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.feed.getFeedSkeleton"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("feed")>]
-              Feed: AtUri
+              Feed : AtUri
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("feed")>]
-              Feed: Defs.SkeletonFeedPost list
+              Feed : Defs.SkeletonFeedPost list
               [<JsonPropertyName("reqId")>]
-              ReqId: string option }
+              ReqId : string option }
 
         module Errors =
             [<Literal>]
@@ -1772,57 +1903,63 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getLikes"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("likes")>]
-              Likes: GetLikes.Like list
+              Likes : GetLikes.Like list
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         type Like =
             { [<JsonPropertyName("actor")>]
-              Actor: AppBskyActor.Defs.ProfileView
+              Actor : AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime }
+              IndexedAt : AtDateTime }
 
     module GetListFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getListFeed"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("list")>]
-              List: AtUri }
+              List : AtUri }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("feed")>]
-              Feed: Defs.FeedViewPost list }
+              Feed : Defs.FeedViewPost list }
 
         module Errors =
             [<Literal>]
@@ -1832,18 +1969,22 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getPostThread"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("depth")>]
-              Depth: int64 option
+              Depth : int64 option
               [<JsonPropertyName("parentHeight")>]
-              ParentHeight: int64 option
+              ParentHeight : int64 option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputThreadUnion =
             | [<JsonName("app.bsky.feed.defs#threadViewPost")>] ThreadViewPost of Defs.ThreadViewPost
             | [<JsonName("app.bsky.feed.defs#notFoundPost")>] NotFoundPost of Defs.NotFoundPost
@@ -1852,9 +1993,9 @@ module AppBskyFeed =
 
         type Output =
             { [<JsonPropertyName("thread")>]
-              Thread: OutputThreadUnion
+              Thread : OutputThreadUnion
               [<JsonPropertyName("threadgate")>]
-              Threadgate: Defs.ThreadgateView option }
+              Threadgate : Defs.ThreadgateView option }
 
         module Errors =
             [<Literal>]
@@ -1864,110 +2005,125 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.getPosts"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("uris")>]
-              Uris: AtUri list }
+              Uris : AtUri list }
 
         type Output =
             { [<JsonPropertyName("posts")>]
-              Posts: Defs.PostView list }
+              Posts : Defs.PostView list }
 
     module GetQuotes =
         [<Literal>]
         let TypeId = "app.bsky.feed.getQuotes"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("posts")>]
-              Posts: Defs.PostView list
+              Posts : Defs.PostView list
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
     module GetRepostedBy =
         [<Literal>]
         let TypeId = "app.bsky.feed.getRepostedBy"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("repostedBy")>]
-              RepostedBy: AppBskyActor.Defs.ProfileView list
+              RepostedBy : AppBskyActor.Defs.ProfileView list
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
     module GetSuggestedFeeds =
         [<Literal>]
         let TypeId = "app.bsky.feed.getSuggestedFeeds"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("feeds")>]
-              Feeds: Defs.GeneratorView list }
+              Feeds : Defs.GeneratorView list }
 
     module GetTimeline =
         [<Literal>]
         let TypeId = "app.bsky.feed.getTimeline"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("algorithm")>]
-              Algorithm: string option
+              Algorithm : string option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("feed")>]
-              Feed: Defs.FeedViewPost list }
+              Feed : Defs.FeedViewPost list }
 
     module Like =
         [<Literal>]
@@ -1976,17 +2132,18 @@ module AppBskyFeed =
         /// Record declaring a 'like' of a piece of subject content.
         type Like =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("subject")>]
-              Subject: ComAtprotoRepo.StrongRef.StrongRef
+              Subject : ComAtprotoRepo.StrongRef.StrongRef
               [<JsonPropertyName("via")>]
-              Via: ComAtprotoRepo.StrongRef.StrongRef option }
+              Via : ComAtprotoRepo.StrongRef.StrongRef option }
 
     module Post =
         [<Literal>]
         let TypeId = "app.bsky.feed.post"
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type PostEmbedUnion =
             | [<JsonName("app.bsky.embed.images")>] Images of AppBskyEmbed.Images.Images
             | [<JsonName("app.bsky.embed.video")>] Video of AppBskyEmbed.Video.Video
@@ -1997,7 +2154,8 @@ module AppBskyFeed =
             | Unknown of string * System.Text.Json.JsonElement
 
         /// Self-label values for this post. Effectively content warnings.
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type PostLabelsUnion =
             | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
             | Unknown of string * System.Text.Json.JsonElement
@@ -2005,51 +2163,52 @@ module AppBskyFeed =
         /// Record containing a Bluesky post.
         type Post =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("embed")>]
-              Embed: PostEmbedUnion option
+              Embed : PostEmbedUnion option
               [<JsonPropertyName("entities")>]
-              Entities: Post.Entity list option
+              Entities : Post.Entity list option
               [<JsonPropertyName("facets")>]
-              Facets: AppBskyRichtext.Facet.Facet list option
+              Facets : AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("labels")>]
-              Labels: PostLabelsUnion option
+              Labels : PostLabelsUnion option
               [<JsonPropertyName("langs")>]
-              Langs: Language list option
+              Langs : Language list option
               [<JsonPropertyName("reply")>]
-              Reply: Post.ReplyRef option
+              Reply : Post.ReplyRef option
               [<JsonPropertyName("tags")>]
-              Tags: string list option
+              Tags : string list option
               [<JsonPropertyName("text")>]
-              Text: string }
+              Text : string }
 
         /// Deprecated: use facets instead.
         type Entity =
             { [<JsonPropertyName("index")>]
-              Index: Post.TextSlice
+              Index : Post.TextSlice
               [<JsonPropertyName("type")>]
-              Type: string
+              Type : string
               [<JsonPropertyName("value")>]
-              Value: string }
+              Value : string }
 
         type ReplyRef =
             { [<JsonPropertyName("parent")>]
-              Parent: ComAtprotoRepo.StrongRef.StrongRef
+              Parent : ComAtprotoRepo.StrongRef.StrongRef
               [<JsonPropertyName("root")>]
-              Root: ComAtprotoRepo.StrongRef.StrongRef }
+              Root : ComAtprotoRepo.StrongRef.StrongRef }
 
         /// Deprecated. Use app.bsky.richtext instead -- A text segment. Start is inclusive, end is exclusive. Indices are for utf16-encoded strings.
         type TextSlice =
             { [<JsonPropertyName("end")>]
-              End: int64
+              End : int64
               [<JsonPropertyName("start")>]
-              Start: int64 }
+              Start : int64 }
 
     module Postgate =
         [<Literal>]
         let TypeId = "app.bsky.feed.postgate"
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type PostgateEmbeddingRulesItem =
             | [<JsonName("app.bsky.feed.postgate#disableRule")>] DisableRule of Postgate.DisableRule
             | Unknown of string * System.Text.Json.JsonElement
@@ -2057,13 +2216,13 @@ module AppBskyFeed =
         /// Record defining interaction rules for a post. The record key (rkey) of the postgate record must match the record key of the post, and that record must be in the same repository.
         type Postgate =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("detachedEmbeddingUris")>]
-              DetachedEmbeddingUris: AtUri list option
+              DetachedEmbeddingUris : AtUri list option
               [<JsonPropertyName("embeddingRules")>]
-              EmbeddingRules: PostgateEmbeddingRulesItem list option
+              EmbeddingRules : PostgateEmbeddingRulesItem list option
               [<JsonPropertyName("post")>]
-              Post: AtUri }
+              Post : AtUri }
 
         type DisableRule = JsonElement
 
@@ -2074,17 +2233,20 @@ module AppBskyFeed =
         /// Record representing a 'repost' of an existing Bluesky post.
         type Repost =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("subject")>]
-              Subject: ComAtprotoRepo.StrongRef.StrongRef
+              Subject : ComAtprotoRepo.StrongRef.StrongRef
               [<JsonPropertyName("via")>]
-              Via: ComAtprotoRepo.StrongRef.StrongRef option }
+              Via : ComAtprotoRepo.StrongRef.StrongRef option }
 
     module SearchPosts =
         [<Literal>]
         let TypeId = "app.bsky.feed.searchPosts"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsSort>>)>]
@@ -2095,37 +2257,37 @@ module AppBskyFeed =
 
         type Params =
             { [<JsonPropertyName("author")>]
-              Author: string option
+              Author : string option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("domain")>]
-              Domain: string option
+              Domain : string option
               [<JsonPropertyName("lang")>]
-              Lang: Language option
+              Lang : Language option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("mentions")>]
-              Mentions: string option
+              Mentions : string option
               [<JsonPropertyName("q")>]
-              Q: string
+              Q : string
               [<JsonPropertyName("since")>]
-              Since: string option
+              Since : string option
               [<JsonPropertyName("sort")>]
-              Sort: ParamsSort option
+              Sort : ParamsSort option
               [<JsonPropertyName("tag")>]
-              Tag: string list option
+              Tag : string list option
               [<JsonPropertyName("until")>]
-              Until: string option
+              Until : string option
               [<JsonPropertyName("url")>]
-              Url: Uri option }
+              Url : Uri option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("hitsTotal")>]
-              HitsTotal: int64 option
+              HitsTotal : int64 option
               [<JsonPropertyName("posts")>]
-              Posts: Defs.PostView list }
+              Posts : Defs.PostView list }
 
         module Errors =
             [<Literal>]
@@ -2135,18 +2297,22 @@ module AppBskyFeed =
         [<Literal>]
         let TypeId = "app.bsky.feed.sendInteractions"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("interactions")>]
-              Interactions: Defs.Interaction list }
+              Interactions : Defs.Interaction list }
 
     module Threadgate =
         [<Literal>]
         let TypeId = "app.bsky.feed.threadgate"
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ThreadgateAllowItem =
             | [<JsonName("app.bsky.feed.threadgate#mentionRule")>] MentionRule of Threadgate.MentionRule
             | [<JsonName("app.bsky.feed.threadgate#followerRule")>] FollowerRule of Threadgate.FollowerRule
@@ -2157,13 +2323,13 @@ module AppBskyFeed =
         /// Record defining interaction gating rules for a thread (aka, reply controls). The record key (rkey) of the threadgate record must match the record key of the thread's root post, and that record must be in the same repository.
         type Threadgate =
             { [<JsonPropertyName("allow")>]
-              Allow: ThreadgateAllowItem list option
+              Allow : ThreadgateAllowItem list option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("hiddenReplies")>]
-              HiddenReplies: AtUri list option
+              HiddenReplies : AtUri list option
               [<JsonPropertyName("post")>]
-              Post: AtUri }
+              Post : AtUri }
 
         type FollowerRule = JsonElement
         type FollowingRule = JsonElement
@@ -2171,7 +2337,7 @@ module AppBskyFeed =
         /// Allow replies from actors on a list.
         type ListRule =
             { [<JsonPropertyName("list")>]
-              List: AtUri }
+              List : AtUri }
 
         type MentionRule = JsonElement
 
@@ -2184,41 +2350,46 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.checkAccountStatus"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("activated")>]
-              Activated: bool
+              Activated : bool
               [<JsonPropertyName("expectedBlobs")>]
-              ExpectedBlobs: int64
+              ExpectedBlobs : int64
               [<JsonPropertyName("importedBlobs")>]
-              ImportedBlobs: int64
+              ImportedBlobs : int64
               [<JsonPropertyName("indexedRecords")>]
-              IndexedRecords: int64
+              IndexedRecords : int64
               [<JsonPropertyName("privateStateValues")>]
-              PrivateStateValues: int64
+              PrivateStateValues : int64
               [<JsonPropertyName("repoBlocks")>]
-              RepoBlocks: int64
+              RepoBlocks : int64
               [<JsonPropertyName("repoCommit")>]
-              RepoCommit: Cid
+              RepoCommit : Cid
               [<JsonPropertyName("repoRev")>]
-              RepoRev: string
+              RepoRev : string
               [<JsonPropertyName("validDid")>]
-              ValidDid: bool }
+              ValidDid : bool }
 
     module ConfirmEmail =
         [<Literal>]
         let TypeId = "com.atproto.server.confirmEmail"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("email")>]
-              Email: string
+              Email : string
               [<JsonPropertyName("token")>]
-              Token: string }
+              Token : string }
 
         module Errors =
             [<Literal>]
@@ -2237,40 +2408,43 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.createAccount"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: Did option
+              Did : Did option
               [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("inviteCode")>]
-              InviteCode: string option
+              InviteCode : string option
               [<JsonPropertyName("password")>]
-              Password: string option
+              Password : string option
               [<JsonPropertyName("plcOp")>]
-              PlcOp: JsonElement option
+              PlcOp : JsonElement option
               [<JsonPropertyName("recoveryKey")>]
-              RecoveryKey: string option
+              RecoveryKey : string option
               [<JsonPropertyName("verificationCode")>]
-              VerificationCode: string option
+              VerificationCode : string option
               [<JsonPropertyName("verificationPhone")>]
-              VerificationPhone: string option }
+              VerificationPhone : string option }
 
         type Output =
             { [<JsonPropertyName("accessJwt")>]
-              AccessJwt: string
+              AccessJwt : string
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("didDoc")>]
-              DidDoc: JsonElement option
+              DidDoc : JsonElement option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("refreshJwt")>]
-              RefreshJwt: string }
+              RefreshJwt : string }
 
         module Errors =
             [<Literal>]
@@ -2298,14 +2472,17 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.createAppPassword"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("name")>]
-              Name: string
+              Name : string
               [<JsonPropertyName("privileged")>]
-              Privileged: bool option }
+              Privileged : bool option }
 
         type Output = CreateAppPassword.AppPassword
 
@@ -2315,72 +2492,81 @@ module ComAtprotoServer =
 
         type AppPassword =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("name")>]
-              Name: string
+              Name : string
               [<JsonPropertyName("password")>]
-              Password: string
+              Password : string
               [<JsonPropertyName("privileged")>]
-              Privileged: bool option }
+              Privileged : bool option }
 
     module CreateInviteCode =
         [<Literal>]
         let TypeId = "com.atproto.server.createInviteCode"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("forAccount")>]
-              ForAccount: Did option
+              ForAccount : Did option
               [<JsonPropertyName("useCount")>]
-              UseCount: int64 }
+              UseCount : int64 }
 
         type Output =
             { [<JsonPropertyName("code")>]
-              Code: string }
+              Code : string }
 
     module CreateInviteCodes =
         [<Literal>]
         let TypeId = "com.atproto.server.createInviteCodes"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("codeCount")>]
-              CodeCount: int64
+              CodeCount : int64
               [<JsonPropertyName("forAccounts")>]
-              ForAccounts: Did list option
+              ForAccounts : Did list option
               [<JsonPropertyName("useCount")>]
-              UseCount: int64 }
+              UseCount : int64 }
 
         type Output =
             { [<JsonPropertyName("codes")>]
-              Codes: CreateInviteCodes.AccountCodes list }
+              Codes : CreateInviteCodes.AccountCodes list }
 
         type AccountCodes =
             { [<JsonPropertyName("account")>]
-              Account: string
+              Account : string
               [<JsonPropertyName("codes")>]
-              Codes: string list }
+              Codes : string list }
 
     module CreateSession =
         [<Literal>]
         let TypeId = "com.atproto.server.createSession"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("allowTakendown")>]
-              AllowTakendown: bool option
+              AllowTakendown : bool option
               [<JsonPropertyName("authFactorToken")>]
-              AuthFactorToken: string option
+              AuthFactorToken : string option
               [<JsonPropertyName("identifier")>]
-              Identifier: string
+              Identifier : string
               [<JsonPropertyName("password")>]
-              Password: string }
+              Password : string }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OutputStatus>>)>]
         type OutputStatus =
@@ -2391,25 +2577,25 @@ module ComAtprotoServer =
 
         type Output =
             { [<JsonPropertyName("accessJwt")>]
-              AccessJwt: string
+              AccessJwt : string
               [<JsonPropertyName("active")>]
-              Active: bool option
+              Active : bool option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("didDoc")>]
-              DidDoc: JsonElement option
+              DidDoc : JsonElement option
               [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("emailAuthFactor")>]
-              EmailAuthFactor: bool option
+              EmailAuthFactor : bool option
               [<JsonPropertyName("emailConfirmed")>]
-              EmailConfirmed: bool option
+              EmailConfirmed : bool option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("refreshJwt")>]
-              RefreshJwt: string
+              RefreshJwt : string
               [<JsonPropertyName("status")>]
-              Status: OutputStatus option }
+              Status : OutputStatus option }
 
         module Errors =
             [<Literal>]
@@ -2422,50 +2608,56 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.deactivateAccount"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("deleteAfter")>]
-              DeleteAfter: AtDateTime option }
+              DeleteAfter : AtDateTime option }
 
     module Defs =
         type InviteCode =
             { [<JsonPropertyName("available")>]
-              Available: int64
+              Available : int64
               [<JsonPropertyName("code")>]
-              Code: string
+              Code : string
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string
+              CreatedBy : string
               [<JsonPropertyName("disabled")>]
-              Disabled: bool
+              Disabled : bool
               [<JsonPropertyName("forAccount")>]
-              ForAccount: string
+              ForAccount : string
               [<JsonPropertyName("uses")>]
-              Uses: Defs.InviteCodeUse list }
+              Uses : Defs.InviteCodeUse list }
 
         type InviteCodeUse =
             { [<JsonPropertyName("usedAt")>]
-              UsedAt: AtDateTime
+              UsedAt : AtDateTime
               [<JsonPropertyName("usedBy")>]
-              UsedBy: Did }
+              UsedBy : Did }
 
     module DeleteAccount =
         [<Literal>]
         let TypeId = "com.atproto.server.deleteAccount"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("password")>]
-              Password: string
+              Password : string
               [<JsonPropertyName("token")>]
-              Token: string }
+              Token : string }
 
         module Errors =
             [<Literal>]
@@ -2489,49 +2681,54 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.describeServer"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("availableUserDomains")>]
-              AvailableUserDomains: string list
+              AvailableUserDomains : string list
               [<JsonPropertyName("contact")>]
-              Contact: DescribeServer.Contact option
+              Contact : DescribeServer.Contact option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("inviteCodeRequired")>]
-              InviteCodeRequired: bool option
+              InviteCodeRequired : bool option
               [<JsonPropertyName("links")>]
-              Links: DescribeServer.Links option
+              Links : DescribeServer.Links option
               [<JsonPropertyName("phoneVerificationRequired")>]
-              PhoneVerificationRequired: bool option }
+              PhoneVerificationRequired : bool option }
 
         type Contact =
             { [<JsonPropertyName("email")>]
-              Email: string option }
+              Email : string option }
 
         type Links =
             { [<JsonPropertyName("privacyPolicy")>]
-              PrivacyPolicy: Uri option
+              PrivacyPolicy : Uri option
               [<JsonPropertyName("termsOfService")>]
-              TermsOfService: Uri option }
+              TermsOfService : Uri option }
 
     module GetAccountInviteCodes =
         [<Literal>]
         let TypeId = "com.atproto.server.getAccountInviteCodes"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("createAvailable")>]
-              CreateAvailable: bool option
+              CreateAvailable : bool option
               [<JsonPropertyName("includeUsed")>]
-              IncludeUsed: bool option }
+              IncludeUsed : bool option }
 
         type Output =
             { [<JsonPropertyName("codes")>]
-              Codes: Defs.InviteCode list }
+              Codes : Defs.InviteCode list }
 
         module Errors =
             [<Literal>]
@@ -2541,20 +2738,23 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.getServiceAuth"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("aud")>]
-              Aud: Did
+              Aud : Did
               [<JsonPropertyName("exp")>]
-              Exp: int64 option
+              Exp : int64 option
               [<JsonPropertyName("lxm")>]
-              Lxm: Nsid option }
+              Lxm : Nsid option }
 
         type Output =
             { [<JsonPropertyName("token")>]
-              Token: string }
+              Token : string }
 
         module Errors =
             [<Literal>]
@@ -2564,7 +2764,9 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.getSession"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OutputStatus>>)>]
@@ -2576,32 +2778,34 @@ module ComAtprotoServer =
 
         type Output =
             { [<JsonPropertyName("active")>]
-              Active: bool option
+              Active : bool option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("didDoc")>]
-              DidDoc: JsonElement option
+              DidDoc : JsonElement option
               [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("emailAuthFactor")>]
-              EmailAuthFactor: bool option
+              EmailAuthFactor : bool option
               [<JsonPropertyName("emailConfirmed")>]
-              EmailConfirmed: bool option
+              EmailConfirmed : bool option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("status")>]
-              Status: OutputStatus option }
+              Status : OutputStatus option }
 
     module ListAppPasswords =
         [<Literal>]
         let TypeId = "com.atproto.server.listAppPasswords"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("passwords")>]
-              Passwords: ListAppPasswords.AppPassword list }
+              Passwords : ListAppPasswords.AppPassword list }
 
         module Errors =
             [<Literal>]
@@ -2609,11 +2813,11 @@ module ComAtprotoServer =
 
         type AppPassword =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("name")>]
-              Name: string
+              Name : string
               [<JsonPropertyName("privileged")>]
-              Privileged: bool option }
+              Privileged : bool option }
 
     module RefreshSession =
         [<Literal>]
@@ -2628,25 +2832,25 @@ module ComAtprotoServer =
 
         type Output =
             { [<JsonPropertyName("accessJwt")>]
-              AccessJwt: string
+              AccessJwt : string
               [<JsonPropertyName("active")>]
-              Active: bool option
+              Active : bool option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("didDoc")>]
-              DidDoc: JsonElement option
+              DidDoc : JsonElement option
               [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("emailAuthFactor")>]
-              EmailAuthFactor: bool option
+              EmailAuthFactor : bool option
               [<JsonPropertyName("emailConfirmed")>]
-              EmailConfirmed: bool option
+              EmailConfirmed : bool option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("refreshJwt")>]
-              RefreshJwt: string
+              RefreshJwt : string
               [<JsonPropertyName("status")>]
-              Status: OutputStatus option }
+              Status : OutputStatus option }
 
         module Errors =
             [<Literal>]
@@ -2672,46 +2876,55 @@ module ComAtprotoServer =
 
         type Output =
             { [<JsonPropertyName("tokenRequired")>]
-              TokenRequired: bool }
+              TokenRequired : bool }
 
     module RequestPasswordReset =
         [<Literal>]
         let TypeId = "com.atproto.server.requestPasswordReset"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("email")>]
-              Email: string }
+              Email : string }
 
     module ReserveSigningKey =
         [<Literal>]
         let TypeId = "com.atproto.server.reserveSigningKey"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: Did option }
+              Did : Did option }
 
         type Output =
             { [<JsonPropertyName("signingKey")>]
-              SigningKey: string }
+              SigningKey : string }
 
     module ResetPassword =
         [<Literal>]
         let TypeId = "com.atproto.server.resetPassword"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("password")>]
-              Password: string
+              Password : string
               [<JsonPropertyName("token")>]
-              Token: string }
+              Token : string }
 
         module Errors =
             [<Literal>]
@@ -2724,27 +2937,33 @@ module ComAtprotoServer =
         [<Literal>]
         let TypeId = "com.atproto.server.revokeAppPassword"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("name")>]
-              Name: string }
+              Name : string }
 
     module UpdateEmail =
         [<Literal>]
         let TypeId = "com.atproto.server.updateEmail"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("email")>]
-              Email: string
+              Email : string
               [<JsonPropertyName("emailAuthFactor")>]
-              EmailAuthFactor: bool option
+              EmailAuthFactor : bool option
               [<JsonPropertyName("token")>]
-              Token: string option }
+              Token : string option }
 
         module Errors =
             [<Literal>]
@@ -2760,114 +2979,129 @@ module ComAtprotoAdmin =
     module Defs =
         type AccountView =
             { [<JsonPropertyName("deactivatedAt")>]
-              DeactivatedAt: AtDateTime option
+              DeactivatedAt : AtDateTime option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("emailConfirmedAt")>]
-              EmailConfirmedAt: AtDateTime option
+              EmailConfirmedAt : AtDateTime option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("inviteNote")>]
-              InviteNote: string option
+              InviteNote : string option
               [<JsonPropertyName("invitedBy")>]
-              InvitedBy: ComAtprotoServer.Defs.InviteCode option
+              InvitedBy : ComAtprotoServer.Defs.InviteCode option
               [<JsonPropertyName("invites")>]
-              Invites: ComAtprotoServer.Defs.InviteCode list option
+              Invites : ComAtprotoServer.Defs.InviteCode list option
               [<JsonPropertyName("invitesDisabled")>]
-              InvitesDisabled: bool option
+              InvitesDisabled : bool option
               [<JsonPropertyName("relatedRecords")>]
-              RelatedRecords: JsonElement list option
+              RelatedRecords : JsonElement list option
               [<JsonPropertyName("threatSignatures")>]
-              ThreatSignatures: Defs.ThreatSignature list option }
+              ThreatSignatures : Defs.ThreatSignature list option }
 
         type RepoBlobRef =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("recordUri")>]
-              RecordUri: AtUri option }
+              RecordUri : AtUri option }
 
         type RepoRef =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         type StatusAttr =
             { [<JsonPropertyName("applied")>]
-              Applied: bool
+              Applied : bool
               [<JsonPropertyName("ref")>]
-              Ref: string option }
+              Ref : string option }
 
         type ThreatSignature =
             { [<JsonPropertyName("property")>]
-              Property: string
+              Property : string
               [<JsonPropertyName("value")>]
-              Value: string }
+              Value : string }
 
     module DeleteAccount =
         [<Literal>]
         let TypeId = "com.atproto.admin.deleteAccount"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
     module DisableAccountInvites =
         [<Literal>]
         let TypeId = "com.atproto.admin.disableAccountInvites"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("account")>]
-              Account: Did
+              Account : Did
               [<JsonPropertyName("note")>]
-              Note: string option }
+              Note : string option }
 
     module DisableInviteCodes =
         [<Literal>]
         let TypeId = "com.atproto.admin.disableInviteCodes"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("accounts")>]
-              Accounts: string list option
+              Accounts : string list option
               [<JsonPropertyName("codes")>]
-              Codes: string list option }
+              Codes : string list option }
 
     module EnableAccountInvites =
         [<Literal>]
         let TypeId = "com.atproto.admin.enableAccountInvites"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("account")>]
-              Account: Did
+              Account : Did
               [<JsonPropertyName("note")>]
-              Note: string option }
+              Note : string option }
 
     module GetAccountInfo =
         [<Literal>]
         let TypeId = "com.atproto.admin.getAccountInfo"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         type Output = Defs.AccountView
 
@@ -2875,22 +3109,28 @@ module ComAtprotoAdmin =
         [<Literal>]
         let TypeId = "com.atproto.admin.getAccountInfos"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("dids")>]
-              Dids: Did list }
+              Dids : Did list }
 
         type Output =
             { [<JsonPropertyName("infos")>]
-              Infos: Defs.AccountView list }
+              Infos : Defs.AccountView list }
 
     module GetInviteCodes =
         [<Literal>]
         let TypeId = "com.atproto.admin.getInviteCodes"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsSort>>)>]
@@ -2901,34 +3141,38 @@ module ComAtprotoAdmin =
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("sort")>]
-              Sort: ParamsSort option }
+              Sort : ParamsSort option }
 
         type Output =
             { [<JsonPropertyName("codes")>]
-              Codes: ComAtprotoServer.Defs.InviteCode list
+              Codes : ComAtprotoServer.Defs.InviteCode list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
     module GetSubjectStatus =
         [<Literal>]
         let TypeId = "com.atproto.admin.getSubjectStatus"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("blob")>]
-              Blob: Cid option
+              Blob : Cid option
               [<JsonPropertyName("did")>]
-              Did: Did option
+              Did : Did option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri option }
+              Uri : AtUri option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputSubjectUnion =
             | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of Defs.RepoRef
             | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
@@ -2937,116 +3181,138 @@ module ComAtprotoAdmin =
 
         type Output =
             { [<JsonPropertyName("deactivated")>]
-              Deactivated: Defs.StatusAttr option
+              Deactivated : Defs.StatusAttr option
               [<JsonPropertyName("subject")>]
-              Subject: OutputSubjectUnion
+              Subject : OutputSubjectUnion
               [<JsonPropertyName("takedown")>]
-              Takedown: Defs.StatusAttr option }
+              Takedown : Defs.StatusAttr option }
 
     module SearchAccounts =
         [<Literal>]
         let TypeId = "com.atproto.admin.searchAccounts"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("accounts")>]
-              Accounts: Defs.AccountView list
+              Accounts : Defs.AccountView list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
     module SendEmail =
         [<Literal>]
         let TypeId = "com.atproto.admin.sendEmail"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("content")>]
-              Content: string
+              Content : string
               [<JsonPropertyName("recipientDid")>]
-              RecipientDid: Did
+              RecipientDid : Did
               [<JsonPropertyName("senderDid")>]
-              SenderDid: Did
+              SenderDid : Did
               [<JsonPropertyName("subject")>]
-              Subject: string option }
+              Subject : string option }
 
         type Output =
             { [<JsonPropertyName("sent")>]
-              Sent: bool }
+              Sent : bool }
 
     module UpdateAccountEmail =
         [<Literal>]
         let TypeId = "com.atproto.admin.updateAccountEmail"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("account")>]
-              Account: string
+              Account : string
               [<JsonPropertyName("email")>]
-              Email: string }
+              Email : string }
 
     module UpdateAccountHandle =
         [<Literal>]
         let TypeId = "com.atproto.admin.updateAccountHandle"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("handle")>]
-              Handle: Handle }
+              Handle : Handle }
 
     module UpdateAccountPassword =
         [<Literal>]
         let TypeId = "com.atproto.admin.updateAccountPassword"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("password")>]
-              Password: string }
+              Password : string }
 
     module UpdateAccountSigningKey =
         [<Literal>]
         let TypeId = "com.atproto.admin.updateAccountSigningKey"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("signingKey")>]
-              SigningKey: Did }
+              SigningKey : Did }
 
     module UpdateSubjectStatus =
         [<Literal>]
         let TypeId = "com.atproto.admin.updateSubjectStatus"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type InputSubjectUnion =
             | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of Defs.RepoRef
             | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
@@ -3055,13 +3321,14 @@ module ComAtprotoAdmin =
 
         type Input =
             { [<JsonPropertyName("deactivated")>]
-              Deactivated: Defs.StatusAttr option
+              Deactivated : Defs.StatusAttr option
               [<JsonPropertyName("subject")>]
-              Subject: InputSubjectUnion
+              Subject : InputSubjectUnion
               [<JsonPropertyName("takedown")>]
-              Takedown: Defs.StatusAttr option }
+              Takedown : Defs.StatusAttr option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputSubjectUnion =
             | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of Defs.RepoRef
             | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
@@ -3070,19 +3337,23 @@ module ComAtprotoAdmin =
 
         type Output =
             { [<JsonPropertyName("subject")>]
-              Subject: OutputSubjectUnion
+              Subject : OutputSubjectUnion
               [<JsonPropertyName("takedown")>]
-              Takedown: Defs.StatusAttr option }
+              Takedown : Defs.StatusAttr option }
 
 module ComAtprotoModeration =
     module CreateReport =
         [<Literal>]
         let TypeId = "com.atproto.moderation.createReport"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type InputSubjectUnion =
             | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of ComAtprotoAdmin.Defs.RepoRef
             | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
@@ -3090,15 +3361,16 @@ module ComAtprotoModeration =
 
         type Input =
             { [<JsonPropertyName("modTool")>]
-              ModTool: CreateReport.ModTool option
+              ModTool : CreateReport.ModTool option
               [<JsonPropertyName("reason")>]
-              Reason: string option
+              Reason : string option
               [<JsonPropertyName("reasonType")>]
-              ReasonType: Defs.ReasonType
+              ReasonType : Defs.ReasonType
               [<JsonPropertyName("subject")>]
-              Subject: InputSubjectUnion }
+              Subject : InputSubjectUnion }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputSubjectUnion =
             | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of ComAtprotoAdmin.Defs.RepoRef
             | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
@@ -3106,24 +3378,24 @@ module ComAtprotoModeration =
 
         type Output =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("id")>]
-              Id: int64
+              Id : int64
               [<JsonPropertyName("reason")>]
-              Reason: string option
+              Reason : string option
               [<JsonPropertyName("reasonType")>]
-              ReasonType: Defs.ReasonType
+              ReasonType : Defs.ReasonType
               [<JsonPropertyName("reportedBy")>]
-              ReportedBy: Did
+              ReportedBy : Did
               [<JsonPropertyName("subject")>]
-              Subject: OutputSubjectUnion }
+              Subject : OutputSubjectUnion }
 
         /// Moderation tool information for tracing the source of the action
         type ModTool =
             { [<JsonPropertyName("meta")>]
-              Meta: JsonElement option
+              Meta : JsonElement option
               [<JsonPropertyName("name")>]
-              Name: string }
+              Name : string }
 
     module Defs =
         [<Literal>]
@@ -3209,68 +3481,72 @@ module AppBskyLabeler =
     module Defs =
         type LabelerPolicies =
             { [<JsonPropertyName("labelValueDefinitions")>]
-              LabelValueDefinitions: ComAtprotoLabel.Defs.LabelValueDefinition list option
+              LabelValueDefinitions : ComAtprotoLabel.Defs.LabelValueDefinition list option
               [<JsonPropertyName("labelValues")>]
-              LabelValues: ComAtprotoLabel.Defs.LabelValue list }
+              LabelValues : ComAtprotoLabel.Defs.LabelValue list }
 
         type LabelerView =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("creator")>]
-              Creator: AppBskyActor.Defs.ProfileView
+              Creator : AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("likeCount")>]
-              LikeCount: int64 option
+              LikeCount : int64 option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("viewer")>]
-              Viewer: Defs.LabelerViewerState option }
+              Viewer : Defs.LabelerViewerState option }
 
         type LabelerViewDetailed =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("creator")>]
-              Creator: AppBskyActor.Defs.ProfileView
+              Creator : AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("likeCount")>]
-              LikeCount: int64 option
+              LikeCount : int64 option
               [<JsonPropertyName("policies")>]
-              Policies: Defs.LabelerPolicies
+              Policies : Defs.LabelerPolicies
               [<JsonPropertyName("reasonTypes")>]
-              ReasonTypes: ComAtprotoModeration.Defs.ReasonType list option
+              ReasonTypes : ComAtprotoModeration.Defs.ReasonType list option
               [<JsonPropertyName("subjectCollections")>]
-              SubjectCollections: Nsid list option
+              SubjectCollections : Nsid list option
               [<JsonPropertyName("subjectTypes")>]
-              SubjectTypes: ComAtprotoModeration.Defs.SubjectType list option
+              SubjectTypes : ComAtprotoModeration.Defs.SubjectType list option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("viewer")>]
-              Viewer: Defs.LabelerViewerState option }
+              Viewer : Defs.LabelerViewerState option }
 
         type LabelerViewerState =
             { [<JsonPropertyName("like")>]
-              Like: AtUri option }
+              Like : AtUri option }
 
     module GetServices =
         [<Literal>]
         let TypeId = "app.bsky.labeler.getServices"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("detailed")>]
-              Detailed: bool option
+              Detailed : bool option
               [<JsonPropertyName("dids")>]
-              Dids: Did list }
+              Dids : Did list }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputViewsItem =
             | [<JsonName("app.bsky.labeler.defs#labelerView")>] LabelerView of Defs.LabelerView
             | [<JsonName("app.bsky.labeler.defs#labelerViewDetailed")>] LabelerViewDetailed of Defs.LabelerViewDetailed
@@ -3278,13 +3554,14 @@ module AppBskyLabeler =
 
         type Output =
             { [<JsonPropertyName("views")>]
-              Views: OutputViewsItem list }
+              Views : OutputViewsItem list }
 
     module Service =
         [<Literal>]
         let TypeId = "app.bsky.labeler.service"
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ServiceLabelsUnion =
             | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
             | Unknown of string * System.Text.Json.JsonElement
@@ -3292,90 +3569,91 @@ module AppBskyLabeler =
         /// A declaration of the existence of labeler service.
         type Service =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("labels")>]
-              Labels: ServiceLabelsUnion option
+              Labels : ServiceLabelsUnion option
               [<JsonPropertyName("policies")>]
-              Policies: Defs.LabelerPolicies
+              Policies : Defs.LabelerPolicies
               [<JsonPropertyName("reasonTypes")>]
-              ReasonTypes: ComAtprotoModeration.Defs.ReasonType list option
+              ReasonTypes : ComAtprotoModeration.Defs.ReasonType list option
               [<JsonPropertyName("subjectCollections")>]
-              SubjectCollections: Nsid list option
+              SubjectCollections : Nsid list option
               [<JsonPropertyName("subjectTypes")>]
-              SubjectTypes: ComAtprotoModeration.Defs.SubjectType list option }
+              SubjectTypes : ComAtprotoModeration.Defs.SubjectType list option }
 
 module AppBskyEmbed =
     module Defs =
         /// width:height represents an aspect ratio. It may be approximate, and may not correspond to absolute dimensions in any given unit.
         type AspectRatio =
             { [<JsonPropertyName("height")>]
-              Height: int64
+              Height : int64
               [<JsonPropertyName("width")>]
-              Width: int64 }
+              Width : int64 }
 
     module External =
         /// A representation of some externally linked content (eg, a URL and 'card'), embedded in a Bluesky record (eg, a post).
         type External =
             { [<JsonPropertyName("external")>]
-              External: External.ExternalDef }
+              External : External.ExternalDef }
 
         type ExternalDef =
             { [<JsonPropertyName("description")>]
-              Description: string
+              Description : string
               [<JsonPropertyName("thumb")>]
-              Thumb: JsonElement option
+              Thumb : JsonElement option
               [<JsonPropertyName("title")>]
-              Title: string
+              Title : string
               [<JsonPropertyName("uri")>]
-              Uri: Uri }
+              Uri : Uri }
 
         type View =
             { [<JsonPropertyName("external")>]
-              External: External.ViewExternal }
+              External : External.ViewExternal }
 
         type ViewExternal =
             { [<JsonPropertyName("description")>]
-              Description: string
+              Description : string
               [<JsonPropertyName("thumb")>]
-              Thumb: Uri option
+              Thumb : Uri option
               [<JsonPropertyName("title")>]
-              Title: string
+              Title : string
               [<JsonPropertyName("uri")>]
-              Uri: Uri }
+              Uri : Uri }
 
     module Images =
         type Images =
             { [<JsonPropertyName("images")>]
-              Images: Images.Image list }
+              Images : Images.Image list }
 
         type Image =
             { [<JsonPropertyName("alt")>]
-              Alt: string
+              Alt : string
               [<JsonPropertyName("aspectRatio")>]
-              AspectRatio: Defs.AspectRatio option
+              AspectRatio : Defs.AspectRatio option
               [<JsonPropertyName("image")>]
-              Image: JsonElement }
+              Image : JsonElement }
 
         type View =
             { [<JsonPropertyName("images")>]
-              Images: Images.ViewImage list }
+              Images : Images.ViewImage list }
 
         type ViewImage =
             { [<JsonPropertyName("alt")>]
-              Alt: string
+              Alt : string
               [<JsonPropertyName("aspectRatio")>]
-              AspectRatio: Defs.AspectRatio option
+              AspectRatio : Defs.AspectRatio option
               [<JsonPropertyName("fullsize")>]
-              Fullsize: Uri
+              Fullsize : Uri
               [<JsonPropertyName("thumb")>]
-              Thumb: Uri }
+              Thumb : Uri }
 
     module Record =
         type Record =
             { [<JsonPropertyName("record")>]
-              Record: ComAtprotoRepo.StrongRef.StrongRef }
+              Record : ComAtprotoRepo.StrongRef.StrongRef }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ViewRecordUnion =
             | [<JsonName("app.bsky.embed.record#viewRecord")>] ViewRecord of Record.ViewRecord
             | [<JsonName("app.bsky.embed.record#viewNotFound")>] ViewNotFound of Record.ViewNotFound
@@ -3390,29 +3668,30 @@ module AppBskyEmbed =
 
         type View =
             { [<JsonPropertyName("record")>]
-              Record: ViewRecordUnion }
+              Record : ViewRecordUnion }
 
         type ViewBlocked =
             { [<JsonPropertyName("author")>]
-              Author: AppBskyFeed.Defs.BlockedAuthor
+              Author : AppBskyFeed.Defs.BlockedAuthor
               [<JsonPropertyName("blocked")>]
-              Blocked: bool
+              Blocked : bool
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         type ViewDetached =
             { [<JsonPropertyName("detached")>]
-              Detached: bool
+              Detached : bool
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         type ViewNotFound =
             { [<JsonPropertyName("notFound")>]
-              NotFound: bool
+              NotFound : bool
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ViewRecordEmbedsItem =
             | [<JsonName("app.bsky.embed.images#view")>] View of Images.View
             | [<JsonName("app.bsky.embed.video#view")>] View2 of Video.View
@@ -3423,30 +3702,31 @@ module AppBskyEmbed =
 
         type ViewRecord =
             { [<JsonPropertyName("author")>]
-              Author: AppBskyActor.Defs.ProfileViewBasic
+              Author : AppBskyActor.Defs.ProfileViewBasic
               [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("embeds")>]
-              Embeds: ViewRecordEmbedsItem list option
+              Embeds : ViewRecordEmbedsItem list option
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("likeCount")>]
-              LikeCount: int64 option
+              LikeCount : int64 option
               [<JsonPropertyName("quoteCount")>]
-              QuoteCount: int64 option
+              QuoteCount : int64 option
               [<JsonPropertyName("replyCount")>]
-              ReplyCount: int64 option
+              ReplyCount : int64 option
               [<JsonPropertyName("repostCount")>]
-              RepostCount: int64 option
+              RepostCount : int64 option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("value")>]
-              Value: JsonElement }
+              Value : JsonElement }
 
     module RecordWithMedia =
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type RecordWithMediaMediaUnion =
             | [<JsonName("app.bsky.embed.images")>] Images of Images.Images
             | [<JsonName("app.bsky.embed.video")>] Video of Video.Video
@@ -3455,11 +3735,12 @@ module AppBskyEmbed =
 
         type RecordWithMedia =
             { [<JsonPropertyName("media")>]
-              Media: RecordWithMediaMediaUnion
+              Media : RecordWithMediaMediaUnion
               [<JsonPropertyName("record")>]
-              Record: Record.Record }
+              Record : Record.Record }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ViewMediaUnion =
             | [<JsonName("app.bsky.embed.images#view")>] View of Images.View
             | [<JsonName("app.bsky.embed.video#view")>] View2 of Video.View
@@ -3468,9 +3749,9 @@ module AppBskyEmbed =
 
         type View =
             { [<JsonPropertyName("media")>]
-              Media: ViewMediaUnion
+              Media : ViewMediaUnion
               [<JsonPropertyName("record")>]
-              Record: Record.View }
+              Record : Record.View }
 
     module Video =
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<VideoPresentation>>)>]
@@ -3481,21 +3762,21 @@ module AppBskyEmbed =
 
         type Video =
             { [<JsonPropertyName("alt")>]
-              Alt: string option
+              Alt : string option
               [<JsonPropertyName("aspectRatio")>]
-              AspectRatio: Defs.AspectRatio option
+              AspectRatio : Defs.AspectRatio option
               [<JsonPropertyName("captions")>]
-              Captions: Video.Caption list option
+              Captions : Video.Caption list option
               [<JsonPropertyName("presentation")>]
-              Presentation: VideoPresentation option
+              Presentation : VideoPresentation option
               [<JsonPropertyName("video")>]
-              Video: JsonElement }
+              Video : JsonElement }
 
         type Caption =
             { [<JsonPropertyName("file")>]
-              File: JsonElement
+              File : JsonElement
               [<JsonPropertyName("lang")>]
-              Lang: Language }
+              Lang : Language }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ViewPresentation>>)>]
         type ViewPresentation =
@@ -3505,17 +3786,17 @@ module AppBskyEmbed =
 
         type View =
             { [<JsonPropertyName("alt")>]
-              Alt: string option
+              Alt : string option
               [<JsonPropertyName("aspectRatio")>]
-              AspectRatio: Defs.AspectRatio option
+              AspectRatio : Defs.AspectRatio option
               [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("playlist")>]
-              Playlist: Uri
+              Playlist : Uri
               [<JsonPropertyName("presentation")>]
-              Presentation: ViewPresentation option
+              Presentation : ViewPresentation option
               [<JsonPropertyName("thumbnail")>]
-              Thumbnail: Uri option }
+              Thumbnail : Uri option }
 
 module AppBskyNotification =
     module Declaration =
@@ -3532,14 +3813,14 @@ module AppBskyNotification =
         /// A declaration of the user's choices related to notifications that can be produced by them.
         type Declaration =
             { [<JsonPropertyName("allowSubscriptions")>]
-              AllowSubscriptions: DeclarationAllowSubscriptions }
+              AllowSubscriptions : DeclarationAllowSubscriptions }
 
     module Defs =
         type ActivitySubscription =
             { [<JsonPropertyName("post")>]
-              Post: bool
+              Post : bool
               [<JsonPropertyName("reply")>]
-              Reply: bool }
+              Reply : bool }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ChatPreferenceInclude>>)>]
         type ChatPreferenceInclude =
@@ -3549,9 +3830,9 @@ module AppBskyNotification =
 
         type ChatPreference =
             { [<JsonPropertyName("include")>]
-              Include: ChatPreferenceInclude
+              Include : ChatPreferenceInclude
               [<JsonPropertyName("push")>]
-              Push: bool }
+              Push : bool }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<FilterablePreferenceInclude>>)>]
         type FilterablePreferenceInclude =
@@ -3561,130 +3842,141 @@ module AppBskyNotification =
 
         type FilterablePreference =
             { [<JsonPropertyName("include")>]
-              Include: FilterablePreferenceInclude
+              Include : FilterablePreferenceInclude
               [<JsonPropertyName("list")>]
-              List: bool
+              List : bool
               [<JsonPropertyName("push")>]
-              Push: bool }
+              Push : bool }
 
         type Preference =
             { [<JsonPropertyName("list")>]
-              List: bool
+              List : bool
               [<JsonPropertyName("push")>]
-              Push: bool }
+              Push : bool }
 
         type Preferences =
             { [<JsonPropertyName("chat")>]
-              Chat: Defs.ChatPreference
+              Chat : Defs.ChatPreference
               [<JsonPropertyName("follow")>]
-              Follow: Defs.FilterablePreference
+              Follow : Defs.FilterablePreference
               [<JsonPropertyName("like")>]
-              Like: Defs.FilterablePreference
+              Like : Defs.FilterablePreference
               [<JsonPropertyName("likeViaRepost")>]
-              LikeViaRepost: Defs.FilterablePreference
+              LikeViaRepost : Defs.FilterablePreference
               [<JsonPropertyName("mention")>]
-              Mention: Defs.FilterablePreference
+              Mention : Defs.FilterablePreference
               [<JsonPropertyName("quote")>]
-              Quote: Defs.FilterablePreference
+              Quote : Defs.FilterablePreference
               [<JsonPropertyName("reply")>]
-              Reply: Defs.FilterablePreference
+              Reply : Defs.FilterablePreference
               [<JsonPropertyName("repost")>]
-              Repost: Defs.FilterablePreference
+              Repost : Defs.FilterablePreference
               [<JsonPropertyName("repostViaRepost")>]
-              RepostViaRepost: Defs.FilterablePreference
+              RepostViaRepost : Defs.FilterablePreference
               [<JsonPropertyName("starterpackJoined")>]
-              StarterpackJoined: Defs.Preference
+              StarterpackJoined : Defs.Preference
               [<JsonPropertyName("subscribedPost")>]
-              SubscribedPost: Defs.Preference
+              SubscribedPost : Defs.Preference
               [<JsonPropertyName("unverified")>]
-              Unverified: Defs.Preference
+              Unverified : Defs.Preference
               [<JsonPropertyName("verified")>]
-              Verified: Defs.Preference }
+              Verified : Defs.Preference }
 
         type RecordDeleted = JsonElement
 
         /// Object used to store activity subscription data in stash.
         type SubjectActivitySubscription =
             { [<JsonPropertyName("activitySubscription")>]
-              ActivitySubscription: Defs.ActivitySubscription
+              ActivitySubscription : Defs.ActivitySubscription
               [<JsonPropertyName("subject")>]
-              Subject: Did }
+              Subject : Did }
 
     module GetPreferences =
         [<Literal>]
         let TypeId = "app.bsky.notification.getPreferences"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("preferences")>]
-              Preferences: Defs.Preferences }
+              Preferences : Defs.Preferences }
 
     module GetUnreadCount =
         [<Literal>]
         let TypeId = "app.bsky.notification.getUnreadCount"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("priority")>]
-              Priority: bool option
+              Priority : bool option
               [<JsonPropertyName("seenAt")>]
-              SeenAt: AtDateTime option }
+              SeenAt : AtDateTime option }
 
         type Output =
             { [<JsonPropertyName("count")>]
-              Count: int64 }
+              Count : int64 }
 
     module ListActivitySubscriptions =
         [<Literal>]
         let TypeId = "app.bsky.notification.listActivitySubscriptions"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("subscriptions")>]
-              Subscriptions: AppBskyActor.Defs.ProfileView list }
+              Subscriptions : AppBskyActor.Defs.ProfileView list }
 
     module ListNotifications =
         [<Literal>]
         let TypeId = "app.bsky.notification.listNotifications"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("priority")>]
-              Priority: bool option
+              Priority : bool option
               [<JsonPropertyName("reasons")>]
-              Reasons: string list option
+              Reasons : string list option
               [<JsonPropertyName("seenAt")>]
-              SeenAt: AtDateTime option }
+              SeenAt : AtDateTime option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("notifications")>]
-              Notifications: ListNotifications.Notification list
+              Notifications : ListNotifications.Notification list
               [<JsonPropertyName("priority")>]
-              Priority: bool option
+              Priority : bool option
               [<JsonPropertyName("seenAt")>]
-              SeenAt: AtDateTime option }
+              SeenAt : AtDateTime option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<NotificationReason>>)>]
         type NotificationReason =
@@ -3705,98 +3997,110 @@ module AppBskyNotification =
 
         type Notification =
             { [<JsonPropertyName("author")>]
-              Author: AppBskyActor.Defs.ProfileView
+              Author : AppBskyActor.Defs.ProfileView
               [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("isRead")>]
-              IsRead: bool
+              IsRead : bool
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("reason")>]
-              Reason: NotificationReason
+              Reason : NotificationReason
               [<JsonPropertyName("reasonSubject")>]
-              ReasonSubject: AtUri option
+              ReasonSubject : AtUri option
               [<JsonPropertyName("record")>]
-              Record: JsonElement
+              Record : JsonElement
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
     module PutActivitySubscription =
         [<Literal>]
         let TypeId = "app.bsky.notification.putActivitySubscription"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("activitySubscription")>]
-              ActivitySubscription: Defs.ActivitySubscription
+              ActivitySubscription : Defs.ActivitySubscription
               [<JsonPropertyName("subject")>]
-              Subject: Did }
+              Subject : Did }
 
         type Output =
             { [<JsonPropertyName("activitySubscription")>]
-              ActivitySubscription: Defs.ActivitySubscription option
+              ActivitySubscription : Defs.ActivitySubscription option
               [<JsonPropertyName("subject")>]
-              Subject: Did }
+              Subject : Did }
 
     module PutPreferences =
         [<Literal>]
         let TypeId = "app.bsky.notification.putPreferences"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("priority")>]
-              Priority: bool }
+              Priority : bool }
 
     module PutPreferencesV2 =
         [<Literal>]
         let TypeId = "app.bsky.notification.putPreferencesV2"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("chat")>]
-              Chat: Defs.ChatPreference option
+              Chat : Defs.ChatPreference option
               [<JsonPropertyName("follow")>]
-              Follow: Defs.FilterablePreference option
+              Follow : Defs.FilterablePreference option
               [<JsonPropertyName("like")>]
-              Like: Defs.FilterablePreference option
+              Like : Defs.FilterablePreference option
               [<JsonPropertyName("likeViaRepost")>]
-              LikeViaRepost: Defs.FilterablePreference option
+              LikeViaRepost : Defs.FilterablePreference option
               [<JsonPropertyName("mention")>]
-              Mention: Defs.FilterablePreference option
+              Mention : Defs.FilterablePreference option
               [<JsonPropertyName("quote")>]
-              Quote: Defs.FilterablePreference option
+              Quote : Defs.FilterablePreference option
               [<JsonPropertyName("reply")>]
-              Reply: Defs.FilterablePreference option
+              Reply : Defs.FilterablePreference option
               [<JsonPropertyName("repost")>]
-              Repost: Defs.FilterablePreference option
+              Repost : Defs.FilterablePreference option
               [<JsonPropertyName("repostViaRepost")>]
-              RepostViaRepost: Defs.FilterablePreference option
+              RepostViaRepost : Defs.FilterablePreference option
               [<JsonPropertyName("starterpackJoined")>]
-              StarterpackJoined: Defs.Preference option
+              StarterpackJoined : Defs.Preference option
               [<JsonPropertyName("subscribedPost")>]
-              SubscribedPost: Defs.Preference option
+              SubscribedPost : Defs.Preference option
               [<JsonPropertyName("unverified")>]
-              Unverified: Defs.Preference option
+              Unverified : Defs.Preference option
               [<JsonPropertyName("verified")>]
-              Verified: Defs.Preference option }
+              Verified : Defs.Preference option }
 
         type Output =
             { [<JsonPropertyName("preferences")>]
-              Preferences: Defs.Preferences }
+              Preferences : Defs.Preferences }
 
     module RegisterPush =
         [<Literal>]
         let TypeId = "app.bsky.notification.registerPush"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputPlatform>>)>]
@@ -3808,21 +4112,24 @@ module AppBskyNotification =
 
         type Input =
             { [<JsonPropertyName("ageRestricted")>]
-              AgeRestricted: bool option
+              AgeRestricted : bool option
               [<JsonPropertyName("appId")>]
-              AppId: string
+              AppId : string
               [<JsonPropertyName("platform")>]
-              Platform: InputPlatform
+              Platform : InputPlatform
               [<JsonPropertyName("serviceDid")>]
-              ServiceDid: Did
+              ServiceDid : Did
               [<JsonPropertyName("token")>]
-              Token: string }
+              Token : string }
 
     module UnregisterPush =
         [<Literal>]
         let TypeId = "app.bsky.notification.unregisterPush"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputPlatform>>)>]
@@ -3834,44 +4141,47 @@ module AppBskyNotification =
 
         type Input =
             { [<JsonPropertyName("appId")>]
-              AppId: string
+              AppId : string
               [<JsonPropertyName("platform")>]
-              Platform: InputPlatform
+              Platform : InputPlatform
               [<JsonPropertyName("serviceDid")>]
-              ServiceDid: Did
+              ServiceDid : Did
               [<JsonPropertyName("token")>]
-              Token: string }
+              Token : string }
 
     module UpdateSeen =
         [<Literal>]
         let TypeId = "app.bsky.notification.updateSeen"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("seenAt")>]
-              SeenAt: AtDateTime }
+              SeenAt : AtDateTime }
 
 module AppBskyActor =
     module Defs =
         type AdultContentPref =
             { [<JsonPropertyName("enabled")>]
-              Enabled: bool }
+              Enabled : bool }
 
         /// If set, an active progress guide. Once completed, can be set to undefined. Should have unspecced fields tracking progress.
         type BskyAppProgressGuide =
             { [<JsonPropertyName("guide")>]
-              Guide: string }
+              Guide : string }
 
         /// A grab bag of state that's specific to the bsky.app program. Third-party apps shouldn't use this.
         type BskyAppStatePref =
             { [<JsonPropertyName("activeProgressGuide")>]
-              ActiveProgressGuide: Defs.BskyAppProgressGuide option
+              ActiveProgressGuide : Defs.BskyAppProgressGuide option
               [<JsonPropertyName("nuxs")>]
-              Nuxs: Defs.Nux list option
+              Nuxs : Defs.Nux list option
               [<JsonPropertyName("queuedNudges")>]
-              QueuedNudges: string list option }
+              QueuedNudges : string list option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ContentLabelPrefVisibility>>)>]
         type ContentLabelPrefVisibility =
@@ -3883,64 +4193,64 @@ module AppBskyActor =
 
         type ContentLabelPref =
             { [<JsonPropertyName("label")>]
-              Label: string
+              Label : string
               [<JsonPropertyName("labelerDid")>]
-              LabelerDid: Did option
+              LabelerDid : Did option
               [<JsonPropertyName("visibility")>]
-              Visibility: ContentLabelPrefVisibility }
+              Visibility : ContentLabelPrefVisibility }
 
         /// Read-only preference containing value(s) inferred from the user's declared birthdate. Absence of this preference object in the response indicates that the user has not made a declaration.
         type DeclaredAgePref =
             { [<JsonPropertyName("isOverAge13")>]
-              IsOverAge13: bool option
+              IsOverAge13 : bool option
               [<JsonPropertyName("isOverAge16")>]
-              IsOverAge16: bool option
+              IsOverAge16 : bool option
               [<JsonPropertyName("isOverAge18")>]
-              IsOverAge18: bool option }
+              IsOverAge18 : bool option }
 
         type FeedViewPref =
             { [<JsonPropertyName("feed")>]
-              Feed: string
+              Feed : string
               [<JsonPropertyName("hideQuotePosts")>]
-              HideQuotePosts: bool option
+              HideQuotePosts : bool option
               [<JsonPropertyName("hideReplies")>]
-              HideReplies: bool option
+              HideReplies : bool option
               [<JsonPropertyName("hideRepliesByLikeCount")>]
-              HideRepliesByLikeCount: int64 option
+              HideRepliesByLikeCount : int64 option
               [<JsonPropertyName("hideRepliesByUnfollowed")>]
-              HideRepliesByUnfollowed: bool option
+              HideRepliesByUnfollowed : bool option
               [<JsonPropertyName("hideReposts")>]
-              HideReposts: bool option }
+              HideReposts : bool option }
 
         type HiddenPostsPref =
             { [<JsonPropertyName("items")>]
-              Items: AtUri list }
+              Items : AtUri list }
 
         type InterestsPref =
             { [<JsonPropertyName("tags")>]
-              Tags: string list }
+              Tags : string list }
 
         /// The subject's followers whom you also follow
         type KnownFollowers =
             { [<JsonPropertyName("count")>]
-              Count: int64
+              Count : int64
               [<JsonPropertyName("followers")>]
-              Followers: Defs.ProfileViewBasic list }
+              Followers : Defs.ProfileViewBasic list }
 
         type LabelerPrefItem =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         type LabelersPref =
             { [<JsonPropertyName("labelers")>]
-              Labelers: Defs.LabelerPrefItem list }
+              Labelers : Defs.LabelerPrefItem list }
 
         /// Preferences for live events.
         type LiveEventPreferences =
             { [<JsonPropertyName("hiddenFeedIds")>]
-              HiddenFeedIds: string list option
+              HiddenFeedIds : string list option
               [<JsonPropertyName("hideAllFeeds")>]
-              HideAllFeeds: bool option }
+              HideAllFeeds : bool option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<MutedWordActorTarget>>)>]
         type MutedWordActorTarget =
@@ -3951,15 +4261,15 @@ module AppBskyActor =
         /// A word that the account owner has muted.
         type MutedWord =
             { [<JsonPropertyName("actorTarget")>]
-              ActorTarget: MutedWordActorTarget option
+              ActorTarget : MutedWordActorTarget option
               [<JsonPropertyName("expiresAt")>]
-              ExpiresAt: AtDateTime option
+              ExpiresAt : AtDateTime option
               [<JsonPropertyName("id")>]
-              Id: string option
+              Id : string option
               [<JsonPropertyName("targets")>]
-              Targets: Defs.MutedWordTarget list
+              Targets : Defs.MutedWordTarget list
               [<JsonPropertyName("value")>]
-              Value: string }
+              Value : string }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<MutedWordTarget>>)>]
         type MutedWordTarget =
@@ -3969,29 +4279,31 @@ module AppBskyActor =
 
         type MutedWordsPref =
             { [<JsonPropertyName("items")>]
-              Items: Defs.MutedWord list }
+              Items : Defs.MutedWord list }
 
         /// A new user experiences (NUX) storage object
         type Nux =
             { [<JsonPropertyName("completed")>]
-              Completed: bool
+              Completed : bool
               [<JsonPropertyName("data")>]
-              Data: string option
+              Data : string option
               [<JsonPropertyName("expiresAt")>]
-              ExpiresAt: AtDateTime option
+              ExpiresAt : AtDateTime option
               [<JsonPropertyName("id")>]
-              Id: string }
+              Id : string }
 
         type PersonalDetailsPref =
             { [<JsonPropertyName("birthDate")>]
-              BirthDate: AtDateTime option }
+              BirthDate : AtDateTime option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type PostInteractionSettingsPrefPostgateEmbeddingRulesItem =
             | [<JsonName("app.bsky.feed.postgate#disableRule")>] DisableRule of AppBskyFeed.Postgate.DisableRule
             | Unknown of string * System.Text.Json.JsonElement
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type PostInteractionSettingsPrefThreadgateAllowRulesItem =
             | [<JsonName("app.bsky.feed.threadgate#mentionRule")>] MentionRule of AppBskyFeed.Threadgate.MentionRule
             | [<JsonName("app.bsky.feed.threadgate#followerRule")>] FollowerRule of AppBskyFeed.Threadgate.FollowerRule
@@ -4003,29 +4315,31 @@ module AppBskyActor =
         /// Default post interaction settings for the account. These values should be applied as default values when creating new posts. These refs should mirror the threadgate and postgate records exactly.
         type PostInteractionSettingsPref =
             { [<JsonPropertyName("postgateEmbeddingRules")>]
-              PostgateEmbeddingRules: PostInteractionSettingsPrefPostgateEmbeddingRulesItem list option
+              PostgateEmbeddingRules : PostInteractionSettingsPrefPostgateEmbeddingRulesItem list option
               [<JsonPropertyName("threadgateAllowRules")>]
-              ThreadgateAllowRules: PostInteractionSettingsPrefThreadgateAllowRulesItem list option }
+              ThreadgateAllowRules : PostInteractionSettingsPrefThreadgateAllowRulesItem list option }
 
         type Preferences = JsonElement list
 
         type ProfileAssociated =
             { [<JsonPropertyName("activitySubscription")>]
-              ActivitySubscription: Defs.ProfileAssociatedActivitySubscription option
+              ActivitySubscription : Defs.ProfileAssociatedActivitySubscription option
               [<JsonPropertyName("chat")>]
-              Chat: Defs.ProfileAssociatedChat option
+              Chat : Defs.ProfileAssociatedChat option
               [<JsonPropertyName("feedgens")>]
-              Feedgens: int64 option
+              Feedgens : int64 option
               [<JsonPropertyName("germ")>]
-              Germ: Defs.ProfileAssociatedGerm option
+              Germ : Defs.ProfileAssociatedGerm option
               [<JsonPropertyName("labeler")>]
-              Labeler: bool option
+              Labeler : bool option
               [<JsonPropertyName("lists")>]
-              Lists: int64 option
+              Lists : int64 option
               [<JsonPropertyName("starterPacks")>]
-              StarterPacks: int64 option }
+              StarterPacks : int64 option }
 
-        [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ProfileAssociatedActivitySubscriptionAllowSubscriptions>>)>]
+        [<JsonConverter(typeof<
+            FSharp.ATProto.Core.KnownValueConverter<ProfileAssociatedActivitySubscriptionAllowSubscriptions>
+                         >)>]
         type ProfileAssociatedActivitySubscriptionAllowSubscriptions =
             | [<JsonName("followers")>] Followers
             | [<JsonName("mutuals")>] Mutuals
@@ -4034,7 +4348,7 @@ module AppBskyActor =
 
         type ProfileAssociatedActivitySubscription =
             { [<JsonPropertyName("allowSubscriptions")>]
-              AllowSubscriptions: ProfileAssociatedActivitySubscriptionAllowSubscriptions }
+              AllowSubscriptions : ProfileAssociatedActivitySubscriptionAllowSubscriptions }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ProfileAssociatedChatAllowIncoming>>)>]
         type ProfileAssociatedChatAllowIncoming =
@@ -4045,7 +4359,7 @@ module AppBskyActor =
 
         type ProfileAssociatedChat =
             { [<JsonPropertyName("allowIncoming")>]
-              AllowIncoming: ProfileAssociatedChatAllowIncoming }
+              AllowIncoming : ProfileAssociatedChatAllowIncoming }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ProfileAssociatedGermShowButtonTo>>)>]
         type ProfileAssociatedGermShowButtonTo =
@@ -4055,109 +4369,109 @@ module AppBskyActor =
 
         type ProfileAssociatedGerm =
             { [<JsonPropertyName("messageMeUrl")>]
-              MessageMeUrl: Uri
+              MessageMeUrl : Uri
               [<JsonPropertyName("showButtonTo")>]
-              ShowButtonTo: ProfileAssociatedGermShowButtonTo }
+              ShowButtonTo : ProfileAssociatedGermShowButtonTo }
 
         type ProfileView =
             { [<JsonPropertyName("associated")>]
-              Associated: Defs.ProfileAssociated option
+              Associated : Defs.ProfileAssociated option
               [<JsonPropertyName("avatar")>]
-              Avatar: Uri option
+              Avatar : Uri option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime option
+              CreatedAt : AtDateTime option
               [<JsonPropertyName("debug")>]
-              Debug: JsonElement option
+              Debug : JsonElement option
               [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("displayName")>]
-              DisplayName: string option
+              DisplayName : string option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime option
+              IndexedAt : AtDateTime option
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("pronouns")>]
-              Pronouns: string option
+              Pronouns : string option
               [<JsonPropertyName("status")>]
-              Status: Defs.StatusView option
+              Status : Defs.StatusView option
               [<JsonPropertyName("verification")>]
-              Verification: Defs.VerificationState option
+              Verification : Defs.VerificationState option
               [<JsonPropertyName("viewer")>]
-              Viewer: Defs.ViewerState option }
+              Viewer : Defs.ViewerState option }
 
         type ProfileViewBasic =
             { [<JsonPropertyName("associated")>]
-              Associated: Defs.ProfileAssociated option
+              Associated : Defs.ProfileAssociated option
               [<JsonPropertyName("avatar")>]
-              Avatar: Uri option
+              Avatar : Uri option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime option
+              CreatedAt : AtDateTime option
               [<JsonPropertyName("debug")>]
-              Debug: JsonElement option
+              Debug : JsonElement option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("displayName")>]
-              DisplayName: string option
+              DisplayName : string option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("pronouns")>]
-              Pronouns: string option
+              Pronouns : string option
               [<JsonPropertyName("status")>]
-              Status: Defs.StatusView option
+              Status : Defs.StatusView option
               [<JsonPropertyName("verification")>]
-              Verification: Defs.VerificationState option
+              Verification : Defs.VerificationState option
               [<JsonPropertyName("viewer")>]
-              Viewer: Defs.ViewerState option }
+              Viewer : Defs.ViewerState option }
 
         type ProfileViewDetailed =
             { [<JsonPropertyName("associated")>]
-              Associated: Defs.ProfileAssociated option
+              Associated : Defs.ProfileAssociated option
               [<JsonPropertyName("avatar")>]
-              Avatar: Uri option
+              Avatar : Uri option
               [<JsonPropertyName("banner")>]
-              Banner: Uri option
+              Banner : Uri option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime option
+              CreatedAt : AtDateTime option
               [<JsonPropertyName("debug")>]
-              Debug: JsonElement option
+              Debug : JsonElement option
               [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("displayName")>]
-              DisplayName: string option
+              DisplayName : string option
               [<JsonPropertyName("followersCount")>]
-              FollowersCount: int64 option
+              FollowersCount : int64 option
               [<JsonPropertyName("followsCount")>]
-              FollowsCount: int64 option
+              FollowsCount : int64 option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime option
+              IndexedAt : AtDateTime option
               [<JsonPropertyName("joinedViaStarterPack")>]
-              JoinedViaStarterPack: AppBskyGraph.Defs.StarterPackViewBasic option
+              JoinedViaStarterPack : AppBskyGraph.Defs.StarterPackViewBasic option
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("pinnedPost")>]
-              PinnedPost: ComAtprotoRepo.StrongRef.StrongRef option
+              PinnedPost : ComAtprotoRepo.StrongRef.StrongRef option
               [<JsonPropertyName("postsCount")>]
-              PostsCount: int64 option
+              PostsCount : int64 option
               [<JsonPropertyName("pronouns")>]
-              Pronouns: string option
+              Pronouns : string option
               [<JsonPropertyName("status")>]
-              Status: Defs.StatusView option
+              Status : Defs.StatusView option
               [<JsonPropertyName("verification")>]
-              Verification: Defs.VerificationState option
+              Verification : Defs.VerificationState option
               [<JsonPropertyName("viewer")>]
-              Viewer: Defs.ViewerState option
+              Viewer : Defs.ViewerState option
               [<JsonPropertyName("website")>]
-              Website: Uri option }
+              Website : Uri option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<SavedFeedType>>)>]
         type SavedFeedType =
@@ -4168,25 +4482,25 @@ module AppBskyActor =
 
         type SavedFeed =
             { [<JsonPropertyName("id")>]
-              Id: string
+              Id : string
               [<JsonPropertyName("pinned")>]
-              Pinned: bool
+              Pinned : bool
               [<JsonPropertyName("type")>]
-              Type: SavedFeedType
+              Type : SavedFeedType
               [<JsonPropertyName("value")>]
-              Value: string }
+              Value : string }
 
         type SavedFeedsPref =
             { [<JsonPropertyName("pinned")>]
-              Pinned: AtUri list
+              Pinned : AtUri list
               [<JsonPropertyName("saved")>]
-              Saved: AtUri list
+              Saved : AtUri list
               [<JsonPropertyName("timelineIndex")>]
-              TimelineIndex: int64 option }
+              TimelineIndex : int64 option }
 
         type SavedFeedsPrefV2 =
             { [<JsonPropertyName("items")>]
-              Items: Defs.SavedFeed list }
+              Items : Defs.SavedFeed list }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<StatusViewStatus>>)>]
         type StatusViewStatus =
@@ -4194,28 +4508,29 @@ module AppBskyActor =
             | Unknown of string
 
         /// An optional embed associated with the status.
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type StatusViewEmbedUnion =
             | [<JsonName("app.bsky.embed.external#view")>] View of AppBskyEmbed.External.View
             | Unknown of string * System.Text.Json.JsonElement
 
         type StatusView =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("embed")>]
-              Embed: StatusViewEmbedUnion option
+              Embed : StatusViewEmbedUnion option
               [<JsonPropertyName("expiresAt")>]
-              ExpiresAt: AtDateTime option
+              ExpiresAt : AtDateTime option
               [<JsonPropertyName("isActive")>]
-              IsActive: bool option
+              IsActive : bool option
               [<JsonPropertyName("isDisabled")>]
-              IsDisabled: bool option
+              IsDisabled : bool option
               [<JsonPropertyName("record")>]
-              Record: JsonElement
+              Record : JsonElement
               [<JsonPropertyName("status")>]
-              Status: StatusViewStatus
+              Status : StatusViewStatus
               [<JsonPropertyName("uri")>]
-              Uri: AtUri option }
+              Uri : AtUri option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ThreadViewPrefSort>>)>]
         type ThreadViewPrefSort =
@@ -4228,12 +4543,12 @@ module AppBskyActor =
 
         type ThreadViewPref =
             { [<JsonPropertyName("sort")>]
-              Sort: ThreadViewPrefSort option }
+              Sort : ThreadViewPrefSort option }
 
         /// Preferences for how verified accounts appear in the app.
         type VerificationPrefs =
             { [<JsonPropertyName("hideBadges")>]
-              HideBadges: bool option }
+              HideBadges : bool option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<VerificationStateTrustedVerifierStatus>>)>]
         type VerificationStateTrustedVerifierStatus =
@@ -4252,65 +4567,70 @@ module AppBskyActor =
         /// Represents the verification information about the user this object is attached to.
         type VerificationState =
             { [<JsonPropertyName("trustedVerifierStatus")>]
-              TrustedVerifierStatus: VerificationStateTrustedVerifierStatus
+              TrustedVerifierStatus : VerificationStateTrustedVerifierStatus
               [<JsonPropertyName("verifications")>]
-              Verifications: Defs.VerificationView list
+              Verifications : Defs.VerificationView list
               [<JsonPropertyName("verifiedStatus")>]
-              VerifiedStatus: VerificationStateVerifiedStatus }
+              VerifiedStatus : VerificationStateVerifiedStatus }
 
         /// An individual verification for an associated subject.
         type VerificationView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("isValid")>]
-              IsValid: bool
+              IsValid : bool
               [<JsonPropertyName("issuer")>]
-              Issuer: Did
+              Issuer : Did
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         /// Metadata about the requesting account's relationship with the subject account. Only has meaningful content for authed requests.
         type ViewerState =
             { [<JsonPropertyName("activitySubscription")>]
-              ActivitySubscription: AppBskyNotification.Defs.ActivitySubscription option
+              ActivitySubscription : AppBskyNotification.Defs.ActivitySubscription option
               [<JsonPropertyName("blockedBy")>]
-              BlockedBy: bool option
+              BlockedBy : bool option
               [<JsonPropertyName("blocking")>]
-              Blocking: AtUri option
+              Blocking : AtUri option
               [<JsonPropertyName("blockingByList")>]
-              BlockingByList: AppBskyGraph.Defs.ListViewBasic option
+              BlockingByList : AppBskyGraph.Defs.ListViewBasic option
               [<JsonPropertyName("followedBy")>]
-              FollowedBy: AtUri option
+              FollowedBy : AtUri option
               [<JsonPropertyName("following")>]
-              Following: AtUri option
+              Following : AtUri option
               [<JsonPropertyName("knownFollowers")>]
-              KnownFollowers: Defs.KnownFollowers option
+              KnownFollowers : Defs.KnownFollowers option
               [<JsonPropertyName("muted")>]
-              Muted: bool option
+              Muted : bool option
               [<JsonPropertyName("mutedByList")>]
-              MutedByList: AppBskyGraph.Defs.ListViewBasic option }
+              MutedByList : AppBskyGraph.Defs.ListViewBasic option }
 
     module GetPreferences =
         [<Literal>]
         let TypeId = "app.bsky.actor.getPreferences"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("preferences")>]
-              Preferences: Defs.Preferences }
+              Preferences : Defs.Preferences }
 
     module GetProfile =
         [<Literal>]
         let TypeId = "app.bsky.actor.getProfile"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: string }
+              Actor : string }
 
         type Output = Defs.ProfileViewDetailed
 
@@ -4318,44 +4638,51 @@ module AppBskyActor =
         [<Literal>]
         let TypeId = "app.bsky.actor.getProfiles"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actors")>]
-              Actors: string list }
+              Actors : string list }
 
         type Output =
             { [<JsonPropertyName("profiles")>]
-              Profiles: Defs.ProfileViewDetailed list }
+              Profiles : Defs.ProfileViewDetailed list }
 
     module GetSuggestions =
         [<Literal>]
         let TypeId = "app.bsky.actor.getSuggestions"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("actors")>]
-              Actors: Defs.ProfileView list
+              Actors : Defs.ProfileView list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("recId")>]
-              RecId: int64 option }
+              RecId : int64 option }
 
     module Profile =
         [<Literal>]
         let TypeId = "app.bsky.actor.profile"
 
         /// Self-label values, specific to the Bluesky application, on the overall account.
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ProfileLabelsUnion =
             | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
             | Unknown of string * System.Text.Json.JsonElement
@@ -4363,78 +4690,87 @@ module AppBskyActor =
         /// A declaration of a Bluesky account profile.
         type Profile =
             { [<JsonPropertyName("avatar")>]
-              Avatar: JsonElement option
+              Avatar : JsonElement option
               [<JsonPropertyName("banner")>]
-              Banner: JsonElement option
+              Banner : JsonElement option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime option
+              CreatedAt : AtDateTime option
               [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("displayName")>]
-              DisplayName: string option
+              DisplayName : string option
               [<JsonPropertyName("joinedViaStarterPack")>]
-              JoinedViaStarterPack: ComAtprotoRepo.StrongRef.StrongRef option
+              JoinedViaStarterPack : ComAtprotoRepo.StrongRef.StrongRef option
               [<JsonPropertyName("labels")>]
-              Labels: ProfileLabelsUnion option
+              Labels : ProfileLabelsUnion option
               [<JsonPropertyName("pinnedPost")>]
-              PinnedPost: ComAtprotoRepo.StrongRef.StrongRef option
+              PinnedPost : ComAtprotoRepo.StrongRef.StrongRef option
               [<JsonPropertyName("pronouns")>]
-              Pronouns: string option
+              Pronouns : string option
               [<JsonPropertyName("website")>]
-              Website: Uri option }
+              Website : Uri option }
 
     module PutPreferences =
         [<Literal>]
         let TypeId = "app.bsky.actor.putPreferences"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("preferences")>]
-              Preferences: Defs.Preferences }
+              Preferences : Defs.Preferences }
 
     module SearchActors =
         [<Literal>]
         let TypeId = "app.bsky.actor.searchActors"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("q")>]
-              Q: string option
+              Q : string option
               [<JsonPropertyName("term")>]
-              Term: string option }
+              Term : string option }
 
         type Output =
             { [<JsonPropertyName("actors")>]
-              Actors: Defs.ProfileView list
+              Actors : Defs.ProfileView list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
     module SearchActorsTypeahead =
         [<Literal>]
         let TypeId = "app.bsky.actor.searchActorsTypeahead"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("q")>]
-              Q: string option
+              Q : string option
               [<JsonPropertyName("term")>]
-              Term: string option }
+              Term : string option }
 
         type Output =
             { [<JsonPropertyName("actors")>]
-              Actors: Defs.ProfileViewBasic list }
+              Actors : Defs.ProfileViewBasic list }
 
     module Status =
         [<Literal>]
@@ -4446,7 +4782,8 @@ module AppBskyActor =
             | Unknown of string
 
         /// An optional embed associated with the status.
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type StatusEmbedUnion =
             | [<JsonName("app.bsky.embed.external")>] External of AppBskyEmbed.External.External
             | Unknown of string * System.Text.Json.JsonElement
@@ -4454,13 +4791,13 @@ module AppBskyActor =
         /// A declaration of a Bluesky account status.
         type Status =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("durationMinutes")>]
-              DurationMinutes: int64 option
+              DurationMinutes : int64 option
               [<JsonPropertyName("embed")>]
-              Embed: StatusEmbedUnion option
+              Embed : StatusEmbedUnion option
               [<JsonPropertyName("status")>]
-              Status: StatusStatus }
+              Status : StatusStatus }
 
         [<Literal>]
         let Live = "app.bsky.actor.status#live"
@@ -4470,18 +4807,21 @@ module AppBskyAgeassurance =
         [<Literal>]
         let TypeId = "app.bsky.ageassurance.begin"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("countryCode")>]
-              CountryCode: string
+              CountryCode : string
               [<JsonPropertyName("email")>]
-              Email: string
+              Email : string
               [<JsonPropertyName("language")>]
-              Language: string
+              Language : string
               [<JsonPropertyName("regionCode")>]
-              RegionCode: string option }
+              RegionCode : string option }
 
         type Output = Defs.State
 
@@ -4510,9 +4850,10 @@ module AppBskyAgeassurance =
         ///
         type Config =
             { [<JsonPropertyName("regions")>]
-              Regions: Defs.ConfigRegion list }
+              Regions : Defs.ConfigRegion list }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ConfigRegionRulesItem =
             | [<JsonName("app.bsky.ageassurance.defs#configRegionRuleDefault")>] ConfigRegionRuleDefault of
                 Defs.ConfigRegionRuleDefault
@@ -4533,60 +4874,60 @@ module AppBskyAgeassurance =
         /// The Age Assurance configuration for a specific region.
         type ConfigRegion =
             { [<JsonPropertyName("countryCode")>]
-              CountryCode: string
+              CountryCode : string
               [<JsonPropertyName("minAccessAge")>]
-              MinAccessAge: int64
+              MinAccessAge : int64
               [<JsonPropertyName("regionCode")>]
-              RegionCode: string option
+              RegionCode : string option
               [<JsonPropertyName("rules")>]
-              Rules: ConfigRegionRulesItem list }
+              Rules : ConfigRegionRulesItem list }
 
         /// Age Assurance rule that applies by default.
         type ConfigRegionRuleDefault =
             { [<JsonPropertyName("access")>]
-              Access: Defs.Access }
+              Access : Defs.Access }
 
         /// Age Assurance rule that applies if the account is equal-to or newer than a certain date.
         type ConfigRegionRuleIfAccountNewerThan =
             { [<JsonPropertyName("access")>]
-              Access: Defs.Access
+              Access : Defs.Access
               [<JsonPropertyName("date")>]
-              Date: AtDateTime }
+              Date : AtDateTime }
 
         /// Age Assurance rule that applies if the account is older than a certain date.
         type ConfigRegionRuleIfAccountOlderThan =
             { [<JsonPropertyName("access")>]
-              Access: Defs.Access
+              Access : Defs.Access
               [<JsonPropertyName("date")>]
-              Date: AtDateTime }
+              Date : AtDateTime }
 
         /// Age Assurance rule that applies if the user has been assured to be equal-to or over a certain age.
         type ConfigRegionRuleIfAssuredOverAge =
             { [<JsonPropertyName("access")>]
-              Access: Defs.Access
+              Access : Defs.Access
               [<JsonPropertyName("age")>]
-              Age: int64 }
+              Age : int64 }
 
         /// Age Assurance rule that applies if the user has been assured to be under a certain age.
         type ConfigRegionRuleIfAssuredUnderAge =
             { [<JsonPropertyName("access")>]
-              Access: Defs.Access
+              Access : Defs.Access
               [<JsonPropertyName("age")>]
-              Age: int64 }
+              Age : int64 }
 
         /// Age Assurance rule that applies if the user has declared themselves equal-to or over a certain age.
         type ConfigRegionRuleIfDeclaredOverAge =
             { [<JsonPropertyName("access")>]
-              Access: Defs.Access
+              Access : Defs.Access
               [<JsonPropertyName("age")>]
-              Age: int64 }
+              Age : int64 }
 
         /// Age Assurance rule that applies if the user has declared themselves under a certain age.
         type ConfigRegionRuleIfDeclaredUnderAge =
             { [<JsonPropertyName("access")>]
-              Access: Defs.Access
+              Access : Defs.Access
               [<JsonPropertyName("age")>]
-              Age: int64 }
+              Age : int64 }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<EventAccess>>)>]
         type EventAccess =
@@ -4607,41 +4948,41 @@ module AppBskyAgeassurance =
         /// Object used to store Age Assurance data in stash.
         type Event =
             { [<JsonPropertyName("access")>]
-              Access: EventAccess
+              Access : EventAccess
               [<JsonPropertyName("attemptId")>]
-              AttemptId: string
+              AttemptId : string
               [<JsonPropertyName("completeIp")>]
-              CompleteIp: string option
+              CompleteIp : string option
               [<JsonPropertyName("completeUa")>]
-              CompleteUa: string option
+              CompleteUa : string option
               [<JsonPropertyName("countryCode")>]
-              CountryCode: string
+              CountryCode : string
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("initIp")>]
-              InitIp: string option
+              InitIp : string option
               [<JsonPropertyName("initUa")>]
-              InitUa: string option
+              InitUa : string option
               [<JsonPropertyName("regionCode")>]
-              RegionCode: string option
+              RegionCode : string option
               [<JsonPropertyName("status")>]
-              Status: EventStatus }
+              Status : EventStatus }
 
         /// The user's computed Age Assurance state.
         type State =
             { [<JsonPropertyName("access")>]
-              Access: Defs.Access
+              Access : Defs.Access
               [<JsonPropertyName("lastInitiatedAt")>]
-              LastInitiatedAt: AtDateTime option
+              LastInitiatedAt : AtDateTime option
               [<JsonPropertyName("status")>]
-              Status: Defs.Status }
+              Status : Defs.Status }
 
         /// Additional metadata needed to compute Age Assurance state client-side.
         type StateMetadata =
             { [<JsonPropertyName("accountCreatedAt")>]
-              AccountCreatedAt: AtDateTime option }
+              AccountCreatedAt : AtDateTime option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<Status>>)>]
         type Status =
@@ -4655,7 +4996,9 @@ module AppBskyAgeassurance =
         [<Literal>]
         let TypeId = "app.bsky.ageassurance.getConfig"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output = Defs.Config
@@ -4664,34 +5007,40 @@ module AppBskyAgeassurance =
         [<Literal>]
         let TypeId = "app.bsky.ageassurance.getState"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("countryCode")>]
-              CountryCode: string
+              CountryCode : string
               [<JsonPropertyName("regionCode")>]
-              RegionCode: string option }
+              RegionCode : string option }
 
         type Output =
             { [<JsonPropertyName("metadata")>]
-              Metadata: Defs.StateMetadata
+              Metadata : Defs.StateMetadata
               [<JsonPropertyName("state")>]
-              State: Defs.State }
+              State : Defs.State }
 
 module AppBskyBookmark =
     module CreateBookmark =
         [<Literal>]
         let TypeId = "app.bsky.bookmark.createBookmark"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         module Errors =
             [<Literal>]
@@ -4701,9 +5050,10 @@ module AppBskyBookmark =
         /// Object used to store bookmark data in stash.
         type Bookmark =
             { [<JsonPropertyName("subject")>]
-              Subject: ComAtprotoRepo.StrongRef.StrongRef }
+              Subject : ComAtprotoRepo.StrongRef.StrongRef }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type BookmarkViewItemUnion =
             | [<JsonName("app.bsky.feed.defs#blockedPost")>] BlockedPost of AppBskyFeed.Defs.BlockedPost
             | [<JsonName("app.bsky.feed.defs#notFoundPost")>] NotFoundPost of AppBskyFeed.Defs.NotFoundPost
@@ -4712,22 +5062,25 @@ module AppBskyBookmark =
 
         type BookmarkView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime option
+              CreatedAt : AtDateTime option
               [<JsonPropertyName("item")>]
-              Item: BookmarkViewItemUnion
+              Item : BookmarkViewItemUnion
               [<JsonPropertyName("subject")>]
-              Subject: ComAtprotoRepo.StrongRef.StrongRef }
+              Subject : ComAtprotoRepo.StrongRef.StrongRef }
 
     module DeleteBookmark =
         [<Literal>]
         let TypeId = "app.bsky.bookmark.deleteBookmark"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         module Errors =
             [<Literal>]
@@ -4737,53 +5090,59 @@ module AppBskyBookmark =
         [<Literal>]
         let TypeId = "app.bsky.bookmark.getBookmarks"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("bookmarks")>]
-              Bookmarks: Defs.BookmarkView list
+              Bookmarks : Defs.BookmarkView list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
 module AppBskyContact =
     module Defs =
         /// Associates a profile with the positional index of the contact import input in the call to `app.bsky.contact.importContacts`, so clients can know which phone caused a particular match.
         type MatchAndContactIndex =
             { [<JsonPropertyName("contactIndex")>]
-              ContactIndex: int64
+              ContactIndex : int64
               [<JsonPropertyName("match")>]
-              Match: AppBskyActor.Defs.ProfileView }
+              Match : AppBskyActor.Defs.ProfileView }
 
         /// A stash object to be sent via bsync representing a notification to be created.
         type Notification =
             { [<JsonPropertyName("from")>]
-              From: Did
+              From : Did
               [<JsonPropertyName("to")>]
-              To: Did }
+              To : Did }
 
         type SyncStatus =
             { [<JsonPropertyName("matchesCount")>]
-              MatchesCount: int64
+              MatchesCount : int64
               [<JsonPropertyName("syncedAt")>]
-              SyncedAt: AtDateTime }
+              SyncedAt : AtDateTime }
 
     module DismissMatch =
         [<Literal>]
         let TypeId = "app.bsky.contact.dismissMatch"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("subject")>]
-              Subject: Did }
+              Subject : Did }
 
         module Errors =
             [<Literal>]
@@ -4796,20 +5155,23 @@ module AppBskyContact =
         [<Literal>]
         let TypeId = "app.bsky.contact.getMatches"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("matches")>]
-              Matches: AppBskyActor.Defs.ProfileView list }
+              Matches : AppBskyActor.Defs.ProfileView list }
 
         module Errors =
             [<Literal>]
@@ -4828,12 +5190,14 @@ module AppBskyContact =
         [<Literal>]
         let TypeId = "app.bsky.contact.getSyncStatus"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("syncStatus")>]
-              SyncStatus: Defs.SyncStatus option }
+              SyncStatus : Defs.SyncStatus option }
 
         module Errors =
             [<Literal>]
@@ -4846,18 +5210,21 @@ module AppBskyContact =
         [<Literal>]
         let TypeId = "app.bsky.contact.importContacts"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("contacts")>]
-              Contacts: string list
+              Contacts : string list
               [<JsonPropertyName("token")>]
-              Token: string }
+              Token : string }
 
         type Output =
             { [<JsonPropertyName("matchesAndContactIndexes")>]
-              MatchesAndContactIndexes: Defs.MatchAndContactIndex list }
+              MatchesAndContactIndexes : Defs.MatchAndContactIndex list }
 
         module Errors =
             [<Literal>]
@@ -4890,25 +5257,31 @@ module AppBskyContact =
         [<Literal>]
         let TypeId = "app.bsky.contact.sendNotification"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("from")>]
-              From: Did
+              From : Did
               [<JsonPropertyName("to")>]
-              To: Did }
+              To : Did }
 
     module StartPhoneVerification =
         [<Literal>]
         let TypeId = "app.bsky.contact.startPhoneVerification"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("phone")>]
-              Phone: string }
+              Phone : string }
 
         module Errors =
             [<Literal>]
@@ -4927,18 +5300,21 @@ module AppBskyContact =
         [<Literal>]
         let TypeId = "app.bsky.contact.verifyPhone"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("code")>]
-              Code: string
+              Code : string
               [<JsonPropertyName("phone")>]
-              Phone: string }
+              Phone : string }
 
         type Output =
             { [<JsonPropertyName("token")>]
-              Token: string }
+              Token : string }
 
         module Errors =
             [<Literal>]
@@ -4961,28 +5337,33 @@ module AppBskyDraft =
         [<Literal>]
         let TypeId = "app.bsky.draft.createDraft"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("draft")>]
-              Draft: Defs.Draft }
+              Draft : Defs.Draft }
 
         type Output =
             { [<JsonPropertyName("id")>]
-              Id: string }
+              Id : string }
 
         module Errors =
             [<Literal>]
             let DraftLimitReached = "DraftLimitReached"
 
     module Defs =
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type DraftPostgateEmbeddingRulesItem =
             | [<JsonName("app.bsky.feed.postgate#disableRule")>] DisableRule of AppBskyFeed.Postgate.DisableRule
             | Unknown of string * System.Text.Json.JsonElement
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type DraftThreadgateAllowItem =
             | [<JsonName("app.bsky.feed.threadgate#mentionRule")>] MentionRule of AppBskyFeed.Threadgate.MentionRule
             | [<JsonName("app.bsky.feed.threadgate#followerRule")>] FollowerRule of AppBskyFeed.Threadgate.FollowerRule
@@ -4994,52 +5375,53 @@ module AppBskyDraft =
         /// A draft containing an array of draft posts.
         type Draft =
             { [<JsonPropertyName("deviceId")>]
-              DeviceId: string option
+              DeviceId : string option
               [<JsonPropertyName("deviceName")>]
-              DeviceName: string option
+              DeviceName : string option
               [<JsonPropertyName("langs")>]
-              Langs: Language list option
+              Langs : Language list option
               [<JsonPropertyName("postgateEmbeddingRules")>]
-              PostgateEmbeddingRules: DraftPostgateEmbeddingRulesItem list option
+              PostgateEmbeddingRules : DraftPostgateEmbeddingRulesItem list option
               [<JsonPropertyName("posts")>]
-              Posts: Defs.DraftPost list
+              Posts : Defs.DraftPost list
               [<JsonPropertyName("threadgateAllow")>]
-              ThreadgateAllow: DraftThreadgateAllowItem list option }
+              ThreadgateAllow : DraftThreadgateAllowItem list option }
 
         type DraftEmbedCaption =
             { [<JsonPropertyName("content")>]
-              Content: string
+              Content : string
               [<JsonPropertyName("lang")>]
-              Lang: Language }
+              Lang : Language }
 
         type DraftEmbedExternal =
             { [<JsonPropertyName("uri")>]
-              Uri: Uri }
+              Uri : Uri }
 
         type DraftEmbedImage =
             { [<JsonPropertyName("alt")>]
-              Alt: string option
+              Alt : string option
               [<JsonPropertyName("localRef")>]
-              LocalRef: Defs.DraftEmbedLocalRef }
+              LocalRef : Defs.DraftEmbedLocalRef }
 
         type DraftEmbedLocalRef =
             { [<JsonPropertyName("path")>]
-              Path: string }
+              Path : string }
 
         type DraftEmbedRecord =
             { [<JsonPropertyName("record")>]
-              Record: ComAtprotoRepo.StrongRef.StrongRef }
+              Record : ComAtprotoRepo.StrongRef.StrongRef }
 
         type DraftEmbedVideo =
             { [<JsonPropertyName("alt")>]
-              Alt: string option
+              Alt : string option
               [<JsonPropertyName("captions")>]
-              Captions: Defs.DraftEmbedCaption list option
+              Captions : Defs.DraftEmbedCaption list option
               [<JsonPropertyName("localRef")>]
-              LocalRef: Defs.DraftEmbedLocalRef }
+              LocalRef : Defs.DraftEmbedLocalRef }
 
         /// Self-label values for this post. Effectively content warnings.
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type DraftPostLabelsUnion =
             | [<JsonName("com.atproto.label.defs#selfLabels")>] SelfLabels of ComAtprotoLabel.Defs.SelfLabels
             | Unknown of string * System.Text.Json.JsonElement
@@ -5047,76 +5429,85 @@ module AppBskyDraft =
         /// One of the posts that compose a draft.
         type DraftPost =
             { [<JsonPropertyName("embedExternals")>]
-              EmbedExternals: Defs.DraftEmbedExternal list option
+              EmbedExternals : Defs.DraftEmbedExternal list option
               [<JsonPropertyName("embedImages")>]
-              EmbedImages: Defs.DraftEmbedImage list option
+              EmbedImages : Defs.DraftEmbedImage list option
               [<JsonPropertyName("embedRecords")>]
-              EmbedRecords: Defs.DraftEmbedRecord list option
+              EmbedRecords : Defs.DraftEmbedRecord list option
               [<JsonPropertyName("embedVideos")>]
-              EmbedVideos: Defs.DraftEmbedVideo list option
+              EmbedVideos : Defs.DraftEmbedVideo list option
               [<JsonPropertyName("labels")>]
-              Labels: DraftPostLabelsUnion option
+              Labels : DraftPostLabelsUnion option
               [<JsonPropertyName("text")>]
-              Text: string }
+              Text : string }
 
         /// View to present drafts data to users.
         type DraftView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("draft")>]
-              Draft: Defs.Draft
+              Draft : Defs.Draft
               [<JsonPropertyName("id")>]
-              Id: Tid
+              Id : Tid
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: AtDateTime }
+              UpdatedAt : AtDateTime }
 
         /// A draft with an identifier, used to store drafts in private storage (stash).
         type DraftWithId =
             { [<JsonPropertyName("draft")>]
-              Draft: Defs.Draft
+              Draft : Defs.Draft
               [<JsonPropertyName("id")>]
-              Id: Tid }
+              Id : Tid }
 
     module DeleteDraft =
         [<Literal>]
         let TypeId = "app.bsky.draft.deleteDraft"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("id")>]
-              Id: Tid }
+              Id : Tid }
 
     module GetDrafts =
         [<Literal>]
         let TypeId = "app.bsky.draft.getDrafts"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("drafts")>]
-              Drafts: Defs.DraftView list }
+              Drafts : Defs.DraftView list }
 
     module UpdateDraft =
         [<Literal>]
         let TypeId = "app.bsky.draft.updateDraft"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("draft")>]
-              Draft: Defs.DraftWithId }
+              Draft : Defs.DraftWithId }
 
 module AppBskyUnspecced =
     module Defs =
@@ -5130,21 +5521,21 @@ module AppBskyUnspecced =
         /// Object used to store age assurance data in stash.
         type AgeAssuranceEvent =
             { [<JsonPropertyName("attemptId")>]
-              AttemptId: string
+              AttemptId : string
               [<JsonPropertyName("completeIp")>]
-              CompleteIp: string option
+              CompleteIp : string option
               [<JsonPropertyName("completeUa")>]
-              CompleteUa: string option
+              CompleteUa : string option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("initIp")>]
-              InitIp: string option
+              InitIp : string option
               [<JsonPropertyName("initUa")>]
-              InitUa: string option
+              InitUa : string option
               [<JsonPropertyName("status")>]
-              Status: AgeAssuranceEventStatus }
+              Status : AgeAssuranceEventStatus }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AgeAssuranceStateStatus>>)>]
         type AgeAssuranceStateStatus =
@@ -5157,21 +5548,21 @@ module AppBskyUnspecced =
         /// The computed state of the age assurance process, returned to the user in question on certain authenticated requests.
         type AgeAssuranceState =
             { [<JsonPropertyName("lastInitiatedAt")>]
-              LastInitiatedAt: AtDateTime option
+              LastInitiatedAt : AtDateTime option
               [<JsonPropertyName("status")>]
-              Status: AgeAssuranceStateStatus }
+              Status : AgeAssuranceStateStatus }
 
         type SkeletonSearchActor =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         type SkeletonSearchPost =
             { [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         type SkeletonSearchStarterPack =
             { [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<SkeletonTrendStatus>>)>]
         type SkeletonTrendStatus =
@@ -5180,42 +5571,42 @@ module AppBskyUnspecced =
 
         type SkeletonTrend =
             { [<JsonPropertyName("category")>]
-              Category: string option
+              Category : string option
               [<JsonPropertyName("dids")>]
-              Dids: Did list
+              Dids : Did list
               [<JsonPropertyName("displayName")>]
-              DisplayName: string
+              DisplayName : string
               [<JsonPropertyName("link")>]
-              Link: string
+              Link : string
               [<JsonPropertyName("postCount")>]
-              PostCount: int64
+              PostCount : int64
               [<JsonPropertyName("startedAt")>]
-              StartedAt: AtDateTime
+              StartedAt : AtDateTime
               [<JsonPropertyName("status")>]
-              Status: SkeletonTrendStatus option
+              Status : SkeletonTrendStatus option
               [<JsonPropertyName("topic")>]
-              Topic: string }
+              Topic : string }
 
         type ThreadItemBlocked =
             { [<JsonPropertyName("author")>]
-              Author: AppBskyFeed.Defs.BlockedAuthor }
+              Author : AppBskyFeed.Defs.BlockedAuthor }
 
         type ThreadItemNoUnauthenticated = JsonElement
         type ThreadItemNotFound = JsonElement
 
         type ThreadItemPost =
             { [<JsonPropertyName("hiddenByThreadgate")>]
-              HiddenByThreadgate: bool
+              HiddenByThreadgate : bool
               [<JsonPropertyName("moreParents")>]
-              MoreParents: bool
+              MoreParents : bool
               [<JsonPropertyName("moreReplies")>]
-              MoreReplies: int64
+              MoreReplies : int64
               [<JsonPropertyName("mutedByViewer")>]
-              MutedByViewer: bool
+              MutedByViewer : bool
               [<JsonPropertyName("opThread")>]
-              OpThread: bool
+              OpThread : bool
               [<JsonPropertyName("post")>]
-              Post: AppBskyFeed.Defs.PostView }
+              Post : AppBskyFeed.Defs.PostView }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<TrendViewStatus>>)>]
         type TrendViewStatus =
@@ -5224,37 +5615,39 @@ module AppBskyUnspecced =
 
         type TrendView =
             { [<JsonPropertyName("actors")>]
-              Actors: AppBskyActor.Defs.ProfileViewBasic list
+              Actors : AppBskyActor.Defs.ProfileViewBasic list
               [<JsonPropertyName("category")>]
-              Category: string option
+              Category : string option
               [<JsonPropertyName("displayName")>]
-              DisplayName: string
+              DisplayName : string
               [<JsonPropertyName("link")>]
-              Link: string
+              Link : string
               [<JsonPropertyName("postCount")>]
-              PostCount: int64
+              PostCount : int64
               [<JsonPropertyName("startedAt")>]
-              StartedAt: AtDateTime
+              StartedAt : AtDateTime
               [<JsonPropertyName("status")>]
-              Status: TrendViewStatus option
+              Status : TrendViewStatus option
               [<JsonPropertyName("topic")>]
-              Topic: string }
+              Topic : string }
 
         type TrendingTopic =
             { [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("displayName")>]
-              DisplayName: string option
+              DisplayName : string option
               [<JsonPropertyName("link")>]
-              Link: string
+              Link : string
               [<JsonPropertyName("topic")>]
-              Topic: string }
+              Topic : string }
 
     module GetAgeAssuranceState =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getAgeAssuranceState"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output = Defs.AgeAssuranceState
@@ -5263,128 +5656,149 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getConfig"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("checkEmailConfirmed")>]
-              CheckEmailConfirmed: bool option
+              CheckEmailConfirmed : bool option
               [<JsonPropertyName("liveNow")>]
-              LiveNow: GetConfig.LiveNowConfig list option }
+              LiveNow : GetConfig.LiveNowConfig list option }
 
         type LiveNowConfig =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("domains")>]
-              Domains: string list }
+              Domains : string list }
 
     module GetOnboardingSuggestedStarterPacks =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getOnboardingSuggestedStarterPacks"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("starterPacks")>]
-              StarterPacks: AppBskyGraph.Defs.StarterPackView list }
+              StarterPacks : AppBskyGraph.Defs.StarterPackView list }
 
     module GetOnboardingSuggestedStarterPacksSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getOnboardingSuggestedStarterPacksSkeleton"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: Did option }
+              Viewer : Did option }
 
         type Output =
             { [<JsonPropertyName("starterPacks")>]
-              StarterPacks: AtUri list }
+              StarterPacks : AtUri list }
 
     module GetOnboardingSuggestedUsersSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getOnboardingSuggestedUsersSkeleton"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("category")>]
-              Category: string option
+              Category : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: Did option }
+              Viewer : Did option }
 
         type Output =
             { [<JsonPropertyName("dids")>]
-              Dids: Did list
+              Dids : Did list
               [<JsonPropertyName("recId")>]
-              RecId: string option }
+              RecId : string option }
 
     module GetPopularFeedGenerators =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getPopularFeedGenerators"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("query")>]
-              Query: string option }
+              Query : string option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("feeds")>]
-              Feeds: AppBskyFeed.Defs.GeneratorView list }
+              Feeds : AppBskyFeed.Defs.GeneratorView list }
 
     module GetPostThreadOtherV2 =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getPostThreadOtherV2"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("anchor")>]
-              Anchor: AtUri }
+              Anchor : AtUri }
 
         type Output =
             { [<JsonPropertyName("thread")>]
-              Thread: GetPostThreadOtherV2.ThreadItem list }
+              Thread : GetPostThreadOtherV2.ThreadItem list }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ThreadItemValueUnion =
             | [<JsonName("app.bsky.unspecced.defs#threadItemPost")>] ThreadItemPost of Defs.ThreadItemPost
             | Unknown of string * System.Text.Json.JsonElement
 
         type ThreadItem =
             { [<JsonPropertyName("depth")>]
-              Depth: int64
+              Depth : int64
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("value")>]
-              Value: ThreadItemValueUnion }
+              Value : ThreadItemValueUnion }
 
     module GetPostThreadV2 =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getPostThreadV2"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsSort>>)>]
@@ -5396,25 +5810,26 @@ module AppBskyUnspecced =
 
         type Params =
             { [<JsonPropertyName("above")>]
-              Above: bool option
+              Above : bool option
               [<JsonPropertyName("anchor")>]
-              Anchor: AtUri
+              Anchor : AtUri
               [<JsonPropertyName("below")>]
-              Below: int64 option
+              Below : int64 option
               [<JsonPropertyName("branchingFactor")>]
-              BranchingFactor: int64 option
+              BranchingFactor : int64 option
               [<JsonPropertyName("sort")>]
-              Sort: ParamsSort option }
+              Sort : ParamsSort option }
 
         type Output =
             { [<JsonPropertyName("hasOtherReplies")>]
-              HasOtherReplies: bool
+              HasOtherReplies : bool
               [<JsonPropertyName("thread")>]
-              Thread: GetPostThreadV2.ThreadItem list
+              Thread : GetPostThreadV2.ThreadItem list
               [<JsonPropertyName("threadgate")>]
-              Threadgate: AppBskyFeed.Defs.ThreadgateView option }
+              Threadgate : AppBskyFeed.Defs.ThreadgateView option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ThreadItemValueUnion =
             | [<JsonName("app.bsky.unspecced.defs#threadItemPost")>] ThreadItemPost of Defs.ThreadItemPost
             | [<JsonName("app.bsky.unspecced.defs#threadItemNoUnauthenticated")>] ThreadItemNoUnauthenticated of
@@ -5425,174 +5840,200 @@ module AppBskyUnspecced =
 
         type ThreadItem =
             { [<JsonPropertyName("depth")>]
-              Depth: int64
+              Depth : int64
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("value")>]
-              Value: ThreadItemValueUnion }
+              Value : ThreadItemValueUnion }
 
     module GetSuggestedFeeds =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedFeeds"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("feeds")>]
-              Feeds: AppBskyFeed.Defs.GeneratorView list }
+              Feeds : AppBskyFeed.Defs.GeneratorView list }
 
     module GetSuggestedFeedsSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedFeedsSkeleton"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: Did option }
+              Viewer : Did option }
 
         type Output =
             { [<JsonPropertyName("feeds")>]
-              Feeds: AtUri list }
+              Feeds : AtUri list }
 
     module GetSuggestedOnboardingUsers =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedOnboardingUsers"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("category")>]
-              Category: string option
+              Category : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("actors")>]
-              Actors: AppBskyActor.Defs.ProfileView list
+              Actors : AppBskyActor.Defs.ProfileView list
               [<JsonPropertyName("recId")>]
-              RecId: string option }
+              RecId : string option }
 
     module GetSuggestedStarterPacks =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedStarterPacks"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("starterPacks")>]
-              StarterPacks: AppBskyGraph.Defs.StarterPackView list }
+              StarterPacks : AppBskyGraph.Defs.StarterPackView list }
 
     module GetSuggestedStarterPacksSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedStarterPacksSkeleton"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: Did option }
+              Viewer : Did option }
 
         type Output =
             { [<JsonPropertyName("starterPacks")>]
-              StarterPacks: AtUri list }
+              StarterPacks : AtUri list }
 
     module GetSuggestedUsers =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedUsers"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("category")>]
-              Category: string option
+              Category : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("actors")>]
-              Actors: AppBskyActor.Defs.ProfileView list
+              Actors : AppBskyActor.Defs.ProfileView list
               [<JsonPropertyName("recId")>]
-              RecId: string option }
+              RecId : string option }
 
     module GetSuggestedUsersSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestedUsersSkeleton"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("category")>]
-              Category: string option
+              Category : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: Did option }
+              Viewer : Did option }
 
         type Output =
             { [<JsonPropertyName("dids")>]
-              Dids: Did list
+              Dids : Did list
               [<JsonPropertyName("recId")>]
-              RecId: string option }
+              RecId : string option }
 
     module GetSuggestionsSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getSuggestionsSkeleton"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("relativeToDid")>]
-              RelativeToDid: Did option
+              RelativeToDid : Did option
               [<JsonPropertyName("viewer")>]
-              Viewer: Did option }
+              Viewer : Did option }
 
         type Output =
             { [<JsonPropertyName("actors")>]
-              Actors: Defs.SkeletonSearchActor list
+              Actors : Defs.SkeletonSearchActor list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("recId")>]
-              RecId: int64 option
+              RecId : int64 option
               [<JsonPropertyName("recIdStr")>]
-              RecIdStr: string option
+              RecIdStr : string option
               [<JsonPropertyName("relativeToDid")>]
-              RelativeToDid: Did option }
+              RelativeToDid : Did option }
 
     module GetTaggedSuggestions =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getTaggedSuggestions"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("suggestions")>]
-              Suggestions: GetTaggedSuggestions.Suggestion list }
+              Suggestions : GetTaggedSuggestions.Suggestion list }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<SuggestionSubjectType>>)>]
         type SuggestionSubjectType =
@@ -5602,77 +6043,89 @@ module AppBskyUnspecced =
 
         type Suggestion =
             { [<JsonPropertyName("subject")>]
-              Subject: Uri
+              Subject : Uri
               [<JsonPropertyName("subjectType")>]
-              SubjectType: SuggestionSubjectType
+              SubjectType : SuggestionSubjectType
               [<JsonPropertyName("tag")>]
-              Tag: string }
+              Tag : string }
 
     module GetTrendingTopics =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getTrendingTopics"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: Did option }
+              Viewer : Did option }
 
         type Output =
             { [<JsonPropertyName("suggested")>]
-              Suggested: Defs.TrendingTopic list
+              Suggested : Defs.TrendingTopic list
               [<JsonPropertyName("topics")>]
-              Topics: Defs.TrendingTopic list }
+              Topics : Defs.TrendingTopic list }
 
     module GetTrends =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getTrends"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("trends")>]
-              Trends: Defs.TrendView list }
+              Trends : Defs.TrendView list }
 
     module GetTrendsSkeleton =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.getTrendsSkeleton"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("viewer")>]
-              Viewer: Did option }
+              Viewer : Did option }
 
         type Output =
             { [<JsonPropertyName("trends")>]
-              Trends: Defs.SkeletonTrend list }
+              Trends : Defs.SkeletonTrend list }
 
     module InitAgeAssurance =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.initAgeAssurance"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("countryCode")>]
-              CountryCode: string
+              CountryCode : string
               [<JsonPropertyName("email")>]
-              Email: string
+              Email : string
               [<JsonPropertyName("language")>]
-              Language: string }
+              Language : string }
 
         type Output = Defs.AgeAssuranceState
 
@@ -5690,28 +6143,31 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.searchActorsSkeleton"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("q")>]
-              Q: string
+              Q : string
               [<JsonPropertyName("typeahead")>]
-              Typeahead: bool option
+              Typeahead : bool option
               [<JsonPropertyName("viewer")>]
-              Viewer: Did option }
+              Viewer : Did option }
 
         type Output =
             { [<JsonPropertyName("actors")>]
-              Actors: Defs.SkeletonSearchActor list
+              Actors : Defs.SkeletonSearchActor list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("hitsTotal")>]
-              HitsTotal: int64 option }
+              HitsTotal : int64 option }
 
         module Errors =
             [<Literal>]
@@ -5721,7 +6177,10 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.searchPostsSkeleton"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsSort>>)>]
@@ -5732,39 +6191,39 @@ module AppBskyUnspecced =
 
         type Params =
             { [<JsonPropertyName("author")>]
-              Author: string option
+              Author : string option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("domain")>]
-              Domain: string option
+              Domain : string option
               [<JsonPropertyName("lang")>]
-              Lang: Language option
+              Lang : Language option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("mentions")>]
-              Mentions: string option
+              Mentions : string option
               [<JsonPropertyName("q")>]
-              Q: string
+              Q : string
               [<JsonPropertyName("since")>]
-              Since: string option
+              Since : string option
               [<JsonPropertyName("sort")>]
-              Sort: ParamsSort option
+              Sort : ParamsSort option
               [<JsonPropertyName("tag")>]
-              Tag: string list option
+              Tag : string list option
               [<JsonPropertyName("until")>]
-              Until: string option
+              Until : string option
               [<JsonPropertyName("url")>]
-              Url: Uri option
+              Url : Uri option
               [<JsonPropertyName("viewer")>]
-              Viewer: Did option }
+              Viewer : Did option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("hitsTotal")>]
-              HitsTotal: int64 option
+              HitsTotal : int64 option
               [<JsonPropertyName("posts")>]
-              Posts: Defs.SkeletonSearchPost list }
+              Posts : Defs.SkeletonSearchPost list }
 
         module Errors =
             [<Literal>]
@@ -5774,26 +6233,29 @@ module AppBskyUnspecced =
         [<Literal>]
         let TypeId = "app.bsky.unspecced.searchStarterPacksSkeleton"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("q")>]
-              Q: string
+              Q : string
               [<JsonPropertyName("viewer")>]
-              Viewer: Did option }
+              Viewer : Did option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("hitsTotal")>]
-              HitsTotal: int64 option
+              HitsTotal : int64 option
               [<JsonPropertyName("starterPacks")>]
-              StarterPacks: Defs.SkeletonSearchStarterPack list }
+              StarterPacks : Defs.SkeletonSearchStarterPack list }
 
         module Errors =
             [<Literal>]
@@ -5809,53 +6271,58 @@ module AppBskyVideo =
 
         type JobStatus =
             { [<JsonPropertyName("blob")>]
-              Blob: JsonElement option
+              Blob : JsonElement option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("error")>]
-              Error: string option
+              Error : string option
               [<JsonPropertyName("jobId")>]
-              JobId: string
+              JobId : string
               [<JsonPropertyName("message")>]
-              Message: string option
+              Message : string option
               [<JsonPropertyName("progress")>]
-              Progress: int64 option
+              Progress : int64 option
               [<JsonPropertyName("state")>]
-              State: JobStatusState }
+              State : JobStatusState }
 
     module GetJobStatus =
         [<Literal>]
         let TypeId = "app.bsky.video.getJobStatus"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("jobId")>]
-              JobId: string }
+              JobId : string }
 
         type Output =
             { [<JsonPropertyName("jobStatus")>]
-              JobStatus: Defs.JobStatus }
+              JobStatus : Defs.JobStatus }
 
     module GetUploadLimits =
         [<Literal>]
         let TypeId = "app.bsky.video.getUploadLimits"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("canUpload")>]
-              CanUpload: bool
+              CanUpload : bool
               [<JsonPropertyName("error")>]
-              Error: string option
+              Error : string option
               [<JsonPropertyName("message")>]
-              Message: string option
+              Message : string option
               [<JsonPropertyName("remainingDailyBytes")>]
-              RemainingDailyBytes: int64 option
+              RemainingDailyBytes : int64 option
               [<JsonPropertyName("remainingDailyVideos")>]
-              RemainingDailyVideos: int64 option }
+              RemainingDailyVideos : int64 option }
 
     module UploadVideo =
         [<Literal>]
@@ -5863,7 +6330,7 @@ module AppBskyVideo =
 
         type Output =
             { [<JsonPropertyName("jobStatus")>]
-              JobStatus: Defs.JobStatus }
+              JobStatus : Defs.JobStatus }
 
 module ChatBsky =
     begin end
@@ -5883,28 +6350,28 @@ module ChatBskyActor =
         /// A declaration of a Bluesky chat account.
         type Declaration =
             { [<JsonPropertyName("allowIncoming")>]
-              AllowIncoming: DeclarationAllowIncoming }
+              AllowIncoming : DeclarationAllowIncoming }
 
     module Defs =
         type ProfileViewBasic =
             { [<JsonPropertyName("associated")>]
-              Associated: AppBskyActor.Defs.ProfileAssociated option
+              Associated : AppBskyActor.Defs.ProfileAssociated option
               [<JsonPropertyName("avatar")>]
-              Avatar: Uri option
+              Avatar : Uri option
               [<JsonPropertyName("chatDisabled")>]
-              ChatDisabled: bool option
+              ChatDisabled : bool option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("displayName")>]
-              DisplayName: string option
+              DisplayName : string option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("verification")>]
-              Verification: AppBskyActor.Defs.VerificationState option
+              Verification : AppBskyActor.Defs.VerificationState option
               [<JsonPropertyName("viewer")>]
-              Viewer: AppBskyActor.Defs.ViewerState option }
+              Viewer : AppBskyActor.Defs.ViewerState option }
 
     module DeleteAccount =
         [<Literal>]
@@ -5919,35 +6386,41 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.acceptConvo"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string }
+              ConvoId : string }
 
         type Output =
             { [<JsonPropertyName("rev")>]
-              Rev: string option }
+              Rev : string option }
 
     module AddReaction =
         [<Literal>]
         let TypeId = "chat.bsky.convo.addReaction"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("messageId")>]
-              MessageId: string
+              MessageId : string
               [<JsonPropertyName("value")>]
-              Value: string }
+              Value : string }
 
         type Output =
             { [<JsonPropertyName("message")>]
-              Message: Defs.MessageView }
+              Message : Defs.MessageView }
 
         module Errors =
             [<Literal>]
@@ -5966,13 +6439,15 @@ module ChatBskyConvo =
             | [<JsonName("accepted")>] Accepted
             | Unknown of string
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ConvoViewLastMessageUnion =
             | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
             | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
             | Unknown of string * System.Text.Json.JsonElement
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ConvoViewLastReactionUnion =
             | [<JsonName("chat.bsky.convo.defs#messageAndReactionView")>] MessageAndReactionView of
                 Defs.MessageAndReactionView
@@ -5980,39 +6455,40 @@ module ChatBskyConvo =
 
         type ConvoView =
             { [<JsonPropertyName("id")>]
-              Id: string
+              Id : string
               [<JsonPropertyName("lastMessage")>]
-              LastMessage: ConvoViewLastMessageUnion option
+              LastMessage : ConvoViewLastMessageUnion option
               [<JsonPropertyName("lastReaction")>]
-              LastReaction: ConvoViewLastReactionUnion option
+              LastReaction : ConvoViewLastReactionUnion option
               [<JsonPropertyName("members")>]
-              Members: ChatBskyActor.Defs.ProfileViewBasic list
+              Members : ChatBskyActor.Defs.ProfileViewBasic list
               [<JsonPropertyName("muted")>]
-              Muted: bool
+              Muted : bool
               [<JsonPropertyName("rev")>]
-              Rev: string
+              Rev : string
               [<JsonPropertyName("status")>]
-              Status: ConvoViewStatus option
+              Status : ConvoViewStatus option
               [<JsonPropertyName("unreadCount")>]
-              UnreadCount: int64 }
+              UnreadCount : int64 }
 
         type DeletedMessageView =
             { [<JsonPropertyName("id")>]
-              Id: string
+              Id : string
               [<JsonPropertyName("rev")>]
-              Rev: string
+              Rev : string
               [<JsonPropertyName("sender")>]
-              Sender: Defs.MessageViewSender
+              Sender : Defs.MessageViewSender
               [<JsonPropertyName("sentAt")>]
-              SentAt: AtDateTime }
+              SentAt : AtDateTime }
 
         type LogAcceptConvo =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev : string }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type LogAddReactionMessageUnion =
             | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
             | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
@@ -6020,21 +6496,22 @@ module ChatBskyConvo =
 
         type LogAddReaction =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("message")>]
-              Message: LogAddReactionMessageUnion
+              Message : LogAddReactionMessageUnion
               [<JsonPropertyName("reaction")>]
-              Reaction: Defs.ReactionView
+              Reaction : Defs.ReactionView
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev : string }
 
         type LogBeginConvo =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev : string }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type LogCreateMessageMessageUnion =
             | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
             | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
@@ -6042,13 +6519,14 @@ module ChatBskyConvo =
 
         type LogCreateMessage =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("message")>]
-              Message: LogCreateMessageMessageUnion
+              Message : LogCreateMessageMessageUnion
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev : string }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type LogDeleteMessageMessageUnion =
             | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
             | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
@@ -6056,25 +6534,26 @@ module ChatBskyConvo =
 
         type LogDeleteMessage =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("message")>]
-              Message: LogDeleteMessageMessageUnion
+              Message : LogDeleteMessageMessageUnion
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev : string }
 
         type LogLeaveConvo =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev : string }
 
         type LogMuteConvo =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev : string }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type LogReadMessageMessageUnion =
             | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
             | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
@@ -6082,13 +6561,14 @@ module ChatBskyConvo =
 
         type LogReadMessage =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("message")>]
-              Message: LogReadMessageMessageUnion
+              Message : LogReadMessageMessageUnion
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev : string }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type LogRemoveReactionMessageUnion =
             | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
             | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
@@ -6096,98 +6576,103 @@ module ChatBskyConvo =
 
         type LogRemoveReaction =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("message")>]
-              Message: LogRemoveReactionMessageUnion
+              Message : LogRemoveReactionMessageUnion
               [<JsonPropertyName("reaction")>]
-              Reaction: Defs.ReactionView
+              Reaction : Defs.ReactionView
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev : string }
 
         type LogUnmuteConvo =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev : string }
 
         type MessageAndReactionView =
             { [<JsonPropertyName("message")>]
-              Message: Defs.MessageView
+              Message : Defs.MessageView
               [<JsonPropertyName("reaction")>]
-              Reaction: Defs.ReactionView }
+              Reaction : Defs.ReactionView }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type MessageInputEmbedUnion =
             | [<JsonName("app.bsky.embed.record")>] Record of AppBskyEmbed.Record.Record
             | Unknown of string * System.Text.Json.JsonElement
 
         type MessageInput =
             { [<JsonPropertyName("embed")>]
-              Embed: MessageInputEmbedUnion option
+              Embed : MessageInputEmbedUnion option
               [<JsonPropertyName("facets")>]
-              Facets: AppBskyRichtext.Facet.Facet list option
+              Facets : AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("text")>]
-              Text: string }
+              Text : string }
 
         type MessageRef =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("messageId")>]
-              MessageId: string }
+              MessageId : string }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type MessageViewEmbedUnion =
             | [<JsonName("app.bsky.embed.record#view")>] View of AppBskyEmbed.Record.View
             | Unknown of string * System.Text.Json.JsonElement
 
         type MessageView =
             { [<JsonPropertyName("embed")>]
-              Embed: MessageViewEmbedUnion option
+              Embed : MessageViewEmbedUnion option
               [<JsonPropertyName("facets")>]
-              Facets: AppBskyRichtext.Facet.Facet list option
+              Facets : AppBskyRichtext.Facet.Facet list option
               [<JsonPropertyName("id")>]
-              Id: string
+              Id : string
               [<JsonPropertyName("reactions")>]
-              Reactions: Defs.ReactionView list option
+              Reactions : Defs.ReactionView list option
               [<JsonPropertyName("rev")>]
-              Rev: string
+              Rev : string
               [<JsonPropertyName("sender")>]
-              Sender: Defs.MessageViewSender
+              Sender : Defs.MessageViewSender
               [<JsonPropertyName("sentAt")>]
-              SentAt: AtDateTime
+              SentAt : AtDateTime
               [<JsonPropertyName("text")>]
-              Text: string }
+              Text : string }
 
         type MessageViewSender =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         type ReactionView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("sender")>]
-              Sender: Defs.ReactionViewSender
+              Sender : Defs.ReactionViewSender
               [<JsonPropertyName("value")>]
-              Value: string }
+              Value : string }
 
         type ReactionViewSender =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
     module DeleteMessageForSelf =
         [<Literal>]
         let TypeId = "chat.bsky.convo.deleteMessageForSelf"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("messageId")>]
-              MessageId: string }
+              MessageId : string }
 
         type Output = Defs.DeletedMessageView
 
@@ -6195,61 +6680,74 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.getConvo"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string }
+              ConvoId : string }
 
         type Output =
             { [<JsonPropertyName("convo")>]
-              Convo: Defs.ConvoView }
+              Convo : Defs.ConvoView }
 
     module GetConvoAvailability =
         [<Literal>]
         let TypeId = "chat.bsky.convo.getConvoAvailability"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("members")>]
-              Members: Did list }
+              Members : Did list }
 
         type Output =
             { [<JsonPropertyName("canChat")>]
-              CanChat: bool
+              CanChat : bool
               [<JsonPropertyName("convo")>]
-              Convo: Defs.ConvoView option }
+              Convo : Defs.ConvoView option }
 
     module GetConvoForMembers =
         [<Literal>]
         let TypeId = "chat.bsky.convo.getConvoForMembers"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("members")>]
-              Members: Did list }
+              Members : Did list }
 
         type Output =
             { [<JsonPropertyName("convo")>]
-              Convo: Defs.ConvoView }
+              Convo : Defs.ConvoView }
 
     module GetLog =
         [<Literal>]
         let TypeId = "chat.bsky.convo.getLog"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputLogsItem =
             | [<JsonName("chat.bsky.convo.defs#logBeginConvo")>] LogBeginConvo of Defs.LogBeginConvo
             | [<JsonName("chat.bsky.convo.defs#logAcceptConvo")>] LogAcceptConvo of Defs.LogAcceptConvo
@@ -6265,26 +6763,30 @@ module ChatBskyConvo =
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("logs")>]
-              Logs: OutputLogsItem list }
+              Logs : OutputLogsItem list }
 
     module GetMessages =
         [<Literal>]
         let TypeId = "chat.bsky.convo.getMessages"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputMessagesItem =
             | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of Defs.MessageView
             | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of Defs.DeletedMessageView
@@ -6292,32 +6794,38 @@ module ChatBskyConvo =
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("messages")>]
-              Messages: OutputMessagesItem list }
+              Messages : OutputMessagesItem list }
 
     module LeaveConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.leaveConvo"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string }
+              ConvoId : string }
 
         type Output =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("rev")>]
-              Rev: string }
+              Rev : string }
 
     module ListConvos =
         [<Literal>]
         let TypeId = "chat.bsky.convo.listConvos"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsReadState>>)>]
@@ -6333,53 +6841,59 @@ module ChatBskyConvo =
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("readState")>]
-              ReadState: ParamsReadState option
+              ReadState : ParamsReadState option
               [<JsonPropertyName("status")>]
-              Status: ParamsStatus option }
+              Status : ParamsStatus option }
 
         type Output =
             { [<JsonPropertyName("convos")>]
-              Convos: Defs.ConvoView list
+              Convos : Defs.ConvoView list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
     module MuteConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.muteConvo"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string }
+              ConvoId : string }
 
         type Output =
             { [<JsonPropertyName("convo")>]
-              Convo: Defs.ConvoView }
+              Convo : Defs.ConvoView }
 
     module RemoveReaction =
         [<Literal>]
         let TypeId = "chat.bsky.convo.removeReaction"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("messageId")>]
-              MessageId: string
+              MessageId : string
               [<JsonPropertyName("value")>]
-              Value: string }
+              Value : string }
 
         type Output =
             { [<JsonPropertyName("message")>]
-              Message: Defs.MessageView }
+              Message : Defs.MessageView }
 
         module Errors =
             [<Literal>]
@@ -6392,14 +6906,17 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.sendMessage"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("message")>]
-              Message: Defs.MessageInput }
+              Message : Defs.MessageInput }
 
         type Output = Defs.MessageView
 
@@ -6407,43 +6924,52 @@ module ChatBskyConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.sendMessageBatch"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("items")>]
-              Items: SendMessageBatch.BatchItem list }
+              Items : SendMessageBatch.BatchItem list }
 
         type Output =
             { [<JsonPropertyName("items")>]
-              Items: Defs.MessageView list }
+              Items : Defs.MessageView list }
 
         type BatchItem =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("message")>]
-              Message: Defs.MessageInput }
+              Message : Defs.MessageInput }
 
     module UnmuteConvo =
         [<Literal>]
         let TypeId = "chat.bsky.convo.unmuteConvo"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string }
+              ConvoId : string }
 
         type Output =
             { [<JsonPropertyName("convo")>]
-              Convo: Defs.ConvoView }
+              Convo : Defs.ConvoView }
 
     module UpdateAllRead =
         [<Literal>]
         let TypeId = "chat.bsky.convo.updateAllRead"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputStatus>>)>]
@@ -6454,77 +6980,87 @@ module ChatBskyConvo =
 
         type Input =
             { [<JsonPropertyName("status")>]
-              Status: InputStatus option }
+              Status : InputStatus option }
 
         type Output =
             { [<JsonPropertyName("updatedCount")>]
-              UpdatedCount: int64 }
+              UpdatedCount : int64 }
 
     module UpdateRead =
         [<Literal>]
         let TypeId = "chat.bsky.convo.updateRead"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("convoId")>]
-              ConvoId: string
+              ConvoId : string
               [<JsonPropertyName("messageId")>]
-              MessageId: string option }
+              MessageId : string option }
 
         type Output =
             { [<JsonPropertyName("convo")>]
-              Convo: Defs.ConvoView }
+              Convo : Defs.ConvoView }
 
 module ChatBskyModeration =
     module GetActorMetadata =
         [<Literal>]
         let TypeId = "chat.bsky.moderation.getActorMetadata"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("actor")>]
-              Actor: Did }
+              Actor : Did }
 
         type Output =
             { [<JsonPropertyName("all")>]
-              All: GetActorMetadata.Metadata
+              All : GetActorMetadata.Metadata
               [<JsonPropertyName("day")>]
-              Day: GetActorMetadata.Metadata
+              Day : GetActorMetadata.Metadata
               [<JsonPropertyName("month")>]
-              Month: GetActorMetadata.Metadata }
+              Month : GetActorMetadata.Metadata }
 
         type Metadata =
             { [<JsonPropertyName("convos")>]
-              Convos: int64
+              Convos : int64
               [<JsonPropertyName("convosStarted")>]
-              ConvosStarted: int64
+              ConvosStarted : int64
               [<JsonPropertyName("messagesReceived")>]
-              MessagesReceived: int64
+              MessagesReceived : int64
               [<JsonPropertyName("messagesSent")>]
-              MessagesSent: int64 }
+              MessagesSent : int64 }
 
     module GetMessageContext =
         [<Literal>]
         let TypeId = "chat.bsky.moderation.getMessageContext"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("after")>]
-              After: int64 option
+              After : int64 option
               [<JsonPropertyName("before")>]
-              Before: int64 option
+              Before : int64 option
               [<JsonPropertyName("convoId")>]
-              ConvoId: string option
+              ConvoId : string option
               [<JsonPropertyName("messageId")>]
-              MessageId: string }
+              MessageId : string }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputMessagesItem =
             | [<JsonName("chat.bsky.convo.defs#messageView")>] MessageView of ChatBskyConvo.Defs.MessageView
             | [<JsonName("chat.bsky.convo.defs#deletedMessageView")>] DeletedMessageView of
@@ -6533,60 +7069,68 @@ module ChatBskyModeration =
 
         type Output =
             { [<JsonPropertyName("messages")>]
-              Messages: OutputMessagesItem list }
+              Messages : OutputMessagesItem list }
 
     module UpdateActorAccess =
         [<Literal>]
         let TypeId = "chat.bsky.moderation.updateActorAccess"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("actor")>]
-              Actor: Did
+              Actor : Did
               [<JsonPropertyName("allowAccess")>]
-              AllowAccess: bool
+              AllowAccess : bool
               [<JsonPropertyName("ref")>]
-              Ref: string option }
+              Ref : string option }
 
 module ComAtprotoIdentity =
     module Defs =
         type IdentityInfo =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("didDoc")>]
-              DidDoc: JsonElement
+              DidDoc : JsonElement
               [<JsonPropertyName("handle")>]
-              Handle: Handle }
+              Handle : Handle }
 
     module GetRecommendedDidCredentials =
         [<Literal>]
         let TypeId = "com.atproto.identity.getRecommendedDidCredentials"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("alsoKnownAs")>]
-              AlsoKnownAs: string list option
+              AlsoKnownAs : string list option
               [<JsonPropertyName("rotationKeys")>]
-              RotationKeys: string list option
+              RotationKeys : string list option
               [<JsonPropertyName("services")>]
-              Services: JsonElement option
+              Services : JsonElement option
               [<JsonPropertyName("verificationMethods")>]
-              VerificationMethods: JsonElement option }
+              VerificationMethods : JsonElement option }
 
     module RefreshIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.refreshIdentity"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("identifier")>]
-              Identifier: string }
+              Identifier : string }
 
         type Output = Defs.IdentityInfo
 
@@ -6608,16 +7152,19 @@ module ComAtprotoIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.resolveDid"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         type Output =
             { [<JsonPropertyName("didDoc")>]
-              DidDoc: JsonElement }
+              DidDoc : JsonElement }
 
         module Errors =
             [<Literal>]
@@ -6630,16 +7177,19 @@ module ComAtprotoIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.resolveHandle"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("handle")>]
-              Handle: Handle }
+              Handle : Handle }
 
         type Output =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         module Errors =
             [<Literal>]
@@ -6649,12 +7199,15 @@ module ComAtprotoIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.resolveIdentity"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("identifier")>]
-              Identifier: string }
+              Identifier : string }
 
         type Output = Defs.IdentityInfo
 
@@ -6672,66 +7225,78 @@ module ComAtprotoIdentity =
         [<Literal>]
         let TypeId = "com.atproto.identity.signPlcOperation"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("alsoKnownAs")>]
-              AlsoKnownAs: string list option
+              AlsoKnownAs : string list option
               [<JsonPropertyName("rotationKeys")>]
-              RotationKeys: string list option
+              RotationKeys : string list option
               [<JsonPropertyName("services")>]
-              Services: JsonElement option
+              Services : JsonElement option
               [<JsonPropertyName("token")>]
-              Token: string option
+              Token : string option
               [<JsonPropertyName("verificationMethods")>]
-              VerificationMethods: JsonElement option }
+              VerificationMethods : JsonElement option }
 
         type Output =
             { [<JsonPropertyName("operation")>]
-              Operation: JsonElement }
+              Operation : JsonElement }
 
     module SubmitPlcOperation =
         [<Literal>]
         let TypeId = "com.atproto.identity.submitPlcOperation"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("operation")>]
-              Operation: JsonElement }
+              Operation : JsonElement }
 
     module UpdateHandle =
         [<Literal>]
         let TypeId = "com.atproto.identity.updateHandle"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("handle")>]
-              Handle: Handle }
+              Handle : Handle }
 
 module ComAtprotoLexicon =
     module ResolveLexicon =
         [<Literal>]
         let TypeId = "com.atproto.lexicon.resolveLexicon"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("nsid")>]
-              Nsid: Nsid }
+              Nsid : Nsid }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("schema")>]
-              Schema: Schema.Schema
+              Schema : Schema.Schema
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         module Errors =
             [<Literal>]
@@ -6744,7 +7309,7 @@ module ComAtprotoLexicon =
         /// Representation of Lexicon schemas themselves, when published as atproto records. Note that the schema language is not defined in Lexicon; this meta schema currently only includes a single version field ('lexicon'). See the atproto specifications for description of the other expected top-level fields ('id', 'defs', etc).
         type Schema =
             { [<JsonPropertyName("lexicon")>]
-              Lexicon: int64 }
+              Lexicon : int64 }
 
 module ComAtprotoSync =
     module Defs =
@@ -6763,9 +7328,9 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         module Errors =
             [<Literal>]
@@ -6789,9 +7354,9 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("cids")>]
-              Cids: Cid list
+              Cids : Cid list
               [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         module Errors =
             [<Literal>]
@@ -6815,22 +7380,25 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
     module GetHead =
         [<Literal>]
         let TypeId = "com.atproto.sync.getHead"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         type Output =
             { [<JsonPropertyName("root")>]
-              Root: Cid }
+              Root : Cid }
 
         module Errors =
             [<Literal>]
@@ -6840,22 +7408,25 @@ module ComAtprotoSync =
         [<Literal>]
         let TypeId = "com.atproto.sync.getHostStatus"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("hostname")>]
-              Hostname: string }
+              Hostname : string }
 
         type Output =
             { [<JsonPropertyName("accountCount")>]
-              AccountCount: int64 option
+              AccountCount : int64 option
               [<JsonPropertyName("hostname")>]
-              Hostname: string
+              Hostname : string
               [<JsonPropertyName("seq")>]
-              Seq: int64 option
+              Seq : int64 option
               [<JsonPropertyName("status")>]
-              Status: Defs.HostStatus option }
+              Status : Defs.HostStatus option }
 
         module Errors =
             [<Literal>]
@@ -6865,18 +7436,21 @@ module ComAtprotoSync =
         [<Literal>]
         let TypeId = "com.atproto.sync.getLatestCommit"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         type Output =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("rev")>]
-              Rev: Tid }
+              Rev : Tid }
 
         module Errors =
             [<Literal>]
@@ -6897,11 +7471,11 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("collection")>]
-              Collection: Nsid
+              Collection : Nsid
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("rkey")>]
-              Rkey: RecordKey }
+              Rkey : RecordKey }
 
         module Errors =
             [<Literal>]
@@ -6925,9 +7499,9 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("since")>]
-              Since: Tid option }
+              Since : Tid option }
 
         module Errors =
             [<Literal>]
@@ -6946,12 +7520,15 @@ module ComAtprotoSync =
         [<Literal>]
         let TypeId = "com.atproto.sync.getRepoStatus"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<OutputStatus>>)>]
         type OutputStatus =
@@ -6965,13 +7542,13 @@ module ComAtprotoSync =
 
         type Output =
             { [<JsonPropertyName("active")>]
-              Active: bool
+              Active : bool
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("rev")>]
-              Rev: Tid option
+              Rev : Tid option
               [<JsonPropertyName("status")>]
-              Status: OutputStatus option }
+              Status : OutputStatus option }
 
         module Errors =
             [<Literal>]
@@ -6981,24 +7558,27 @@ module ComAtprotoSync =
         [<Literal>]
         let TypeId = "com.atproto.sync.listBlobs"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("since")>]
-              Since: Tid option }
+              Since : Tid option }
 
         type Output =
             { [<JsonPropertyName("cids")>]
-              Cids: Cid list
+              Cids : Cid list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
         module Errors =
             [<Literal>]
@@ -7017,49 +7597,55 @@ module ComAtprotoSync =
         [<Literal>]
         let TypeId = "com.atproto.sync.listHosts"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("hosts")>]
-              Hosts: ListHosts.Host list }
+              Hosts : ListHosts.Host list }
 
         type Host =
             { [<JsonPropertyName("accountCount")>]
-              AccountCount: int64 option
+              AccountCount : int64 option
               [<JsonPropertyName("hostname")>]
-              Hostname: string
+              Hostname : string
               [<JsonPropertyName("seq")>]
-              Seq: int64 option
+              Seq : int64 option
               [<JsonPropertyName("status")>]
-              Status: Defs.HostStatus option }
+              Status : Defs.HostStatus option }
 
     module ListRepos =
         [<Literal>]
         let TypeId = "com.atproto.sync.listRepos"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("repos")>]
-              Repos: ListRepos.Repo list }
+              Repos : ListRepos.Repo list }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<RepoStatus>>)>]
         type RepoStatus =
@@ -7073,62 +7659,71 @@ module ComAtprotoSync =
 
         type Repo =
             { [<JsonPropertyName("active")>]
-              Active: bool option
+              Active : bool option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("head")>]
-              Head: Cid
+              Head : Cid
               [<JsonPropertyName("rev")>]
-              Rev: Tid
+              Rev : Tid
               [<JsonPropertyName("status")>]
-              Status: RepoStatus option }
+              Status : RepoStatus option }
 
     module ListReposByCollection =
         [<Literal>]
         let TypeId = "com.atproto.sync.listReposByCollection"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("collection")>]
-              Collection: Nsid
+              Collection : Nsid
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("repos")>]
-              Repos: ListReposByCollection.Repo list }
+              Repos : ListReposByCollection.Repo list }
 
         type Repo =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
     module NotifyOfUpdate =
         [<Literal>]
         let TypeId = "com.atproto.sync.notifyOfUpdate"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("hostname")>]
-              Hostname: string }
+              Hostname : string }
 
     module RequestCrawl =
         [<Literal>]
         let TypeId = "com.atproto.sync.requestCrawl"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("hostname")>]
-              Hostname: string }
+              Hostname : string }
 
         module Errors =
             [<Literal>]
@@ -7140,9 +7735,10 @@ module ComAtprotoSync =
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: int64 option }
+              Cursor : int64 option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type Message =
             | [<JsonName("com.atproto.sync.subscribeRepos#commit")>] Commit of SubscribeRepos.Commit
             | [<JsonName("com.atproto.sync.subscribeRepos#sync")>] Sync of SubscribeRepos.Sync
@@ -7171,53 +7767,53 @@ module ComAtprotoSync =
         /// Represents a change to an account's status on a host (eg, PDS or Relay). The semantics of this event are that the status is at the host which emitted the event, not necessarily that at the currently active PDS. Eg, a Relay takedown would emit a takedown with active=false, even if the PDS is still active.
         type Account =
             { [<JsonPropertyName("active")>]
-              Active: bool
+              Active : bool
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("seq")>]
-              Seq: int64
+              Seq : int64
               [<JsonPropertyName("status")>]
-              Status: AccountStatus option
+              Status : AccountStatus option
               [<JsonPropertyName("time")>]
-              Time: AtDateTime }
+              Time : AtDateTime }
 
         /// Represents an update of repository state. Note that empty commits are allowed, which include no repo data changes, but an update to rev and signature.
         type Commit =
             { [<JsonPropertyName("blobs")>]
-              Blobs: Cid list
+              Blobs : Cid list
               [<JsonPropertyName("blocks")>]
-              Blocks: byte[]
+              Blocks : byte[]
               [<JsonPropertyName("commit")>]
-              Commit: Cid
+              Commit : Cid
               [<JsonPropertyName("ops")>]
-              Ops: SubscribeRepos.RepoOp list
+              Ops : SubscribeRepos.RepoOp list
               [<JsonPropertyName("prevData")>]
-              PrevData: Cid option
+              PrevData : Cid option
               [<JsonPropertyName("rebase")>]
-              Rebase: bool
+              Rebase : bool
               [<JsonPropertyName("repo")>]
-              Repo: Did
+              Repo : Did
               [<JsonPropertyName("rev")>]
-              Rev: Tid
+              Rev : Tid
               [<JsonPropertyName("seq")>]
-              Seq: int64
+              Seq : int64
               [<JsonPropertyName("since")>]
-              Since: Tid option
+              Since : Tid option
               [<JsonPropertyName("time")>]
-              Time: AtDateTime
+              Time : AtDateTime
               [<JsonPropertyName("tooBig")>]
-              TooBig: bool }
+              TooBig : bool }
 
         /// Represents a change to an account's identity. Could be an updated handle, signing key, or pds hosting endpoint. Serves as a prod to all downstream services to refresh their identity cache.
         type Identity =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("handle")>]
-              Handle: Handle option
+              Handle : Handle option
               [<JsonPropertyName("seq")>]
-              Seq: int64
+              Seq : int64
               [<JsonPropertyName("time")>]
-              Time: AtDateTime }
+              Time : AtDateTime }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InfoName>>)>]
         type InfoName =
@@ -7226,9 +7822,9 @@ module ComAtprotoSync =
 
         type Info =
             { [<JsonPropertyName("message")>]
-              Message: string option
+              Message : string option
               [<JsonPropertyName("name")>]
-              Name: InfoName }
+              Name : InfoName }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<RepoOpAction>>)>]
         type RepoOpAction =
@@ -7240,55 +7836,62 @@ module ComAtprotoSync =
         /// A repo operation, ie a mutation of a single record.
         type RepoOp =
             { [<JsonPropertyName("action")>]
-              Action: RepoOpAction
+              Action : RepoOpAction
               [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("path")>]
-              Path: string
+              Path : string
               [<JsonPropertyName("prev")>]
-              Prev: Cid option }
+              Prev : Cid option }
 
         /// Updates the repo to a new state, without necessarily including that state on the firehose. Used to recover from broken commit streams, data loss incidents, or in situations where upstream host does not know recent state of the repository.
         type Sync =
             { [<JsonPropertyName("blocks")>]
-              Blocks: byte[]
+              Blocks : byte[]
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("rev")>]
-              Rev: string
+              Rev : string
               [<JsonPropertyName("seq")>]
-              Seq: int64
+              Seq : int64
               [<JsonPropertyName("time")>]
-              Time: AtDateTime }
+              Time : AtDateTime }
 
 module ComAtprotoTemp =
     module AddReservedHandle =
         [<Literal>]
         let TypeId = "com.atproto.temp.addReservedHandle"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("handle")>]
-              Handle: string }
+              Handle : string }
 
     module CheckHandleAvailability =
         [<Literal>]
         let TypeId = "com.atproto.temp.checkHandleAvailability"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("birthDate")>]
-              BirthDate: AtDateTime option
+              BirthDate : AtDateTime option
               [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("handle")>]
-              Handle: Handle }
+              Handle : Handle }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputResultUnion =
             | [<JsonName("com.atproto.temp.checkHandleAvailability#resultAvailable")>] ResultAvailable of
                 CheckHandleAvailability.ResultAvailable
@@ -7298,9 +7901,9 @@ module ComAtprotoTemp =
 
         type Output =
             { [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("result")>]
-              Result: OutputResultUnion }
+              Result : OutputResultUnion }
 
         module Errors =
             [<Literal>]
@@ -7311,43 +7914,48 @@ module ComAtprotoTemp =
         /// Indicates the provided handle is unavailable and gives suggestions of available handles.
         type ResultUnavailable =
             { [<JsonPropertyName("suggestions")>]
-              Suggestions: CheckHandleAvailability.Suggestion list }
+              Suggestions : CheckHandleAvailability.Suggestion list }
 
         type Suggestion =
             { [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("method")>]
-              Method: string }
+              Method : string }
 
     module CheckSignupQueue =
         [<Literal>]
         let TypeId = "com.atproto.temp.checkSignupQueue"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("activated")>]
-              Activated: bool
+              Activated : bool
               [<JsonPropertyName("estimatedTimeMs")>]
-              EstimatedTimeMs: int64 option
+              EstimatedTimeMs : int64 option
               [<JsonPropertyName("placeInQueue")>]
-              PlaceInQueue: int64 option }
+              PlaceInQueue : int64 option }
 
     module DereferenceScope =
         [<Literal>]
         let TypeId = "com.atproto.temp.dereferenceScope"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("scope")>]
-              Scope: string }
+              Scope : string }
 
         type Output =
             { [<JsonPropertyName("scope")>]
-              Scope: string }
+              Scope : string }
 
         module Errors =
             [<Literal>]
@@ -7357,40 +7965,49 @@ module ComAtprotoTemp =
         [<Literal>]
         let TypeId = "com.atproto.temp.fetchLabels"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("since")>]
-              Since: int64 option }
+              Since : int64 option }
 
         type Output =
             { [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list }
+              Labels : ComAtprotoLabel.Defs.Label list }
 
     module RequestPhoneVerification =
         [<Literal>]
         let TypeId = "com.atproto.temp.requestPhoneVerification"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("phoneNumber")>]
-              PhoneNumber: string }
+              PhoneNumber : string }
 
     module RevokeAccountCredentials =
         [<Literal>]
         let TypeId = "com.atproto.temp.revokeAccountCredentials"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("account")>]
-              Account: string }
+              Account : string }
 
 module ComGermnetwork =
     module Declaration =
@@ -7400,15 +8017,15 @@ module ComGermnetwork =
         /// A declaration of a Germ Network account
         type Declaration =
             { [<JsonPropertyName("continuityProofs")>]
-              ContinuityProofs: byte[] list option
+              ContinuityProofs : byte[] list option
               [<JsonPropertyName("currentKey")>]
-              CurrentKey: byte[]
+              CurrentKey : byte[]
               [<JsonPropertyName("keyPackage")>]
-              KeyPackage: byte[] option
+              KeyPackage : byte[] option
               [<JsonPropertyName("messageMe")>]
-              MessageMe: Declaration.MessageMe option
+              MessageMe : Declaration.MessageMe option
               [<JsonPropertyName("version")>]
-              Version: string }
+              Version : string }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<MessageMeShowButtonTo>>)>]
         type MessageMeShowButtonTo =
@@ -7419,29 +8036,32 @@ module ComGermnetwork =
 
         type MessageMe =
             { [<JsonPropertyName("messageMeUrl")>]
-              MessageMeUrl: Uri
+              MessageMeUrl : Uri
               [<JsonPropertyName("showButtonTo")>]
-              ShowButtonTo: MessageMeShowButtonTo }
+              ShowButtonTo : MessageMeShowButtonTo }
 
 module ToolsOzoneCommunication =
     module CreateTemplate =
         [<Literal>]
         let TypeId = "tools.ozone.communication.createTemplate"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("contentMarkdown")>]
-              ContentMarkdown: string
+              ContentMarkdown : string
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did option
+              CreatedBy : Did option
               [<JsonPropertyName("lang")>]
-              Lang: Language option
+              Lang : Language option
               [<JsonPropertyName("name")>]
-              Name: string
+              Name : string
               [<JsonPropertyName("subject")>]
-              Subject: string }
+              Subject : string }
 
         type Output = Defs.TemplateView
 
@@ -7452,68 +8072,76 @@ module ToolsOzoneCommunication =
     module Defs =
         type TemplateView =
             { [<JsonPropertyName("contentMarkdown")>]
-              ContentMarkdown: string
+              ContentMarkdown : string
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("disabled")>]
-              Disabled: bool
+              Disabled : bool
               [<JsonPropertyName("id")>]
-              Id: string
+              Id : string
               [<JsonPropertyName("lang")>]
-              Lang: Language option
+              Lang : Language option
               [<JsonPropertyName("lastUpdatedBy")>]
-              LastUpdatedBy: Did
+              LastUpdatedBy : Did
               [<JsonPropertyName("name")>]
-              Name: string
+              Name : string
               [<JsonPropertyName("subject")>]
-              Subject: string option
+              Subject : string option
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: AtDateTime }
+              UpdatedAt : AtDateTime }
 
     module DeleteTemplate =
         [<Literal>]
         let TypeId = "tools.ozone.communication.deleteTemplate"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("id")>]
-              Id: string }
+              Id : string }
 
     module ListTemplates =
         [<Literal>]
         let TypeId = "tools.ozone.communication.listTemplates"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("communicationTemplates")>]
-              CommunicationTemplates: Defs.TemplateView list }
+              CommunicationTemplates : Defs.TemplateView list }
 
     module UpdateTemplate =
         [<Literal>]
         let TypeId = "tools.ozone.communication.updateTemplate"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("contentMarkdown")>]
-              ContentMarkdown: string option
+              ContentMarkdown : string option
               [<JsonPropertyName("disabled")>]
-              Disabled: bool option
+              Disabled : bool option
               [<JsonPropertyName("id")>]
-              Id: string
+              Id : string
               [<JsonPropertyName("lang")>]
-              Lang: Language option
+              Lang : Language option
               [<JsonPropertyName("name")>]
-              Name: string option
+              Name : string option
               [<JsonPropertyName("subject")>]
-              Subject: string option
+              Subject : string option
               [<JsonPropertyName("updatedBy")>]
-              UpdatedBy: Did option }
+              UpdatedBy : Did option }
 
         type Output = Defs.TemplateView
 
@@ -7526,7 +8154,10 @@ module ToolsOzoneHosting =
         [<Literal>]
         let TypeId = "tools.ozone.hosting.getAccountHistory"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsEventsItem>>)>]
@@ -7540,35 +8171,36 @@ module ToolsOzoneHosting =
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("events")>]
-              Events: ParamsEventsItem list option
+              Events : ParamsEventsItem list option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("events")>]
-              Events: GetAccountHistory.Event list }
+              Events : GetAccountHistory.Event list }
 
         type AccountCreated =
             { [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("handle")>]
-              Handle: Handle option }
+              Handle : Handle option }
 
         type EmailConfirmed =
             { [<JsonPropertyName("email")>]
-              Email: string }
+              Email : string }
 
         type EmailUpdated =
             { [<JsonPropertyName("email")>]
-              Email: string }
+              Email : string }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type EventDetailsUnion =
             | [<JsonName("tools.ozone.hosting.getAccountHistory#accountCreated")>] AccountCreated of
                 GetAccountHistory.AccountCreated
@@ -7584,15 +8216,15 @@ module ToolsOzoneHosting =
 
         type Event =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: string
+              CreatedBy : string
               [<JsonPropertyName("details")>]
-              Details: EventDetailsUnion }
+              Details : EventDetailsUnion }
 
         type HandleUpdated =
             { [<JsonPropertyName("handle")>]
-              Handle: Handle }
+              Handle : Handle }
 
         type PasswordUpdated = JsonElement
 
@@ -7601,30 +8233,33 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.cancelScheduledActions"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("subjects")>]
-              Subjects: Did list }
+              Subjects : Did list }
 
         type Output = CancelScheduledActions.CancellationResults
 
         type CancellationResults =
             { [<JsonPropertyName("failed")>]
-              Failed: CancelScheduledActions.FailedCancellation list
+              Failed : CancelScheduledActions.FailedCancellation list
               [<JsonPropertyName("succeeded")>]
-              Succeeded: Did list }
+              Succeeded : Did list }
 
         type FailedCancellation =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("error")>]
-              Error: string
+              Error : string
               [<JsonPropertyName("errorCode")>]
-              ErrorCode: string option }
+              ErrorCode : string option }
 
     module Defs =
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AccountEventStatus>>)>]
@@ -7640,13 +8275,13 @@ module ToolsOzoneModeration =
         /// Logs account status related events on a repo subject. Normally captured by automod from the firehose and emitted to ozone for historical tracking.
         type AccountEvent =
             { [<JsonPropertyName("active")>]
-              Active: bool
+              Active : bool
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("status")>]
-              Status: AccountEventStatus option
+              Status : AccountEventStatus option
               [<JsonPropertyName("timestamp")>]
-              Timestamp: AtDateTime }
+              Timestamp : AtDateTime }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AccountHostingStatus>>)>]
         type AccountHostingStatus =
@@ -7659,41 +8294,41 @@ module ToolsOzoneModeration =
 
         type AccountHosting =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime option
+              CreatedAt : AtDateTime option
               [<JsonPropertyName("deactivatedAt")>]
-              DeactivatedAt: AtDateTime option
+              DeactivatedAt : AtDateTime option
               [<JsonPropertyName("deletedAt")>]
-              DeletedAt: AtDateTime option
+              DeletedAt : AtDateTime option
               [<JsonPropertyName("reactivatedAt")>]
-              ReactivatedAt: AtDateTime option
+              ReactivatedAt : AtDateTime option
               [<JsonPropertyName("status")>]
-              Status: AccountHostingStatus
+              Status : AccountHostingStatus
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: AtDateTime option }
+              UpdatedAt : AtDateTime option }
 
         /// Statistics about a particular account subject
         type AccountStats =
             { [<JsonPropertyName("appealCount")>]
-              AppealCount: int64 option
+              AppealCount : int64 option
               [<JsonPropertyName("escalateCount")>]
-              EscalateCount: int64 option
+              EscalateCount : int64 option
               [<JsonPropertyName("reportCount")>]
-              ReportCount: int64 option
+              ReportCount : int64 option
               [<JsonPropertyName("suspendCount")>]
-              SuspendCount: int64 option
+              SuspendCount : int64 option
               [<JsonPropertyName("takedownCount")>]
-              TakedownCount: int64 option }
+              TakedownCount : int64 option }
 
         /// Strike information for an account
         type AccountStrike =
             { [<JsonPropertyName("activeStrikeCount")>]
-              ActiveStrikeCount: int64 option
+              ActiveStrikeCount : int64 option
               [<JsonPropertyName("firstStrikeAt")>]
-              FirstStrikeAt: AtDateTime option
+              FirstStrikeAt : AtDateTime option
               [<JsonPropertyName("lastStrikeAt")>]
-              LastStrikeAt: AtDateTime option
+              LastStrikeAt : AtDateTime option
               [<JsonPropertyName("totalStrikeCount")>]
-              TotalStrikeCount: int64 option }
+              TotalStrikeCount : int64 option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AgeAssuranceEventStatus>>)>]
         type AgeAssuranceEventStatus =
@@ -7705,25 +8340,25 @@ module ToolsOzoneModeration =
         /// Age assurance info coming directly from users. Only works on DID subjects.
         type AgeAssuranceEvent =
             { [<JsonPropertyName("access")>]
-              Access: AppBskyAgeassurance.Defs.Access option
+              Access : AppBskyAgeassurance.Defs.Access option
               [<JsonPropertyName("attemptId")>]
-              AttemptId: string
+              AttemptId : string
               [<JsonPropertyName("completeIp")>]
-              CompleteIp: string option
+              CompleteIp : string option
               [<JsonPropertyName("completeUa")>]
-              CompleteUa: string option
+              CompleteUa : string option
               [<JsonPropertyName("countryCode")>]
-              CountryCode: string option
+              CountryCode : string option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("initIp")>]
-              InitIp: string option
+              InitIp : string option
               [<JsonPropertyName("initUa")>]
-              InitUa: string option
+              InitUa : string option
               [<JsonPropertyName("regionCode")>]
-              RegionCode: string option
+              RegionCode : string option
               [<JsonPropertyName("status")>]
-              Status: AgeAssuranceEventStatus }
+              Status : AgeAssuranceEventStatus }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<AgeAssuranceOverrideEventStatus>>)>]
         type AgeAssuranceOverrideEventStatus =
@@ -7735,13 +8370,14 @@ module ToolsOzoneModeration =
         /// Age assurance status override by moderators. Only works on DID subjects.
         type AgeAssuranceOverrideEvent =
             { [<JsonPropertyName("access")>]
-              Access: AppBskyAgeassurance.Defs.Access option
+              Access : AppBskyAgeassurance.Defs.Access option
               [<JsonPropertyName("comment")>]
-              Comment: string
+              Comment : string
               [<JsonPropertyName("status")>]
-              Status: AgeAssuranceOverrideEventStatus }
+              Status : AgeAssuranceOverrideEventStatus }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type BlobViewDetailsUnion =
             | [<JsonName("tools.ozone.moderation.defs#imageDetails")>] ImageDetails of Defs.ImageDetails
             | [<JsonName("tools.ozone.moderation.defs#videoDetails")>] VideoDetails of Defs.VideoDetails
@@ -7749,148 +8385,148 @@ module ToolsOzoneModeration =
 
         type BlobView =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("details")>]
-              Details: BlobViewDetailsUnion option
+              Details : BlobViewDetailsUnion option
               [<JsonPropertyName("mimeType")>]
-              MimeType: string
+              MimeType : string
               [<JsonPropertyName("moderation")>]
-              Moderation: Defs.Moderation option
+              Moderation : Defs.Moderation option
               [<JsonPropertyName("size")>]
-              Size: int64 }
+              Size : int64 }
 
         /// Logs cancellation of a scheduled takedown action for an account.
         type CancelScheduledTakedownEvent =
             { [<JsonPropertyName("comment")>]
-              Comment: string option }
+              Comment : string option }
 
         /// Logs identity related events on a repo subject. Normally captured by automod from the firehose and emitted to ozone for historical tracking.
         type IdentityEvent =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("handle")>]
-              Handle: Handle option
+              Handle : Handle option
               [<JsonPropertyName("pdsHost")>]
-              PdsHost: Uri option
+              PdsHost : Uri option
               [<JsonPropertyName("timestamp")>]
-              Timestamp: AtDateTime
+              Timestamp : AtDateTime
               [<JsonPropertyName("tombstone")>]
-              Tombstone: bool option }
+              Tombstone : bool option }
 
         type ImageDetails =
             { [<JsonPropertyName("height")>]
-              Height: int64
+              Height : int64
               [<JsonPropertyName("width")>]
-              Width: int64 }
+              Width : int64 }
 
         type ModEventAcknowledge =
             { [<JsonPropertyName("acknowledgeAccountSubjects")>]
-              AcknowledgeAccountSubjects: bool option
+              AcknowledgeAccountSubjects : bool option
               [<JsonPropertyName("comment")>]
-              Comment: string option }
+              Comment : string option }
 
         /// Add a comment to a subject. An empty comment will clear any previously set sticky comment.
         type ModEventComment =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("sticky")>]
-              Sticky: bool option }
+              Sticky : bool option }
 
         /// Divert a record's blobs to a 3rd party service for further scanning/tagging
         type ModEventDivert =
             { [<JsonPropertyName("comment")>]
-              Comment: string option }
+              Comment : string option }
 
         /// Keep a log of outgoing email to a user
         type ModEventEmail =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("content")>]
-              Content: string option
+              Content : string option
               [<JsonPropertyName("isDelivered")>]
-              IsDelivered: bool option
+              IsDelivered : bool option
               [<JsonPropertyName("policies")>]
-              Policies: string list option
+              Policies : string list option
               [<JsonPropertyName("severityLevel")>]
-              SeverityLevel: string option
+              SeverityLevel : string option
               [<JsonPropertyName("strikeCount")>]
-              StrikeCount: int64 option
+              StrikeCount : int64 option
               [<JsonPropertyName("strikeExpiresAt")>]
-              StrikeExpiresAt: AtDateTime option
+              StrikeExpiresAt : AtDateTime option
               [<JsonPropertyName("subjectLine")>]
-              SubjectLine: string }
+              SubjectLine : string }
 
         type ModEventEscalate =
             { [<JsonPropertyName("comment")>]
-              Comment: string option }
+              Comment : string option }
 
         /// Apply/Negate labels on a subject
         type ModEventLabel =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("createLabelVals")>]
-              CreateLabelVals: string list
+              CreateLabelVals : string list
               [<JsonPropertyName("durationInHours")>]
-              DurationInHours: int64 option
+              DurationInHours : int64 option
               [<JsonPropertyName("negateLabelVals")>]
-              NegateLabelVals: string list }
+              NegateLabelVals : string list }
 
         /// Mute incoming reports on a subject
         type ModEventMute =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("durationInHours")>]
-              DurationInHours: int64 }
+              DurationInHours : int64 }
 
         /// Mute incoming reports from an account
         type ModEventMuteReporter =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("durationInHours")>]
-              DurationInHours: int64 option }
+              DurationInHours : int64 option }
 
         /// Set priority score of the subject. Higher score means higher priority.
         type ModEventPriorityScore =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("score")>]
-              Score: int64 }
+              Score : int64 }
 
         /// Report a subject
         type ModEventReport =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("isReporterMuted")>]
-              IsReporterMuted: bool option
+              IsReporterMuted : bool option
               [<JsonPropertyName("reportType")>]
-              ReportType: ComAtprotoModeration.Defs.ReasonType }
+              ReportType : ComAtprotoModeration.Defs.ReasonType }
 
         /// Resolve appeal on a subject
         type ModEventResolveAppeal =
             { [<JsonPropertyName("comment")>]
-              Comment: string option }
+              Comment : string option }
 
         /// Revert take down action on a subject
         type ModEventReverseTakedown =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("policies")>]
-              Policies: string list option
+              Policies : string list option
               [<JsonPropertyName("severityLevel")>]
-              SeverityLevel: string option
+              SeverityLevel : string option
               [<JsonPropertyName("strikeCount")>]
-              StrikeCount: int64 option }
+              StrikeCount : int64 option }
 
         /// Add/Remove a tag on a subject
         type ModEventTag =
             { [<JsonPropertyName("add")>]
-              Add: string list
+              Add : string list
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("remove")>]
-              Remove: string list }
+              Remove : string list }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ModEventTakedownTargetServicesItem>>)>]
         type ModEventTakedownTargetServicesItem =
@@ -7901,33 +8537,34 @@ module ToolsOzoneModeration =
         /// Take down a subject permanently or temporarily
         type ModEventTakedown =
             { [<JsonPropertyName("acknowledgeAccountSubjects")>]
-              AcknowledgeAccountSubjects: bool option
+              AcknowledgeAccountSubjects : bool option
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("durationInHours")>]
-              DurationInHours: int64 option
+              DurationInHours : int64 option
               [<JsonPropertyName("policies")>]
-              Policies: string list option
+              Policies : string list option
               [<JsonPropertyName("severityLevel")>]
-              SeverityLevel: string option
+              SeverityLevel : string option
               [<JsonPropertyName("strikeCount")>]
-              StrikeCount: int64 option
+              StrikeCount : int64 option
               [<JsonPropertyName("strikeExpiresAt")>]
-              StrikeExpiresAt: AtDateTime option
+              StrikeExpiresAt : AtDateTime option
               [<JsonPropertyName("targetServices")>]
-              TargetServices: ModEventTakedownTargetServicesItem list option }
+              TargetServices : ModEventTakedownTargetServicesItem list option }
 
         /// Unmute action on a subject
         type ModEventUnmute =
             { [<JsonPropertyName("comment")>]
-              Comment: string option }
+              Comment : string option }
 
         /// Unmute incoming reports from an account
         type ModEventUnmuteReporter =
             { [<JsonPropertyName("comment")>]
-              Comment: string option }
+              Comment : string option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ModEventViewEventUnion =
             | [<JsonName("tools.ozone.moderation.defs#modEventTakedown")>] ModEventTakedown of Defs.ModEventTakedown
             | [<JsonName("tools.ozone.moderation.defs#modEventReverseTakedown")>] ModEventReverseTakedown of
@@ -7965,7 +8602,8 @@ module ToolsOzoneModeration =
                 Defs.CancelScheduledTakedownEvent
             | Unknown of string * System.Text.Json.JsonElement
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ModEventViewSubjectUnion =
             | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of ComAtprotoAdmin.Defs.RepoRef
             | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
@@ -7974,25 +8612,26 @@ module ToolsOzoneModeration =
 
         type ModEventView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did
+              CreatedBy : Did
               [<JsonPropertyName("creatorHandle")>]
-              CreatorHandle: string option
+              CreatorHandle : string option
               [<JsonPropertyName("event")>]
-              Event: ModEventViewEventUnion
+              Event : ModEventViewEventUnion
               [<JsonPropertyName("id")>]
-              Id: int64
+              Id : int64
               [<JsonPropertyName("modTool")>]
-              ModTool: Defs.ModTool option
+              ModTool : Defs.ModTool option
               [<JsonPropertyName("subject")>]
-              Subject: ModEventViewSubjectUnion
+              Subject : ModEventViewSubjectUnion
               [<JsonPropertyName("subjectBlobCids")>]
-              SubjectBlobCids: string list
+              SubjectBlobCids : string list
               [<JsonPropertyName("subjectHandle")>]
-              SubjectHandle: string option }
+              SubjectHandle : string option }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ModEventViewDetailEventUnion =
             | [<JsonName("tools.ozone.moderation.defs#modEventTakedown")>] ModEventTakedown of Defs.ModEventTakedown
             | [<JsonName("tools.ozone.moderation.defs#modEventReverseTakedown")>] ModEventReverseTakedown of
@@ -8030,7 +8669,8 @@ module ToolsOzoneModeration =
                 Defs.CancelScheduledTakedownEvent
             | Unknown of string * System.Text.Json.JsonElement
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type ModEventViewDetailSubjectUnion =
             | [<JsonName("tools.ozone.moderation.defs#repoView")>] RepoView of Defs.RepoView
             | [<JsonName("tools.ozone.moderation.defs#repoViewNotFound")>] RepoViewNotFound of Defs.RepoViewNotFound
@@ -8041,34 +8681,34 @@ module ToolsOzoneModeration =
 
         type ModEventViewDetail =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did
+              CreatedBy : Did
               [<JsonPropertyName("event")>]
-              Event: ModEventViewDetailEventUnion
+              Event : ModEventViewDetailEventUnion
               [<JsonPropertyName("id")>]
-              Id: int64
+              Id : int64
               [<JsonPropertyName("modTool")>]
-              ModTool: Defs.ModTool option
+              ModTool : Defs.ModTool option
               [<JsonPropertyName("subject")>]
-              Subject: ModEventViewDetailSubjectUnion
+              Subject : ModEventViewDetailSubjectUnion
               [<JsonPropertyName("subjectBlobs")>]
-              SubjectBlobs: Defs.BlobView list }
+              SubjectBlobs : Defs.BlobView list }
 
         /// Moderation tool information for tracing the source of the action
         type ModTool =
             { [<JsonPropertyName("meta")>]
-              Meta: JsonElement option
+              Meta : JsonElement option
               [<JsonPropertyName("name")>]
-              Name: string }
+              Name : string }
 
         type Moderation =
             { [<JsonPropertyName("subjectStatus")>]
-              SubjectStatus: Defs.SubjectStatusView option }
+              SubjectStatus : Defs.SubjectStatusView option }
 
         type ModerationDetail =
             { [<JsonPropertyName("subjectStatus")>]
-              SubjectStatus: Defs.SubjectStatusView option }
+              SubjectStatus : Defs.SubjectStatusView option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<RecordEventOp>>)>]
         type RecordEventOp =
@@ -8080,13 +8720,13 @@ module ToolsOzoneModeration =
         /// Logs lifecycle event on a record subject. Normally captured by automod from the firehose and emitted to ozone for historical tracking.
         type RecordEvent =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("op")>]
-              Op: RecordEventOp
+              Op : RecordEventOp
               [<JsonPropertyName("timestamp")>]
-              Timestamp: AtDateTime }
+              Timestamp : AtDateTime }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<RecordHostingStatus>>)>]
         type RecordHostingStatus =
@@ -8096,148 +8736,148 @@ module ToolsOzoneModeration =
 
         type RecordHosting =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime option
+              CreatedAt : AtDateTime option
               [<JsonPropertyName("deletedAt")>]
-              DeletedAt: AtDateTime option
+              DeletedAt : AtDateTime option
               [<JsonPropertyName("status")>]
-              Status: RecordHostingStatus
+              Status : RecordHostingStatus
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: AtDateTime option }
+              UpdatedAt : AtDateTime option }
 
         type RecordView =
             { [<JsonPropertyName("blobCids")>]
-              BlobCids: Cid list
+              BlobCids : Cid list
               [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("moderation")>]
-              Moderation: Defs.Moderation
+              Moderation : Defs.Moderation
               [<JsonPropertyName("repo")>]
-              Repo: Defs.RepoView
+              Repo : Defs.RepoView
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("value")>]
-              Value: JsonElement }
+              Value : JsonElement }
 
         type RecordViewDetail =
             { [<JsonPropertyName("blobs")>]
-              Blobs: Defs.BlobView list
+              Blobs : Defs.BlobView list
               [<JsonPropertyName("cid")>]
-              Cid: Cid
+              Cid : Cid
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("moderation")>]
-              Moderation: Defs.ModerationDetail
+              Moderation : Defs.ModerationDetail
               [<JsonPropertyName("repo")>]
-              Repo: Defs.RepoView
+              Repo : Defs.RepoView
               [<JsonPropertyName("uri")>]
-              Uri: AtUri
+              Uri : AtUri
               [<JsonPropertyName("value")>]
-              Value: JsonElement }
+              Value : JsonElement }
 
         type RecordViewNotFound =
             { [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         /// Statistics about a set of record subject items
         type RecordsStats =
             { [<JsonPropertyName("appealedCount")>]
-              AppealedCount: int64 option
+              AppealedCount : int64 option
               [<JsonPropertyName("escalatedCount")>]
-              EscalatedCount: int64 option
+              EscalatedCount : int64 option
               [<JsonPropertyName("pendingCount")>]
-              PendingCount: int64 option
+              PendingCount : int64 option
               [<JsonPropertyName("processedCount")>]
-              ProcessedCount: int64 option
+              ProcessedCount : int64 option
               [<JsonPropertyName("reportedCount")>]
-              ReportedCount: int64 option
+              ReportedCount : int64 option
               [<JsonPropertyName("subjectCount")>]
-              SubjectCount: int64 option
+              SubjectCount : int64 option
               [<JsonPropertyName("takendownCount")>]
-              TakendownCount: int64 option
+              TakendownCount : int64 option
               [<JsonPropertyName("totalReports")>]
-              TotalReports: int64 option }
+              TotalReports : int64 option }
 
         type RepoView =
             { [<JsonPropertyName("deactivatedAt")>]
-              DeactivatedAt: AtDateTime option
+              DeactivatedAt : AtDateTime option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("inviteNote")>]
-              InviteNote: string option
+              InviteNote : string option
               [<JsonPropertyName("invitedBy")>]
-              InvitedBy: ComAtprotoServer.Defs.InviteCode option
+              InvitedBy : ComAtprotoServer.Defs.InviteCode option
               [<JsonPropertyName("invitesDisabled")>]
-              InvitesDisabled: bool option
+              InvitesDisabled : bool option
               [<JsonPropertyName("moderation")>]
-              Moderation: Defs.Moderation
+              Moderation : Defs.Moderation
               [<JsonPropertyName("relatedRecords")>]
-              RelatedRecords: JsonElement list
+              RelatedRecords : JsonElement list
               [<JsonPropertyName("threatSignatures")>]
-              ThreatSignatures: ComAtprotoAdmin.Defs.ThreatSignature list option }
+              ThreatSignatures : ComAtprotoAdmin.Defs.ThreatSignature list option }
 
         type RepoViewDetail =
             { [<JsonPropertyName("deactivatedAt")>]
-              DeactivatedAt: AtDateTime option
+              DeactivatedAt : AtDateTime option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("email")>]
-              Email: string option
+              Email : string option
               [<JsonPropertyName("emailConfirmedAt")>]
-              EmailConfirmedAt: AtDateTime option
+              EmailConfirmedAt : AtDateTime option
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("indexedAt")>]
-              IndexedAt: AtDateTime
+              IndexedAt : AtDateTime
               [<JsonPropertyName("inviteNote")>]
-              InviteNote: string option
+              InviteNote : string option
               [<JsonPropertyName("invitedBy")>]
-              InvitedBy: ComAtprotoServer.Defs.InviteCode option
+              InvitedBy : ComAtprotoServer.Defs.InviteCode option
               [<JsonPropertyName("invites")>]
-              Invites: ComAtprotoServer.Defs.InviteCode list option
+              Invites : ComAtprotoServer.Defs.InviteCode list option
               [<JsonPropertyName("invitesDisabled")>]
-              InvitesDisabled: bool option
+              InvitesDisabled : bool option
               [<JsonPropertyName("labels")>]
-              Labels: ComAtprotoLabel.Defs.Label list option
+              Labels : ComAtprotoLabel.Defs.Label list option
               [<JsonPropertyName("moderation")>]
-              Moderation: Defs.ModerationDetail
+              Moderation : Defs.ModerationDetail
               [<JsonPropertyName("relatedRecords")>]
-              RelatedRecords: JsonElement list
+              RelatedRecords : JsonElement list
               [<JsonPropertyName("threatSignatures")>]
-              ThreatSignatures: ComAtprotoAdmin.Defs.ThreatSignature list option }
+              ThreatSignatures : ComAtprotoAdmin.Defs.ThreatSignature list option }
 
         type RepoViewNotFound =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         type ReporterStats =
             { [<JsonPropertyName("accountReportCount")>]
-              AccountReportCount: int64
+              AccountReportCount : int64
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("labeledAccountCount")>]
-              LabeledAccountCount: int64
+              LabeledAccountCount : int64
               [<JsonPropertyName("labeledRecordCount")>]
-              LabeledRecordCount: int64
+              LabeledRecordCount : int64
               [<JsonPropertyName("recordReportCount")>]
-              RecordReportCount: int64
+              RecordReportCount : int64
               [<JsonPropertyName("reportedAccountCount")>]
-              ReportedAccountCount: int64
+              ReportedAccountCount : int64
               [<JsonPropertyName("reportedRecordCount")>]
-              ReportedRecordCount: int64
+              ReportedRecordCount : int64
               [<JsonPropertyName("takendownAccountCount")>]
-              TakendownAccountCount: int64
+              TakendownAccountCount : int64
               [<JsonPropertyName("takendownRecordCount")>]
-              TakendownRecordCount: int64 }
+              TakendownRecordCount : int64 }
 
         [<Literal>]
         let ReviewClosed = "tools.ozone.moderation.defs#reviewClosed"
@@ -8254,18 +8894,18 @@ module ToolsOzoneModeration =
         /// Account credentials revocation by moderators. Only works on DID subjects.
         type RevokeAccountCredentialsEvent =
             { [<JsonPropertyName("comment")>]
-              Comment: string }
+              Comment : string }
 
         /// Logs a scheduled takedown action for an account.
         type ScheduleTakedownEvent =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("executeAfter")>]
-              ExecuteAfter: AtDateTime option
+              ExecuteAfter : AtDateTime option
               [<JsonPropertyName("executeAt")>]
-              ExecuteAt: AtDateTime option
+              ExecuteAt : AtDateTime option
               [<JsonPropertyName("executeUntil")>]
-              ExecuteUntil: AtDateTime option }
+              ExecuteUntil : AtDateTime option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ScheduledActionViewAction>>)>]
         type ScheduledActionViewAction =
@@ -8283,35 +8923,35 @@ module ToolsOzoneModeration =
         /// View of a scheduled moderation action
         type ScheduledActionView =
             { [<JsonPropertyName("action")>]
-              Action: ScheduledActionViewAction
+              Action : ScheduledActionViewAction
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did
+              CreatedBy : Did
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("eventData")>]
-              EventData: JsonElement option
+              EventData : JsonElement option
               [<JsonPropertyName("executeAfter")>]
-              ExecuteAfter: AtDateTime option
+              ExecuteAfter : AtDateTime option
               [<JsonPropertyName("executeAt")>]
-              ExecuteAt: AtDateTime option
+              ExecuteAt : AtDateTime option
               [<JsonPropertyName("executeUntil")>]
-              ExecuteUntil: AtDateTime option
+              ExecuteUntil : AtDateTime option
               [<JsonPropertyName("executionEventId")>]
-              ExecutionEventId: int64 option
+              ExecutionEventId : int64 option
               [<JsonPropertyName("id")>]
-              Id: int64
+              Id : int64
               [<JsonPropertyName("lastExecutedAt")>]
-              LastExecutedAt: AtDateTime option
+              LastExecutedAt : AtDateTime option
               [<JsonPropertyName("lastFailureReason")>]
-              LastFailureReason: string option
+              LastFailureReason : string option
               [<JsonPropertyName("randomizeExecution")>]
-              RandomizeExecution: bool option
+              RandomizeExecution : bool option
               [<JsonPropertyName("status")>]
-              Status: ScheduledActionViewStatus
+              Status : ScheduledActionViewStatus
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: AtDateTime option }
+              UpdatedAt : AtDateTime option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<SubjectReviewState>>)>]
         type SubjectReviewState =
@@ -8336,13 +8976,15 @@ module ToolsOzoneModeration =
             | [<JsonName("user")>] User
             | Unknown of string
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type SubjectStatusViewHostingUnion =
             | [<JsonName("tools.ozone.moderation.defs#accountHosting")>] AccountHosting of Defs.AccountHosting
             | [<JsonName("tools.ozone.moderation.defs#recordHosting")>] RecordHosting of Defs.RecordHosting
             | Unknown of string * System.Text.Json.JsonElement
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type SubjectStatusViewSubjectUnion =
             | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of ComAtprotoAdmin.Defs.RepoRef
             | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
@@ -8351,73 +8993,74 @@ module ToolsOzoneModeration =
 
         type SubjectStatusView =
             { [<JsonPropertyName("accountStats")>]
-              AccountStats: Defs.AccountStats option
+              AccountStats : Defs.AccountStats option
               [<JsonPropertyName("accountStrike")>]
-              AccountStrike: Defs.AccountStrike option
+              AccountStrike : Defs.AccountStrike option
               [<JsonPropertyName("ageAssuranceState")>]
-              AgeAssuranceState: SubjectStatusViewAgeAssuranceState option
+              AgeAssuranceState : SubjectStatusViewAgeAssuranceState option
               [<JsonPropertyName("ageAssuranceUpdatedBy")>]
-              AgeAssuranceUpdatedBy: SubjectStatusViewAgeAssuranceUpdatedBy option
+              AgeAssuranceUpdatedBy : SubjectStatusViewAgeAssuranceUpdatedBy option
               [<JsonPropertyName("appealed")>]
-              Appealed: bool option
+              Appealed : bool option
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("hosting")>]
-              Hosting: SubjectStatusViewHostingUnion option
+              Hosting : SubjectStatusViewHostingUnion option
               [<JsonPropertyName("id")>]
-              Id: int64
+              Id : int64
               [<JsonPropertyName("lastAppealedAt")>]
-              LastAppealedAt: AtDateTime option
+              LastAppealedAt : AtDateTime option
               [<JsonPropertyName("lastReportedAt")>]
-              LastReportedAt: AtDateTime option
+              LastReportedAt : AtDateTime option
               [<JsonPropertyName("lastReviewedAt")>]
-              LastReviewedAt: AtDateTime option
+              LastReviewedAt : AtDateTime option
               [<JsonPropertyName("lastReviewedBy")>]
-              LastReviewedBy: Did option
+              LastReviewedBy : Did option
               [<JsonPropertyName("muteReportingUntil")>]
-              MuteReportingUntil: AtDateTime option
+              MuteReportingUntil : AtDateTime option
               [<JsonPropertyName("muteUntil")>]
-              MuteUntil: AtDateTime option
+              MuteUntil : AtDateTime option
               [<JsonPropertyName("priorityScore")>]
-              PriorityScore: int64 option
+              PriorityScore : int64 option
               [<JsonPropertyName("recordsStats")>]
-              RecordsStats: Defs.RecordsStats option
+              RecordsStats : Defs.RecordsStats option
               [<JsonPropertyName("reviewState")>]
-              ReviewState: Defs.SubjectReviewState
+              ReviewState : Defs.SubjectReviewState
               [<JsonPropertyName("subject")>]
-              Subject: SubjectStatusViewSubjectUnion
+              Subject : SubjectStatusViewSubjectUnion
               [<JsonPropertyName("subjectBlobCids")>]
-              SubjectBlobCids: Cid list option
+              SubjectBlobCids : Cid list option
               [<JsonPropertyName("subjectRepoHandle")>]
-              SubjectRepoHandle: string option
+              SubjectRepoHandle : string option
               [<JsonPropertyName("suspendUntil")>]
-              SuspendUntil: AtDateTime option
+              SuspendUntil : AtDateTime option
               [<JsonPropertyName("tags")>]
-              Tags: string list option
+              Tags : string list option
               [<JsonPropertyName("takendown")>]
-              Takendown: bool option
+              Takendown : bool option
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: AtDateTime }
+              UpdatedAt : AtDateTime }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
-        type SubjectViewProfileUnion = Unknown of string * System.Text.Json.JsonElement
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
+        type SubjectViewProfileUnion = | Unknown of string * System.Text.Json.JsonElement
 
         /// Detailed view of a subject. For record subjects, the author's repo and profile will be returned.
         type SubjectView =
             { [<JsonPropertyName("profile")>]
-              Profile: SubjectViewProfileUnion option
+              Profile : SubjectViewProfileUnion option
               [<JsonPropertyName("record")>]
-              Record: Defs.RecordViewDetail option
+              Record : Defs.RecordViewDetail option
               [<JsonPropertyName("repo")>]
-              Repo: Defs.RepoViewDetail option
+              Repo : Defs.RepoViewDetail option
               [<JsonPropertyName("status")>]
-              Status: Defs.SubjectStatusView option
+              Status : Defs.SubjectStatusView option
               [<JsonPropertyName("subject")>]
-              Subject: string
+              Subject : string
               [<JsonPropertyName("type")>]
-              Type: ComAtprotoModeration.Defs.SubjectType }
+              Type : ComAtprotoModeration.Defs.SubjectType }
 
         [<Literal>]
         let TimelineEventPlcCreate = "tools.ozone.moderation.defs#timelineEventPlcCreate"
@@ -8432,20 +9075,24 @@ module ToolsOzoneModeration =
 
         type VideoDetails =
             { [<JsonPropertyName("height")>]
-              Height: int64
+              Height : int64
               [<JsonPropertyName("length")>]
-              Length: int64
+              Length : int64
               [<JsonPropertyName("width")>]
-              Width: int64 }
+              Width : int64 }
 
     module EmitEvent =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.emitEvent"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type InputEventUnion =
             | [<JsonName("tools.ozone.moderation.defs#modEventTakedown")>] ModEventTakedown of Defs.ModEventTakedown
             | [<JsonName("tools.ozone.moderation.defs#modEventAcknowledge")>] ModEventAcknowledge of
@@ -8483,7 +9130,8 @@ module ToolsOzoneModeration =
                 Defs.CancelScheduledTakedownEvent
             | Unknown of string * System.Text.Json.JsonElement
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type InputSubjectUnion =
             | [<JsonName("com.atproto.admin.defs#repoRef")>] RepoRef of ComAtprotoAdmin.Defs.RepoRef
             | [<JsonName("com.atproto.repo.strongRef")>] StrongRef of ComAtprotoRepo.StrongRef.StrongRef
@@ -8491,17 +9139,17 @@ module ToolsOzoneModeration =
 
         type Input =
             { [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did
+              CreatedBy : Did
               [<JsonPropertyName("event")>]
-              Event: InputEventUnion
+              Event : InputEventUnion
               [<JsonPropertyName("externalId")>]
-              ExternalId: string option
+              ExternalId : string option
               [<JsonPropertyName("modTool")>]
-              ModTool: Defs.ModTool option
+              ModTool : Defs.ModTool option
               [<JsonPropertyName("subject")>]
-              Subject: InputSubjectUnion
+              Subject : InputSubjectUnion
               [<JsonPropertyName("subjectBlobCids")>]
-              SubjectBlobCids: Cid list option }
+              SubjectBlobCids : Cid list option }
 
         type Output = Defs.ModEventView
 
@@ -8516,16 +9164,19 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getAccountTimeline"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         type Output =
             { [<JsonPropertyName("timeline")>]
-              Timeline: GetAccountTimeline.TimelineItem list }
+              Timeline : GetAccountTimeline.TimelineItem list }
 
         module Errors =
             [<Literal>]
@@ -8533,9 +9184,9 @@ module ToolsOzoneModeration =
 
         type TimelineItem =
             { [<JsonPropertyName("day")>]
-              Day: string
+              Day : string
               [<JsonPropertyName("summary")>]
-              Summary: GetAccountTimeline.TimelineItemSummary list }
+              Summary : GetAccountTimeline.TimelineItemSummary list }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<TimelineItemSummaryEventSubjectType>>)>]
         type TimelineItemSummaryEventSubjectType =
@@ -8581,22 +9232,25 @@ module ToolsOzoneModeration =
 
         type TimelineItemSummary =
             { [<JsonPropertyName("count")>]
-              Count: int64
+              Count : int64
               [<JsonPropertyName("eventSubjectType")>]
-              EventSubjectType: TimelineItemSummaryEventSubjectType
+              EventSubjectType : TimelineItemSummaryEventSubjectType
               [<JsonPropertyName("eventType")>]
-              EventType: TimelineItemSummaryEventType }
+              EventType : TimelineItemSummaryEventType }
 
     module GetEvent =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getEvent"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("id")>]
-              Id: int64 }
+              Id : int64 }
 
         type Output = Defs.ModEventViewDetail
 
@@ -8604,14 +9258,17 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getRecord"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cid")>]
-              Cid: Cid option
+              Cid : Cid option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
         type Output = Defs.RecordViewDetail
 
@@ -8623,14 +9280,18 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getRecords"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("uris")>]
-              Uris: AtUri list }
+              Uris : AtUri list }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputRecordsItem =
             | [<JsonName("tools.ozone.moderation.defs#recordViewDetail")>] RecordViewDetail of Defs.RecordViewDetail
             | [<JsonName("tools.ozone.moderation.defs#recordViewNotFound")>] RecordViewNotFound of
@@ -8639,18 +9300,21 @@ module ToolsOzoneModeration =
 
         type Output =
             { [<JsonPropertyName("records")>]
-              Records: OutputRecordsItem list }
+              Records : OutputRecordsItem list }
 
     module GetRepo =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getRepo"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         type Output = Defs.RepoViewDetail
 
@@ -8662,29 +9326,36 @@ module ToolsOzoneModeration =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getReporterStats"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("dids")>]
-              Dids: Did list }
+              Dids : Did list }
 
         type Output =
             { [<JsonPropertyName("stats")>]
-              Stats: Defs.ReporterStats list }
+              Stats : Defs.ReporterStats list }
 
     module GetRepos =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getRepos"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("dids")>]
-              Dids: Did list }
+              Dids : Did list }
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type OutputReposItem =
             | [<JsonName("tools.ozone.moderation.defs#repoViewDetail")>] RepoViewDetail of Defs.RepoViewDetail
             | [<JsonName("tools.ozone.moderation.defs#repoViewNotFound")>] RepoViewNotFound of Defs.RepoViewNotFound
@@ -8692,28 +9363,34 @@ module ToolsOzoneModeration =
 
         type Output =
             { [<JsonPropertyName("repos")>]
-              Repos: OutputReposItem list }
+              Repos : OutputReposItem list }
 
     module GetSubjects =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.getSubjects"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("subjects")>]
-              Subjects: string list }
+              Subjects : string list }
 
         type Output =
             { [<JsonPropertyName("subjects")>]
-              Subjects: Defs.SubjectView list }
+              Subjects : Defs.SubjectView list }
 
     module ListScheduledActions =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.listScheduledActions"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputStatusesItem>>)>]
@@ -8726,29 +9403,32 @@ module ToolsOzoneModeration =
 
         type Input =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("endsBefore")>]
-              EndsBefore: AtDateTime option
+              EndsBefore : AtDateTime option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("startsAfter")>]
-              StartsAfter: AtDateTime option
+              StartsAfter : AtDateTime option
               [<JsonPropertyName("statuses")>]
-              Statuses: InputStatusesItem list
+              Statuses : InputStatusesItem list
               [<JsonPropertyName("subjects")>]
-              Subjects: Did list option }
+              Subjects : Did list option }
 
         type Output =
             { [<JsonPropertyName("actions")>]
-              Actions: Defs.ScheduledActionView list
+              Actions : Defs.ScheduledActionView list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
     module QueryEvents =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.queryEvents"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsAgeAssuranceState>>)>]
@@ -8768,63 +9448,66 @@ module ToolsOzoneModeration =
 
         type Params =
             { [<JsonPropertyName("addedLabels")>]
-              AddedLabels: string list option
+              AddedLabels : string list option
               [<JsonPropertyName("addedTags")>]
-              AddedTags: string list option
+              AddedTags : string list option
               [<JsonPropertyName("ageAssuranceState")>]
-              AgeAssuranceState: ParamsAgeAssuranceState option
+              AgeAssuranceState : ParamsAgeAssuranceState option
               [<JsonPropertyName("batchId")>]
-              BatchId: string option
+              BatchId : string option
               [<JsonPropertyName("collections")>]
-              Collections: Nsid list option
+              Collections : Nsid list option
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("createdAfter")>]
-              CreatedAfter: AtDateTime option
+              CreatedAfter : AtDateTime option
               [<JsonPropertyName("createdBefore")>]
-              CreatedBefore: AtDateTime option
+              CreatedBefore : AtDateTime option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did option
+              CreatedBy : Did option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("hasComment")>]
-              HasComment: bool option
+              HasComment : bool option
               [<JsonPropertyName("includeAllUserRecords")>]
-              IncludeAllUserRecords: bool option
+              IncludeAllUserRecords : bool option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("modTool")>]
-              ModTool: string list option
+              ModTool : string list option
               [<JsonPropertyName("policies")>]
-              Policies: string list option
+              Policies : string list option
               [<JsonPropertyName("removedLabels")>]
-              RemovedLabels: string list option
+              RemovedLabels : string list option
               [<JsonPropertyName("removedTags")>]
-              RemovedTags: string list option
+              RemovedTags : string list option
               [<JsonPropertyName("reportTypes")>]
-              ReportTypes: string list option
+              ReportTypes : string list option
               [<JsonPropertyName("sortDirection")>]
-              SortDirection: string option
+              SortDirection : string option
               [<JsonPropertyName("subject")>]
-              Subject: Uri option
+              Subject : Uri option
               [<JsonPropertyName("subjectType")>]
-              SubjectType: ParamsSubjectType option
+              SubjectType : ParamsSubjectType option
               [<JsonPropertyName("types")>]
-              Types: string list option
+              Types : string list option
               [<JsonPropertyName("withStrike")>]
-              WithStrike: bool option }
+              WithStrike : bool option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("events")>]
-              Events: Defs.ModEventView list }
+              Events : Defs.ModEventView list }
 
     module QueryStatuses =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.queryStatuses"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsAgeAssuranceState>>)>]
@@ -8852,176 +9535,183 @@ module ToolsOzoneModeration =
 
         type Params =
             { [<JsonPropertyName("ageAssuranceState")>]
-              AgeAssuranceState: ParamsAgeAssuranceState option
+              AgeAssuranceState : ParamsAgeAssuranceState option
               [<JsonPropertyName("appealed")>]
-              Appealed: bool option
+              Appealed : bool option
               [<JsonPropertyName("collections")>]
-              Collections: Nsid list option
+              Collections : Nsid list option
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("excludeTags")>]
-              ExcludeTags: string list option
+              ExcludeTags : string list option
               [<JsonPropertyName("hostingDeletedAfter")>]
-              HostingDeletedAfter: AtDateTime option
+              HostingDeletedAfter : AtDateTime option
               [<JsonPropertyName("hostingDeletedBefore")>]
-              HostingDeletedBefore: AtDateTime option
+              HostingDeletedBefore : AtDateTime option
               [<JsonPropertyName("hostingStatuses")>]
-              HostingStatuses: string list option
+              HostingStatuses : string list option
               [<JsonPropertyName("hostingUpdatedAfter")>]
-              HostingUpdatedAfter: AtDateTime option
+              HostingUpdatedAfter : AtDateTime option
               [<JsonPropertyName("hostingUpdatedBefore")>]
-              HostingUpdatedBefore: AtDateTime option
+              HostingUpdatedBefore : AtDateTime option
               [<JsonPropertyName("ignoreSubjects")>]
-              IgnoreSubjects: Uri list option
+              IgnoreSubjects : Uri list option
               [<JsonPropertyName("includeAllUserRecords")>]
-              IncludeAllUserRecords: bool option
+              IncludeAllUserRecords : bool option
               [<JsonPropertyName("includeMuted")>]
-              IncludeMuted: bool option
+              IncludeMuted : bool option
               [<JsonPropertyName("lastReviewedBy")>]
-              LastReviewedBy: Did option
+              LastReviewedBy : Did option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("minAccountSuspendCount")>]
-              MinAccountSuspendCount: int64 option
+              MinAccountSuspendCount : int64 option
               [<JsonPropertyName("minPriorityScore")>]
-              MinPriorityScore: int64 option
+              MinPriorityScore : int64 option
               [<JsonPropertyName("minReportedRecordsCount")>]
-              MinReportedRecordsCount: int64 option
+              MinReportedRecordsCount : int64 option
               [<JsonPropertyName("minStrikeCount")>]
-              MinStrikeCount: int64 option
+              MinStrikeCount : int64 option
               [<JsonPropertyName("minTakendownRecordsCount")>]
-              MinTakendownRecordsCount: int64 option
+              MinTakendownRecordsCount : int64 option
               [<JsonPropertyName("onlyMuted")>]
-              OnlyMuted: bool option
+              OnlyMuted : bool option
               [<JsonPropertyName("queueCount")>]
-              QueueCount: int64 option
+              QueueCount : int64 option
               [<JsonPropertyName("queueIndex")>]
-              QueueIndex: int64 option
+              QueueIndex : int64 option
               [<JsonPropertyName("queueSeed")>]
-              QueueSeed: string option
+              QueueSeed : string option
               [<JsonPropertyName("reportedAfter")>]
-              ReportedAfter: AtDateTime option
+              ReportedAfter : AtDateTime option
               [<JsonPropertyName("reportedBefore")>]
-              ReportedBefore: AtDateTime option
+              ReportedBefore : AtDateTime option
               [<JsonPropertyName("reviewState")>]
-              ReviewState: ParamsReviewState option
+              ReviewState : ParamsReviewState option
               [<JsonPropertyName("reviewedAfter")>]
-              ReviewedAfter: AtDateTime option
+              ReviewedAfter : AtDateTime option
               [<JsonPropertyName("reviewedBefore")>]
-              ReviewedBefore: AtDateTime option
+              ReviewedBefore : AtDateTime option
               [<JsonPropertyName("sortDirection")>]
-              SortDirection: string option
+              SortDirection : string option
               [<JsonPropertyName("sortField")>]
-              SortField: string option
+              SortField : string option
               [<JsonPropertyName("subject")>]
-              Subject: Uri option
+              Subject : Uri option
               [<JsonPropertyName("subjectType")>]
-              SubjectType: ParamsSubjectType option
+              SubjectType : ParamsSubjectType option
               [<JsonPropertyName("tags")>]
-              Tags: string list option
+              Tags : string list option
               [<JsonPropertyName("takendown")>]
-              Takendown: bool option }
+              Takendown : bool option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("subjectStatuses")>]
-              SubjectStatuses: Defs.SubjectStatusView list }
+              SubjectStatuses : Defs.SubjectStatusView list }
 
     module ScheduleAction =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.scheduleAction"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type InputActionUnion =
             | [<JsonName("tools.ozone.moderation.scheduleAction#takedown")>] Takedown of ScheduleAction.Takedown
             | Unknown of string * System.Text.Json.JsonElement
 
         type Input =
             { [<JsonPropertyName("action")>]
-              Action: InputActionUnion
+              Action : InputActionUnion
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did
+              CreatedBy : Did
               [<JsonPropertyName("modTool")>]
-              ModTool: Defs.ModTool option
+              ModTool : Defs.ModTool option
               [<JsonPropertyName("scheduling")>]
-              Scheduling: ScheduleAction.SchedulingConfig
+              Scheduling : ScheduleAction.SchedulingConfig
               [<JsonPropertyName("subjects")>]
-              Subjects: Did list }
+              Subjects : Did list }
 
         type Output = ScheduleAction.ScheduledActionResults
 
         type FailedScheduling =
             { [<JsonPropertyName("error")>]
-              Error: string
+              Error : string
               [<JsonPropertyName("errorCode")>]
-              ErrorCode: string option
+              ErrorCode : string option
               [<JsonPropertyName("subject")>]
-              Subject: Did }
+              Subject : Did }
 
         type ScheduledActionResults =
             { [<JsonPropertyName("failed")>]
-              Failed: ScheduleAction.FailedScheduling list
+              Failed : ScheduleAction.FailedScheduling list
               [<JsonPropertyName("succeeded")>]
-              Succeeded: Did list }
+              Succeeded : Did list }
 
         /// Configuration for when the action should be executed
         type SchedulingConfig =
             { [<JsonPropertyName("executeAfter")>]
-              ExecuteAfter: AtDateTime option
+              ExecuteAfter : AtDateTime option
               [<JsonPropertyName("executeAt")>]
-              ExecuteAt: AtDateTime option
+              ExecuteAt : AtDateTime option
               [<JsonPropertyName("executeUntil")>]
-              ExecuteUntil: AtDateTime option }
+              ExecuteUntil : AtDateTime option }
 
         /// Schedule a takedown action
         type Takedown =
             { [<JsonPropertyName("acknowledgeAccountSubjects")>]
-              AcknowledgeAccountSubjects: bool option
+              AcknowledgeAccountSubjects : bool option
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("durationInHours")>]
-              DurationInHours: int64 option
+              DurationInHours : int64 option
               [<JsonPropertyName("emailContent")>]
-              EmailContent: string option
+              EmailContent : string option
               [<JsonPropertyName("emailSubject")>]
-              EmailSubject: string option
+              EmailSubject : string option
               [<JsonPropertyName("policies")>]
-              Policies: string list option
+              Policies : string list option
               [<JsonPropertyName("severityLevel")>]
-              SeverityLevel: string option
+              SeverityLevel : string option
               [<JsonPropertyName("strikeCount")>]
-              StrikeCount: int64 option
+              StrikeCount : int64 option
               [<JsonPropertyName("strikeExpiresAt")>]
-              StrikeExpiresAt: AtDateTime option }
+              StrikeExpiresAt : AtDateTime option }
 
     module SearchRepos =
         [<Literal>]
         let TypeId = "tools.ozone.moderation.searchRepos"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("q")>]
-              Q: string option
+              Q : string option
               [<JsonPropertyName("term")>]
-              Term: string option }
+              Term : string option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("repos")>]
-              Repos: Defs.RepoView list }
+              Repos : Defs.RepoView list }
 
 module ToolsOzoneReport =
     module Defs =
@@ -9200,22 +9890,25 @@ module ToolsOzoneSafelink =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.addRule"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("action")>]
-              Action: Defs.ActionType
+              Action : Defs.ActionType
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did option
+              CreatedBy : Did option
               [<JsonPropertyName("pattern")>]
-              Pattern: Defs.PatternType
+              Pattern : Defs.PatternType
               [<JsonPropertyName("reason")>]
-              Reason: Defs.ReasonType
+              Reason : Defs.ReasonType
               [<JsonPropertyName("url")>]
-              Url: string }
+              Url : string }
 
         type Output = Defs.Event
 
@@ -9237,23 +9930,23 @@ module ToolsOzoneSafelink =
         /// An event for URL safety decisions
         type Event =
             { [<JsonPropertyName("action")>]
-              Action: Defs.ActionType
+              Action : Defs.ActionType
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did
+              CreatedBy : Did
               [<JsonPropertyName("eventType")>]
-              EventType: Defs.EventType
+              EventType : Defs.EventType
               [<JsonPropertyName("id")>]
-              Id: int64
+              Id : int64
               [<JsonPropertyName("pattern")>]
-              Pattern: Defs.PatternType
+              Pattern : Defs.PatternType
               [<JsonPropertyName("reason")>]
-              Reason: Defs.ReasonType
+              Reason : Defs.ReasonType
               [<JsonPropertyName("url")>]
-              Url: string }
+              Url : string }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<EventType>>)>]
         type EventType =
@@ -9279,27 +9972,30 @@ module ToolsOzoneSafelink =
         /// Input for creating a URL safety rule
         type UrlRule =
             { [<JsonPropertyName("action")>]
-              Action: Defs.ActionType
+              Action : Defs.ActionType
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did
+              CreatedBy : Did
               [<JsonPropertyName("pattern")>]
-              Pattern: Defs.PatternType
+              Pattern : Defs.PatternType
               [<JsonPropertyName("reason")>]
-              Reason: Defs.ReasonType
+              Reason : Defs.ReasonType
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: AtDateTime
+              UpdatedAt : AtDateTime
               [<JsonPropertyName("url")>]
-              Url: string }
+              Url : string }
 
     module QueryEvents =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.queryEvents"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputSortDirection>>)>]
@@ -9310,27 +10006,30 @@ module ToolsOzoneSafelink =
 
         type Input =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("patternType")>]
-              PatternType: string option
+              PatternType : string option
               [<JsonPropertyName("sortDirection")>]
-              SortDirection: InputSortDirection option
+              SortDirection : InputSortDirection option
               [<JsonPropertyName("urls")>]
-              Urls: string list option }
+              Urls : string list option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("events")>]
-              Events: Defs.Event list }
+              Events : Defs.Event list }
 
     module QueryRules =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.queryRules"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputSortDirection>>)>]
@@ -9341,44 +10040,47 @@ module ToolsOzoneSafelink =
 
         type Input =
             { [<JsonPropertyName("actions")>]
-              Actions: string list option
+              Actions : string list option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did option
+              CreatedBy : Did option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("patternType")>]
-              PatternType: string option
+              PatternType : string option
               [<JsonPropertyName("reason")>]
-              Reason: string option
+              Reason : string option
               [<JsonPropertyName("sortDirection")>]
-              SortDirection: InputSortDirection option
+              SortDirection : InputSortDirection option
               [<JsonPropertyName("urls")>]
-              Urls: string list option }
+              Urls : string list option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("rules")>]
-              Rules: Defs.UrlRule list }
+              Rules : Defs.UrlRule list }
 
     module RemoveRule =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.removeRule"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did option
+              CreatedBy : Did option
               [<JsonPropertyName("pattern")>]
-              Pattern: Defs.PatternType
+              Pattern : Defs.PatternType
               [<JsonPropertyName("url")>]
-              Url: string }
+              Url : string }
 
         type Output = Defs.Event
 
@@ -9390,22 +10092,25 @@ module ToolsOzoneSafelink =
         [<Literal>]
         let TypeId = "tools.ozone.safelink.updateRule"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("action")>]
-              Action: Defs.ActionType
+              Action : Defs.ActionType
               [<JsonPropertyName("comment")>]
-              Comment: string option
+              Comment : string option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did option
+              CreatedBy : Did option
               [<JsonPropertyName("pattern")>]
-              Pattern: Defs.PatternType
+              Pattern : Defs.PatternType
               [<JsonPropertyName("reason")>]
-              Reason: Defs.ReasonType
+              Reason : Defs.ReasonType
               [<JsonPropertyName("url")>]
-              Url: string }
+              Url : string }
 
         type Output = Defs.Event
 
@@ -9418,26 +10123,28 @@ module ToolsOzoneServer =
         [<Literal>]
         let TypeId = "tools.ozone.server.getConfig"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.queryNoParams<Output> TypeId agent
 
         type Output =
             { [<JsonPropertyName("appview")>]
-              Appview: GetConfig.ServiceConfig option
+              Appview : GetConfig.ServiceConfig option
               [<JsonPropertyName("blobDivert")>]
-              BlobDivert: GetConfig.ServiceConfig option
+              BlobDivert : GetConfig.ServiceConfig option
               [<JsonPropertyName("chat")>]
-              Chat: GetConfig.ServiceConfig option
+              Chat : GetConfig.ServiceConfig option
               [<JsonPropertyName("pds")>]
-              Pds: GetConfig.ServiceConfig option
+              Pds : GetConfig.ServiceConfig option
               [<JsonPropertyName("verifierDid")>]
-              VerifierDid: Did option
+              VerifierDid : Did option
               [<JsonPropertyName("viewer")>]
-              Viewer: GetConfig.ViewerConfig option }
+              Viewer : GetConfig.ViewerConfig option }
 
         type ServiceConfig =
             { [<JsonPropertyName("url")>]
-              Url: Uri option }
+              Url : Uri option }
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ViewerConfigRole>>)>]
         type ViewerConfigRole =
@@ -9449,51 +10156,57 @@ module ToolsOzoneServer =
 
         type ViewerConfig =
             { [<JsonPropertyName("role")>]
-              Role: ViewerConfigRole option }
+              Role : ViewerConfigRole option }
 
 module ToolsOzoneSet =
     module AddValues =
         [<Literal>]
         let TypeId = "tools.ozone.set.addValues"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("name")>]
-              Name: string
+              Name : string
               [<JsonPropertyName("values")>]
-              Values: string list }
+              Values : string list }
 
     module Defs =
         type Set =
             { [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("name")>]
-              Name: string }
+              Name : string }
 
         type SetView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("name")>]
-              Name: string
+              Name : string
               [<JsonPropertyName("setSize")>]
-              SetSize: int64
+              SetSize : int64
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: AtDateTime }
+              UpdatedAt : AtDateTime }
 
     module DeleteSet =
         [<Literal>]
         let TypeId = "tools.ozone.set.deleteSet"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("name")>]
-              Name: string }
+              Name : string }
 
         module Errors =
             [<Literal>]
@@ -9503,14 +10216,17 @@ module ToolsOzoneSet =
         [<Literal>]
         let TypeId = "tools.ozone.set.deleteValues"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("name")>]
-              Name: string
+              Name : string
               [<JsonPropertyName("values")>]
-              Values: string list }
+              Values : string list }
 
         module Errors =
             [<Literal>]
@@ -9520,24 +10236,27 @@ module ToolsOzoneSet =
         [<Literal>]
         let TypeId = "tools.ozone.set.getValues"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("name")>]
-              Name: string }
+              Name : string }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("set")>]
-              Set: Defs.SetView
+              Set : Defs.SetView
               [<JsonPropertyName("values")>]
-              Values: string list }
+              Values : string list }
 
         module Errors =
             [<Literal>]
@@ -9547,32 +10266,38 @@ module ToolsOzoneSet =
         [<Literal>]
         let TypeId = "tools.ozone.set.querySets"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("namePrefix")>]
-              NamePrefix: string option
+              NamePrefix : string option
               [<JsonPropertyName("sortBy")>]
-              SortBy: string option
+              SortBy : string option
               [<JsonPropertyName("sortDirection")>]
-              SortDirection: string option }
+              SortDirection : string option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("sets")>]
-              Sets: Defs.SetView list }
+              Sets : Defs.SetView list }
 
     module UpsertSet =
         [<Literal>]
         let TypeId = "tools.ozone.set.upsertSet"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input = Defs.Set
@@ -9596,31 +10321,34 @@ module ToolsOzoneSetting =
 
         type Option =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime option
+              CreatedAt : AtDateTime option
               [<JsonPropertyName("createdBy")>]
-              CreatedBy: Did
+              CreatedBy : Did
               [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("key")>]
-              Key: Nsid
+              Key : Nsid
               [<JsonPropertyName("lastUpdatedBy")>]
-              LastUpdatedBy: Did
+              LastUpdatedBy : Did
               [<JsonPropertyName("managerRole")>]
-              ManagerRole: OptionManagerRole option
+              ManagerRole : OptionManagerRole option
               [<JsonPropertyName("scope")>]
-              Scope: OptionScope
+              Scope : OptionScope
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: AtDateTime option
+              UpdatedAt : AtDateTime option
               [<JsonPropertyName("value")>]
-              Value: JsonElement }
+              Value : JsonElement }
 
     module ListOptions =
         [<Literal>]
         let TypeId = "tools.ozone.setting.listOptions"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<ParamsScope>>)>]
@@ -9631,27 +10359,30 @@ module ToolsOzoneSetting =
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("keys")>]
-              Keys: Nsid list option
+              Keys : Nsid list option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("prefix")>]
-              Prefix: string option
+              Prefix : string option
               [<JsonPropertyName("scope")>]
-              Scope: ParamsScope option }
+              Scope : ParamsScope option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("options")>]
-              Options: Defs.Option list }
+              Options : Defs.Option list }
 
     module RemoveOptions =
         [<Literal>]
         let TypeId = "tools.ozone.setting.removeOptions"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputScope>>)>]
@@ -9662,15 +10393,18 @@ module ToolsOzoneSetting =
 
         type Input =
             { [<JsonPropertyName("keys")>]
-              Keys: Nsid list
+              Keys : Nsid list
               [<JsonPropertyName("scope")>]
-              Scope: InputScope }
+              Scope : InputScope }
 
     module UpsertOption =
         [<Literal>]
         let TypeId = "tools.ozone.setting.upsertOption"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputManagerRole>>)>]
@@ -9689,97 +10423,109 @@ module ToolsOzoneSetting =
 
         type Input =
             { [<JsonPropertyName("description")>]
-              Description: string option
+              Description : string option
               [<JsonPropertyName("key")>]
-              Key: Nsid
+              Key : Nsid
               [<JsonPropertyName("managerRole")>]
-              ManagerRole: InputManagerRole option
+              ManagerRole : InputManagerRole option
               [<JsonPropertyName("scope")>]
-              Scope: InputScope
+              Scope : InputScope
               [<JsonPropertyName("value")>]
-              Value: JsonElement }
+              Value : JsonElement }
 
         type Output =
             { [<JsonPropertyName("option")>]
-              Option: Defs.Option }
+              Option : Defs.Option }
 
 module ToolsOzoneSignature =
     module Defs =
         type SigDetail =
             { [<JsonPropertyName("property")>]
-              Property: string
+              Property : string
               [<JsonPropertyName("value")>]
-              Value: string }
+              Value : string }
 
     module FindCorrelation =
         [<Literal>]
         let TypeId = "tools.ozone.signature.findCorrelation"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("dids")>]
-              Dids: Did list }
+              Dids : Did list }
 
         type Output =
             { [<JsonPropertyName("details")>]
-              Details: Defs.SigDetail list }
+              Details : Defs.SigDetail list }
 
     module FindRelatedAccounts =
         [<Literal>]
         let TypeId = "tools.ozone.signature.findRelatedAccounts"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("limit")>]
-              Limit: int64 option }
+              Limit : int64 option }
 
         type Output =
             { [<JsonPropertyName("accounts")>]
-              Accounts: FindRelatedAccounts.RelatedAccount list
+              Accounts : FindRelatedAccounts.RelatedAccount list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
         type RelatedAccount =
             { [<JsonPropertyName("account")>]
-              Account: ComAtprotoAdmin.Defs.AccountView
+              Account : ComAtprotoAdmin.Defs.AccountView
               [<JsonPropertyName("similarities")>]
-              Similarities: Defs.SigDetail list option }
+              Similarities : Defs.SigDetail list option }
 
     module SearchAccounts =
         [<Literal>]
         let TypeId = "tools.ozone.signature.searchAccounts"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("values")>]
-              Values: string list }
+              Values : string list }
 
         type Output =
             { [<JsonPropertyName("accounts")>]
-              Accounts: ComAtprotoAdmin.Defs.AccountView list
+              Accounts : ComAtprotoAdmin.Defs.AccountView list
               [<JsonPropertyName("cursor")>]
-              Cursor: string option }
+              Cursor : string option }
 
 module ToolsOzoneTeam =
     module AddMember =
         [<Literal>]
         let TypeId = "tools.ozone.team.addMember"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputRole>>)>]
@@ -9792,9 +10538,9 @@ module ToolsOzoneTeam =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("role")>]
-              Role: InputRole }
+              Role : InputRole }
 
         type Output = Defs.Member
 
@@ -9813,19 +10559,19 @@ module ToolsOzoneTeam =
 
         type Member =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime option
+              CreatedAt : AtDateTime option
               [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("disabled")>]
-              Disabled: bool option
+              Disabled : bool option
               [<JsonPropertyName("lastUpdatedBy")>]
-              LastUpdatedBy: string option
+              LastUpdatedBy : string option
               [<JsonPropertyName("profile")>]
-              Profile: AppBskyActor.Defs.ProfileViewDetailed option
+              Profile : AppBskyActor.Defs.ProfileViewDetailed option
               [<JsonPropertyName("role")>]
-              Role: MemberRole
+              Role : MemberRole
               [<JsonPropertyName("updatedAt")>]
-              UpdatedAt: AtDateTime option }
+              UpdatedAt : AtDateTime option }
 
         [<Literal>]
         let RoleAdmin = "tools.ozone.team.defs#roleAdmin"
@@ -9843,12 +10589,15 @@ module ToolsOzoneTeam =
         [<Literal>]
         let TypeId = "tools.ozone.team.deleteMember"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<unit, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedureVoid<Input> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: Did }
+              Did : Did }
 
         module Errors =
             [<Literal>]
@@ -9861,32 +10610,38 @@ module ToolsOzoneTeam =
         [<Literal>]
         let TypeId = "tools.ozone.team.listMembers"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("disabled")>]
-              Disabled: bool option
+              Disabled : bool option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("q")>]
-              Q: string option
+              Q : string option
               [<JsonPropertyName("roles")>]
-              Roles: string list option }
+              Roles : string list option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("members")>]
-              Members: Defs.Member list }
+              Members : Defs.Member list }
 
     module UpdateMember =
         [<Literal>]
         let TypeId = "tools.ozone.team.updateMember"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         [<JsonConverter(typeof<FSharp.ATProto.Core.KnownValueConverter<InputRole>>)>]
@@ -9899,11 +10654,11 @@ module ToolsOzoneTeam =
 
         type Input =
             { [<JsonPropertyName("did")>]
-              Did: Did
+              Did : Did
               [<JsonPropertyName("disabled")>]
-              Disabled: bool option
+              Disabled : bool option
               [<JsonPropertyName("role")>]
-              Role: InputRole option }
+              Role : InputRole option }
 
         type Output = Defs.Member
 
@@ -9913,10 +10668,12 @@ module ToolsOzoneTeam =
 
 module ToolsOzoneVerification =
     module Defs =
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
-        type VerificationViewIssuerProfileUnion = Unknown of string * System.Text.Json.JsonElement
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
+        type VerificationViewIssuerProfileUnion = | Unknown of string * System.Text.Json.JsonElement
 
-        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases, unionTagName = "$type")>]
+        [<JsonFSharpConverter(JsonUnionEncoding.InternalTag ||| JsonUnionEncoding.UnwrapSingleFieldCases,
+                              unionTagName = "$type")>]
         type VerificationViewIssuerRepoUnion =
             | [<JsonName("tools.ozone.moderation.defs#repoViewDetail")>] RepoViewDetail of
                 ToolsOzoneModeration.Defs.RepoViewDetail
@@ -9927,119 +10684,128 @@ module ToolsOzoneVerification =
         /// Verification data for the associated subject.
         type VerificationView =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime
+              CreatedAt : AtDateTime
               [<JsonPropertyName("displayName")>]
-              DisplayName: string
+              DisplayName : string
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("issuer")>]
-              Issuer: Did
+              Issuer : Did
               [<JsonPropertyName("issuerProfile")>]
-              IssuerProfile: VerificationViewIssuerProfileUnion option
+              IssuerProfile : VerificationViewIssuerProfileUnion option
               [<JsonPropertyName("issuerRepo")>]
-              IssuerRepo: VerificationViewIssuerRepoUnion option
+              IssuerRepo : VerificationViewIssuerRepoUnion option
               [<JsonPropertyName("revokeReason")>]
-              RevokeReason: string option
+              RevokeReason : string option
               [<JsonPropertyName("revokedAt")>]
-              RevokedAt: AtDateTime option
+              RevokedAt : AtDateTime option
               [<JsonPropertyName("revokedBy")>]
-              RevokedBy: Did option
+              RevokedBy : Did option
               [<JsonPropertyName("subject")>]
-              Subject: Did
+              Subject : Did
               [<JsonPropertyName("subjectProfile")>]
-              SubjectProfile: VerificationViewIssuerProfileUnion option
+              SubjectProfile : VerificationViewIssuerProfileUnion option
               [<JsonPropertyName("subjectRepo")>]
-              SubjectRepo: VerificationViewIssuerRepoUnion option
+              SubjectRepo : VerificationViewIssuerRepoUnion option
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }
 
     module GrantVerifications =
         [<Literal>]
         let TypeId = "tools.ozone.verification.grantVerifications"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("verifications")>]
-              Verifications: GrantVerifications.VerificationInput list }
+              Verifications : GrantVerifications.VerificationInput list }
 
         type Output =
             { [<JsonPropertyName("failedVerifications")>]
-              FailedVerifications: GrantVerifications.GrantError list
+              FailedVerifications : GrantVerifications.GrantError list
               [<JsonPropertyName("verifications")>]
-              Verifications: Defs.VerificationView list }
+              Verifications : Defs.VerificationView list }
 
         /// Error object for failed verifications.
         type GrantError =
             { [<JsonPropertyName("error")>]
-              Error: string
+              Error : string
               [<JsonPropertyName("subject")>]
-              Subject: Did }
+              Subject : Did }
 
         type VerificationInput =
             { [<JsonPropertyName("createdAt")>]
-              CreatedAt: AtDateTime option
+              CreatedAt : AtDateTime option
               [<JsonPropertyName("displayName")>]
-              DisplayName: string
+              DisplayName : string
               [<JsonPropertyName("handle")>]
-              Handle: Handle
+              Handle : Handle
               [<JsonPropertyName("subject")>]
-              Subject: Did }
+              Subject : Did }
 
     module ListVerifications =
         [<Literal>]
         let TypeId = "tools.ozone.verification.listVerifications"
 
-        let query (agent: FSharp.ATProto.Core.AtpAgent) (parameters: Params) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let query
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (parameters : Params)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.query<Params, Output> TypeId parameters agent
 
         type Params =
             { [<JsonPropertyName("createdAfter")>]
-              CreatedAfter: AtDateTime option
+              CreatedAfter : AtDateTime option
               [<JsonPropertyName("createdBefore")>]
-              CreatedBefore: AtDateTime option
+              CreatedBefore : AtDateTime option
               [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("isRevoked")>]
-              IsRevoked: bool option
+              IsRevoked : bool option
               [<JsonPropertyName("issuers")>]
-              Issuers: Did list option
+              Issuers : Did list option
               [<JsonPropertyName("limit")>]
-              Limit: int64 option
+              Limit : int64 option
               [<JsonPropertyName("sortDirection")>]
-              SortDirection: string option
+              SortDirection : string option
               [<JsonPropertyName("subjects")>]
-              Subjects: Did list option }
+              Subjects : Did list option }
 
         type Output =
             { [<JsonPropertyName("cursor")>]
-              Cursor: string option
+              Cursor : string option
               [<JsonPropertyName("verifications")>]
-              Verifications: Defs.VerificationView list }
+              Verifications : Defs.VerificationView list }
 
     module RevokeVerifications =
         [<Literal>]
         let TypeId = "tools.ozone.verification.revokeVerifications"
 
-        let call (agent: FSharp.ATProto.Core.AtpAgent) (input: Input) : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
+        let call
+            (agent : FSharp.ATProto.Core.AtpAgent)
+            (input : Input)
+            : System.Threading.Tasks.Task<Result<Output, FSharp.ATProto.Core.XrpcError>> =
             FSharp.ATProto.Core.Xrpc.procedure<Input, Output> TypeId input agent
 
         type Input =
             { [<JsonPropertyName("revokeReason")>]
-              RevokeReason: string option
+              RevokeReason : string option
               [<JsonPropertyName("uris")>]
-              Uris: AtUri list }
+              Uris : AtUri list }
 
         type Output =
             { [<JsonPropertyName("failedRevocations")>]
-              FailedRevocations: RevokeVerifications.RevokeError list
+              FailedRevocations : RevokeVerifications.RevokeError list
               [<JsonPropertyName("revokedVerifications")>]
-              RevokedVerifications: AtUri list }
+              RevokedVerifications : AtUri list }
 
         /// Error object for failed revocations
         type RevokeError =
             { [<JsonPropertyName("error")>]
-              Error: string
+              Error : string
               [<JsonPropertyName("uri")>]
-              Uri: AtUri }
+              Uri : AtUri }

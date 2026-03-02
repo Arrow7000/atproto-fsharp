@@ -15,13 +15,13 @@ type RecordKey =
     private
     | RecordKey of string
 
-    override this.ToString() = let (RecordKey s) = this in s
+    override this.ToString () = let (RecordKey s) = this in s
 
 /// <summary>
 /// Functions for creating, validating, and extracting data from <see cref="RecordKey"/> values.
 /// </summary>
 module RecordKey =
-    let private pattern = Regex(@"^[a-zA-Z0-9._~:-]{1,512}$", RegexOptions.Compiled)
+    let private pattern = Regex (@"^[a-zA-Z0-9._~:-]{1,512}$", RegexOptions.Compiled)
 
     /// <summary>
     /// Extract the string representation of a record key.
@@ -42,8 +42,12 @@ module RecordKey =
     /// Validation failures include: null input, reserved values (<c>"."</c> or <c>".."</c>),
     /// or characters outside the allowed set.
     /// </returns>
-    let parse (s: string) : Result<RecordKey, string> =
-        if isNull s then Error "RecordKey cannot be null"
-        elif s = "." || s = ".." then Error (sprintf "RecordKey cannot be '%s'" s)
-        elif not (pattern.IsMatch(s)) then Error (sprintf "Invalid RecordKey: %s" s)
-        else Ok (RecordKey s)
+    let parse (s : string) : Result<RecordKey, string> =
+        if isNull s then
+            Error "RecordKey cannot be null"
+        elif s = "." || s = ".." then
+            Error (sprintf "RecordKey cannot be '%s'" s)
+        elif not (pattern.IsMatch (s)) then
+            Error (sprintf "Invalid RecordKey: %s" s)
+        else
+            Ok (RecordKey s)
