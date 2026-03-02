@@ -1,3 +1,5 @@
+<!-- @format -->
+
 <p align="center">
   <img src="docs/assets/header.svg" alt="FSharp.ATProto" width="400"/>
 </p>
@@ -5,135 +7,117 @@
 <p align="center">
   <a href="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml"><img src="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10">
-  <img src="https://img.shields.io/badge/tests-1%2C600%2B-brightgreen" alt="Tests: 1,600+">
+  <img src="https://img.shields.io/badge/tests-1%2C636-brightgreen" alt="Tests: 1,636">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
 </p>
 
 <p align="center">
-  A native, idiomatic F# library for the <a href="https://atproto.com">AT Protocol</a> — the decentralized social networking protocol behind <a href="https://bsky.app">Bluesky</a>.
+  A native F# library for <a href="https://bsky.app">Bluesky</a> and the <a href="https://atproto.com">AT Protocol</a>.
   <br/>
-  Built from the ground up in F#. No C# wrappers. Functional-first. If it compiles, it's correct.
+  Built from the ground up in F#. No C# wrappers. Functional-first.
 </p>
 
 ---
 
-## Features
+```fsharp
+open FSharp.ATProto.Bluesky
 
-- **Strongly-typed domain model** — Distinct types for every concept (`PostRef`, `LikeRef`, `FollowRef`, `BlockRef`). The compiler catches your mistakes.
-- **Result-based error handling** — Every public function returns `Result`. No exceptions, no surprises.
-- **Protocol complexity hidden** — Reply to a post and the library resolves the thread root. Post text with mentions and the library detects and resolves them. You think in domain terms, not protocol internals.
-- **Code-generated from spec** — All 324 Lexicon schemas compiled to F# types and 237 XRPC endpoint wrappers.
-- **1,600+ tests** — Including official AT Protocol interop test vectors and property-based tests.
+taskResult {
+    let! agent = Bluesky.login "https://bsky.social" "my-handle.bsky.social" "app-password"
+    let! post = Bluesky.post agent "Hello from F#! 🦋"
+    let! like = Bluesky.like agent post // PostRef -> LikeRef (the compiler prevents mix-ups)
+    let! reply = Bluesky.replyTo agent "Nice thread!" post // thread root resolved automatically
+    let! _ = Bluesky.undo agent like // generic undo — works on any ref type
+    return reply
+}
+// : Task<Result<PostRef, XrpcError>> — no exceptions, ever
+```
 
-## Quick Start
+## Design
+
+- **If it compiles, it's correct** — distinct types for every domain concept (`PostRef`, `LikeRef`, `FollowRef`, `BlockRef`...) mean the compiler catches your mistakes.
+- **The library handles protocol complexity** — thread roots, rich text facets, chat proxy headers — all resolved automatically.
+- **Results, not exceptions** — every public function returns `Result`. No `failwith`, no try/catch.
+- **Generated from the spec** — 324 Lexicon schemas compiled to F# types + 237 typed XRPC endpoint wrappers.
+
+## Getting Started
 
 ```fsharp
 open FSharp.ATProto.Bluesky
 
-task {
-    // Log in
+taskResult {
     let! agent = Bluesky.login "https://bsky.social" "my-handle.bsky.social" "app-password"
-
-    match agent with
-    | Ok agent ->
-        // Post with auto-detected rich text (mentions, links, hashtags)
-        let! result = Bluesky.post agent "Hello from F#! @other-user.bsky.social #atproto"
-        match result with
-        | Ok postRef -> printfn "Posted: %s" (AtUri.value postRef.Uri)
-        | Error e -> printfn "Failed: %A" e
-    | Error e -> printfn "Login failed: %A" e
+    let! post = Bluesky.post agent "Hello from F#!"
+    return post // PostRef — contains the AT-URI and CID of the new post
 }
 ```
 
-## Examples
+## Features
 
-### Social actions
+### Rich text
 
-```fsharp
-// Like a post
-let! likeRef = Bluesky.like agent postRef
-
-// Repost
-let! repostRef = Bluesky.repost agent postRef
-
-// Follow someone (accepts Handle, Did, or string)
-let! followRef = Bluesky.follow agent did
-
-// Undo any action with a single generic function
-let! result = Bluesky.undo agent likeRef   // works on any ref type
-// Or use specific functions
-let! _ = Bluesky.unlikePost agent postRef  // unlike by post
-```
-
-### Replies
+Mentions, links, and hashtags are detected and resolved automatically when you post:
 
 ```fsharp
-// Reply to a post — thread root is resolved automatically
-let! reply = Bluesky.replyTo agent "Great post!" parentPostRef
+let! post = Bluesky.post agent "Hey @alice.bsky.social, check https://example.com #fsharp"
 ```
 
 ### Images
 
 ```fsharp
-let! result =
-    Bluesky.postWithImages agent "Photo dump! #photography"
-        [ { Data = imageBytes; MimeType = Jpeg; AltText = "A sunset over the ocean" } ]
+let! post =
+    Bluesky.postWithImages agent "Photo dump!" [
+        { Data = imageBytes; MimeType = Jpeg; AltText = "A sunset over the ocean" }
+    ]
 ```
 
-### Rich text
+### Social graph
 
 ```fsharp
-// Detect mentions, links, hashtags
-let detected = RichText.detect "Hey @my-handle.bsky.social, check https://example.com #cool"
+let! followRef = Bluesky.follow agent did                    // typed Did
+let! followRef = Bluesky.followByHandle agent "alice.bsky.social"  // or by handle
+let! _ = Bluesky.undo agent followRef                        // generic undo
+```
 
-// Resolve mentions to DIDs
-let! facets = RichText.resolve agent detected
+### Replies
 
-// Check post length (Bluesky uses grapheme clusters)
-let len = RichText.graphemeLength text  // 300 grapheme limit
+```fsharp
+// Thread root resolved automatically — just pass the parent
+let! reply = Bluesky.replyTo agent "Great post!" parentPostRef
+```
+
+### Chat / DMs
+
+```fsharp
+// Chat proxy headers are handled automatically
+let! convo = Chat.getConvoForMembers agent [ recipientDid ]
+let! msg = Chat.sendMessage agent convo.Convo.Id "Hello from F#!"
 ```
 
 ### Identity
 
 ```fsharp
-// Resolve and verify a handle bidirectionally
-let! identity = Identity.resolveIdentity agent "my-handle.bsky.social"
-match identity with
-| Ok id ->
-    printfn "DID: %s" (Did.value id.Did)
-    printfn "PDS: %A" id.PdsEndpoint
-| Error e -> printfn "Resolution failed: %A" e
-```
-
-### Direct messages
-
-```fsharp
-// Chat proxy headers are handled automatically
-let! convos = Chat.listConvos agent (Some 10L) None
-let! msg = Chat.sendMessage agent convoId "Hello from F#!"
+let! identity = Identity.resolveIdentity agent "alice.bsky.social"
+// identity.Did, identity.Handle, identity.PdsEndpoint, identity.SigningKey
 ```
 
 ### Pagination
 
 ```fsharp
-// IAsyncEnumerable-based pagination
-let pages = Bluesky.paginateTimeline agent (Some 25L)
-
-await for page in pages do
-    match page with
-    | Ok timeline ->
-        for item in timeline.Feed do
-            printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
-    | Error e -> printfn "Error: %A" e
+// Lazy, on-demand pagination via IAsyncEnumerable
+let pages = Bluesky.paginateTimeline agent (Some 50L)
+// Each page: Result<GetTimeline.Output, XrpcError>
 ```
 
-### Generated XRPC wrappers
+### Full XRPC access
 
-For anything the convenience API doesn't cover, use the 237 generated endpoint wrappers directly:
+For anything the convenience API doesn't cover, all 237 Bluesky endpoints are available as typed wrappers:
 
 ```fsharp
-let! result = AppBskyActor.SearchActors.query agent {| q = Some "fsharp"; limit = Some 10L |}
-let! result = AppBskyFeed.GetAuthorFeed.query agent {| actor = handle; limit = Some 20L |}
+// Query endpoints use .query, procedure endpoints use .call
+let! feed = AppBskyFeed.GetAuthorFeed.query agent
+    { Actor = "alice.bsky.social"; Cursor = None; Limit = Some 20L
+      Filter = None; IncludePins = None }
 ```
 
 ## Architecture
@@ -159,57 +143,39 @@ Six layers, each building on the last:
 └─────────────────────────────────────────────┘
 ```
 
-## Project Structure
-
-```
-src/
-  FSharp.ATProto.Syntax/       Identifier types (DID, Handle, NSID, AT-URI, ...)
-  FSharp.ATProto.DRISL/        DRISL/CBOR encoding + CID computation
-  FSharp.ATProto.Lexicon/      Lexicon schema parser + record validator
-  FSharp.ATProto.CodeGen/      CLI: Lexicon schemas → F# source code
-  FSharp.ATProto.Core/         XRPC client, session auth, rate limiting, pagination
-  FSharp.ATProto.Bluesky/      Generated types + rich text, identity, convenience API
-
-tests/
-  FSharp.ATProto.Syntax.Tests/      726 tests (incl. official interop vectors)
-  FSharp.ATProto.DRISL.Tests/       112 tests
-  FSharp.ATProto.Lexicon.Tests/     387 tests (parses all 324 real lexicon files)
-  FSharp.ATProto.CodeGen.Tests/     169 tests
-  FSharp.ATProto.Core.Tests/         30 tests
-  FSharp.ATProto.Bluesky.Tests/      48 tests
-
-examples/
-  BskyBotExample/              Comprehensive example program
-
-extern/
-  atproto/                     Git submodule: official lexicon schemas
-  atproto-interop-tests/       Git submodule: official test vectors
-```
-
-## Building
+## Building & Testing
 
 Requires [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```bash
-# Build everything
 dotnet build
-
-# Run all tests
 dotnet test
-
-# Run a specific test project
-dotnet test tests/FSharp.ATProto.Syntax.Tests
 ```
 
-## Dependencies
+1,636 tests across six projects:
 
-Only three runtime NuGet packages:
+| Project                        | Tests |
+| ------------------------------ | ----: |
+| `FSharp.ATProto.Syntax.Tests`  |   758 |
+| `FSharp.ATProto.DRISL.Tests`   |   112 |
+| `FSharp.ATProto.Lexicon.Tests` |   387 |
+| `FSharp.ATProto.CodeGen.Tests` |   179 |
+| `FSharp.ATProto.Core.Tests`    |    50 |
+| `FSharp.ATProto.Bluesky.Tests` |   150 |
 
-| Package | Used for |
-|---------|----------|
-| `System.Formats.Cbor` | Canonical CBOR serialization (DRISL layer) |
-| `FSharp.SystemTextJson` | JSON serialization with F# union support |
-| `Fabulous.AST` | F# source code generation (CodeGen CLI only) |
+## AI Transparency
+
+This project was built with heavy use of AI coding assistants, mostly Claude Opus 4.6.
+
+To ensure correctness the project validates against ground truth at every layer:
+
+- **Syntax parsing** — [tested](tests/FSharp.ATProto.Syntax.Tests/) against the official [AT Protocol interop test vectors](https://github.com/bluesky-social/atproto-interop-tests) (valid and invalid inputs for DIDs, Handles, NSIDs, TIDs, AT-URIs, and more)
+- **CBOR & CID** — [tested](tests/FSharp.ATProto.DRISL.Tests/InteropTests.fs) against the interop data-model fixtures (known JSON → CBOR → CID round-trips), plus [property-based tests](tests/FSharp.ATProto.DRISL.Tests/PropertyTests.fs) for encoding invariants
+- **Lexicon schemas** — all 324 real lexicon files from the [official atproto repo](https://github.com/bluesky-social/atproto/tree/main/lexicons) are [parsed and validated](tests/FSharp.ATProto.Lexicon.Tests/RealLexiconTests.fs); the code generator is tested against them
+- **Rich text** — [property-based tests](tests/FSharp.ATProto.Bluesky.Tests/RichTextTests.fs) verify byte-range correctness and facet ordering
+- **XRPC / Bluesky** — [tested](tests/FSharp.ATProto.Bluesky.Tests/) via mock HTTP handlers that verify request construction, multi-step orchestration (e.g. thread root resolution), error handling, and domain type mapping (note: the mocks don't validate against real Bluesky API responses — that contract is covered by the generated types matching the lexicon schemas above)
+
+All told, 1,636 tests across six projects, with zero reliance on manual testing or live API calls.
 
 ## License
 
