@@ -1647,7 +1647,7 @@ let getTimelineTests =
 
               let output = Expect.wantOk result "should succeed"
               Expect.equal output.Cursor (Some "cursor123") "cursor"
-              Expect.equal output.Feed [] "empty feed" ]
+              Expect.equal output.Items [] "empty feed" ]
 
 [<Tests>]
 let getPostThreadTests =
@@ -1799,7 +1799,7 @@ let getNotificationsTests =
 
               let output = Expect.wantOk result "should succeed"
               Expect.equal output.Cursor (Some "notif-cursor") "cursor"
-              Expect.equal output.Notifications [] "empty notifications" ]
+              Expect.equal output.Items [] "empty notifications" ]
 
 [<Tests>]
 let loginTests =
@@ -2008,3 +2008,1022 @@ let paginateNotificationsTests =
               let agent = queryAgent (fun _ -> ()) {| notifications = ([||] : obj array) |}
               let pages = Bluesky.paginateNotifications agent None |> collectPages
               Expect.equal pages.Length 1 "exactly 1 page" ]
+
+// ── Helpers for new write operation tests ────────────────────────────
+
+/// Creates a mock agent that returns an empty 200 OK (for procedureVoid endpoints).
+let private voidProcedureAgent (captureRequest : HttpRequestMessage -> unit) =
+    let agent =
+        createMockAgent (fun req ->
+            captureRequest req
+            emptyResponse HttpStatusCode.OK)
+
+    agent.Session <- Some testSession
+    agent
+
+// ── Write operation tests ────────────────────────────────────────────
+
+[<Tests>]
+let muteUserTests =
+    testList
+        "Bluesky.muteUser"
+        [ testCase "muteUser calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.muteUser agent "test.bsky.social"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.graph.muteActor" "correct endpoint"
+
+          testCase "muteUser sends actor in request body"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+
+              let _result =
+                  Bluesky.muteUser agent "spam.bsky.social"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "spam.bsky.social" "actor in body" ]
+
+[<Tests>]
+let unmuteUserTests =
+    testList
+        "Bluesky.unmuteUser"
+        [ testCase "unmuteUser calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.unmuteUser agent "test.bsky.social"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.graph.unmuteActor" "correct endpoint"
+
+          testCase "unmuteUser sends actor in request body"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+
+              let _result =
+                  Bluesky.unmuteUser agent "friend.bsky.social"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "friend.bsky.social" "actor in body" ]
+
+[<Tests>]
+let muteThreadTests =
+    testList
+        "Bluesky.muteThread"
+        [ testCase "muteThread calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let root = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/abc123"
+
+              let result =
+                  Bluesky.muteThread agent root |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.graph.muteThread" "correct endpoint"
+
+          testCase "muteThread sends root URI in request body"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let root = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/thread1"
+
+              let _result =
+                  Bluesky.muteThread agent root |> Async.AwaitTask |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "thread1" "root in body" ]
+
+[<Tests>]
+let unmuteThreadTests =
+    testList
+        "Bluesky.unmuteThread"
+        [ testCase "unmuteThread calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let root = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/abc123"
+
+              let result =
+                  Bluesky.unmuteThread agent root |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.graph.unmuteThread" "correct endpoint"
+
+          testCase "unmuteThread sends root URI in request body"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let root = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/thread2"
+
+              let _result =
+                  Bluesky.unmuteThread agent root |> Async.AwaitTask |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "thread2" "root in body" ]
+
+[<Tests>]
+let reportContentTests =
+    testList
+        "Bluesky.reportContent"
+        [ testCase "reportContent calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              // Use error response to verify request properties without needing valid response JSON.
+              // The CreateReport.Output has KnownValue DUs (ReasonType) and inline unions (OutputSubjectUnion)
+              // which conflict with the global JsonFSharpConverter during deserialization (known limitation).
+              let agent =
+                  createMockAgent (fun req ->
+                      captured <- Some req
+                      jsonResponse HttpStatusCode.BadRequest {| error = "Test"; message = "mock" |})
+
+              agent.Session <- Some testSession
+              let subject = ReportSubject.Account (parseDid "did:plc:test")
+
+              let _result =
+                  Bluesky.reportContent agent subject ComAtprotoModeration.Defs.ReasonType.ReasonSpam None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "com.atproto.moderation.createReport"
+                  "correct endpoint"
+
+          testCase "reportContent sends correct request body for account report"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createMockAgent (fun req ->
+                      captured <- Some req
+                      jsonResponse HttpStatusCode.BadRequest {| error = "Test"; message = "mock" |})
+
+              agent.Session <- Some testSession
+              let subject = ReportSubject.Account (parseDid "did:plc:test")
+
+              let _result =
+                  Bluesky.reportContent
+                      agent
+                      subject
+                      ComAtprotoModeration.Defs.ReasonType.ReasonSpam
+                      (Some "spam account")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "did:plc:test" "subject DID in body"
+              Expect.stringContains body "com.atproto.moderation.defs#reasonSpam" "reason type in body"
+              Expect.stringContains body "spam account" "description in body"
+
+          testCase "reportContent sends correct request body for record report"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createMockAgent (fun req ->
+                      captured <- Some req
+                      jsonResponse HttpStatusCode.BadRequest {| error = "Test"; message = "mock" |})
+
+              agent.Session <- Some testSession
+
+              let postRef =
+                  { PostRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/abc123"
+                    Cid = parseCid "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454" }
+
+              let subject = ReportSubject.Record postRef
+
+              let _result =
+                  Bluesky.reportContent agent subject ComAtprotoModeration.Defs.ReasonType.ReasonSpam None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "abc123" "post rkey in body"
+              Expect.stringContains body "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454" "CID in body" ]
+
+[<Tests>]
+let addBookmarkTests =
+    testList
+        "Bluesky.addBookmark"
+        [ testCase "addBookmark calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+
+              let postRef =
+                  { PostRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/abc123"
+                    Cid = parseCid "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454" }
+
+              let result =
+                  Bluesky.addBookmark agent postRef |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "app.bsky.bookmark.createBookmark"
+                  "correct endpoint"
+
+          testCase "addBookmark sends uri and cid in request body"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+
+              let postRef =
+                  { PostRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/bookmark1"
+                    Cid = parseCid "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454" }
+
+              let _result =
+                  Bluesky.addBookmark agent postRef |> Async.AwaitTask |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "bookmark1" "uri in body"
+              Expect.stringContains body "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454" "cid in body" ]
+
+[<Tests>]
+let removeBookmarkTests =
+    testList
+        "Bluesky.removeBookmark"
+        [ testCase "removeBookmark calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/abc123"
+
+              let result =
+                  Bluesky.removeBookmark agent uri |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "app.bsky.bookmark.deleteBookmark"
+                  "correct endpoint"
+
+          testCase "removeBookmark sends uri in request body"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let uri = parseAtUri "at://did:plc:testuser/app.bsky.feed.post/rm1"
+
+              let _result =
+                  Bluesky.removeBookmark agent uri |> Async.AwaitTask |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "rm1" "uri in body" ]
+
+[<Tests>]
+let updateHandleTests =
+    testList
+        "Bluesky.updateHandle"
+        [ testCase "updateHandle calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let handle = Handle.parse "new-handle.bsky.social" |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.updateHandle agent handle |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "com.atproto.identity.updateHandle"
+                  "correct endpoint"
+
+          testCase "updateHandle sends handle in request body"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let handle = Handle.parse "new-handle.bsky.social" |> Result.defaultWith failwith
+
+              let _result =
+                  Bluesky.updateHandle agent handle |> Async.AwaitTask |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "new-handle.bsky.social" "handle in body" ]
+
+// ── Read operation tests ─────────────────────────────────────────────
+
+[<Tests>]
+let searchPostsTests =
+    testList
+        "Bluesky.searchPosts"
+        [ testCase "searchPosts calls correct XRPC endpoint with q param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| posts =
+                          [| {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                                cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                author = {| did = "did:plc:test"; handle = "test.bsky.social" |}
+                                record = {| |}
+                                indexedAt = "2024-01-15T12:00:00.000Z" |} |]
+                         cursor = "page2" |}
+
+              let result =
+                  Bluesky.searchPosts agent "cats" None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.feed.searchPosts" "correct endpoint"
+              Expect.stringContains (req.RequestUri.ToString ()) "q=cats" "q param"
+
+          testCase "searchPosts returns Page with cursor and items"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| posts =
+                          [| {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                                cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                author = {| did = "did:plc:test"; handle = "test.bsky.social" |}
+                                record = {| |}
+                                indexedAt = "2024-01-15T12:00:00.000Z" |} |]
+                         cursor = "page2" |}
+
+              let result =
+                  Bluesky.searchPosts agent "cats" None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "page2") "cursor"
+              Expect.equal page.Items.Length 1 "one post" ]
+
+[<Tests>]
+let searchActorsTests =
+    testList
+        "Bluesky.searchActors"
+        [ testCase "searchActors calls correct XRPC endpoint with q param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| actors =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User" |} |]
+                         cursor = "page2" |}
+
+              let result =
+                  Bluesky.searchActors agent "alice" None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.actor.searchActors" "correct endpoint"
+              Expect.stringContains (req.RequestUri.ToString ()) "q=alice" "q param"
+
+          testCase "searchActors returns Page with cursor and items"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| actors =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User" |} |]
+                         cursor = "page2" |}
+
+              let result =
+                  Bluesky.searchActors agent "alice" None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "page2") "cursor"
+              Expect.equal page.Items.Length 1 "one actor" ]
+
+[<Tests>]
+let getAuthorFeedTests =
+    testList
+        "Bluesky.getAuthorFeed"
+        [ testCase "getAuthorFeed calls correct XRPC endpoint with actor param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| feed =
+                          [| {| post =
+                                  {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                                     cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                     author = {| did = "did:plc:test"; handle = "test.bsky.social" |}
+                                     record = {| |}
+                                     indexedAt = "2024-01-15T12:00:00.000Z" |} |} |]
+                         cursor = "page2" |}
+
+              let result =
+                  Bluesky.getAuthorFeed agent "test.bsky.social" None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.feed.getAuthorFeed" "correct endpoint"
+              Expect.stringContains (req.RequestUri.ToString ()) "actor=test.bsky.social" "actor param"
+
+          testCase "getAuthorFeed returns Page with cursor and items"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| feed =
+                          [| {| post =
+                                  {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                                     cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                     author = {| did = "did:plc:test"; handle = "test.bsky.social" |}
+                                     record = {| |}
+                                     indexedAt = "2024-01-15T12:00:00.000Z" |} |} |]
+                         cursor = "page2" |}
+
+              let result =
+                  Bluesky.getAuthorFeed agent "test.bsky.social" None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "page2") "cursor"
+              Expect.equal page.Items.Length 1 "one item" ]
+
+[<Tests>]
+let getActorLikesTests =
+    testList
+        "Bluesky.getActorLikes"
+        [ testCase "getActorLikes calls correct XRPC endpoint with actor param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| feed =
+                          [| {| post =
+                                  {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                                     cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                     author = {| did = "did:plc:test"; handle = "test.bsky.social" |}
+                                     record = {| |}
+                                     indexedAt = "2024-01-15T12:00:00.000Z" |} |} |]
+                         cursor = "page2" |}
+
+              let result =
+                  Bluesky.getActorLikes agent "test.bsky.social" None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.feed.getActorLikes" "correct endpoint"
+              Expect.stringContains (req.RequestUri.ToString ()) "actor=test.bsky.social" "actor param"
+
+          testCase "getActorLikes returns Page with cursor and items"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| feed =
+                          [| {| post =
+                                  {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                                     cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                     author = {| did = "did:plc:test"; handle = "test.bsky.social" |}
+                                     record = {| |}
+                                     indexedAt = "2024-01-15T12:00:00.000Z" |} |} |]
+                         cursor = "page2" |}
+
+              let result =
+                  Bluesky.getActorLikes agent "test.bsky.social" None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "page2") "cursor"
+              Expect.equal page.Items.Length 1 "one item" ]
+
+[<Tests>]
+let getLikesTests =
+    testList
+        "Bluesky.getLikes"
+        [ testCase "getLikes calls correct XRPC endpoint with uri param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                         likes =
+                          [| {| actor =
+                                  {| did = "did:plc:test"
+                                     handle = "test.bsky.social"
+                                     displayName = "Test User" |}
+                                createdAt = "2024-01-15T12:00:00.000Z"
+                                indexedAt = "2024-01-15T12:00:00.000Z" |} |]
+                         cursor = "page2" |}
+
+              let uri = parseAtUri "at://did:plc:test/app.bsky.feed.post/abc"
+
+              let result =
+                  Bluesky.getLikes agent uri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.feed.getLikes" "correct endpoint"
+
+          testCase "getLikes returns Page with cursor and items"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                         likes =
+                          [| {| actor =
+                                  {| did = "did:plc:test"
+                                     handle = "test.bsky.social"
+                                     displayName = "Test User" |}
+                                createdAt = "2024-01-15T12:00:00.000Z"
+                                indexedAt = "2024-01-15T12:00:00.000Z" |} |]
+                         cursor = "page2" |}
+
+              let uri = parseAtUri "at://did:plc:test/app.bsky.feed.post/abc"
+
+              let result =
+                  Bluesky.getLikes agent uri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "page2") "cursor"
+              Expect.equal page.Items.Length 1 "one liker" ]
+
+[<Tests>]
+let getRepostedByTests =
+    testList
+        "Bluesky.getRepostedBy"
+        [ testCase "getRepostedBy calls correct XRPC endpoint with uri param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                         repostedBy =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User" |} |]
+                         cursor = "page2" |}
+
+              let uri = parseAtUri "at://did:plc:test/app.bsky.feed.post/abc"
+
+              let result =
+                  Bluesky.getRepostedBy agent uri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.feed.getRepostedBy" "correct endpoint"
+
+          testCase "getRepostedBy returns Page with cursor and items"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                         repostedBy =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User" |} |]
+                         cursor = "page2" |}
+
+              let uri = parseAtUri "at://did:plc:test/app.bsky.feed.post/abc"
+
+              let result =
+                  Bluesky.getRepostedBy agent uri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "page2") "cursor"
+              Expect.equal page.Items.Length 1 "one reposter" ]
+
+[<Tests>]
+let getQuotesTests =
+    testList
+        "Bluesky.getQuotes"
+        [ testCase "getQuotes calls correct XRPC endpoint with uri param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                         posts =
+                          [| {| uri = "at://did:plc:test/app.bsky.feed.post/quote1"
+                                cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                author = {| did = "did:plc:test"; handle = "test.bsky.social" |}
+                                record = {| |}
+                                indexedAt = "2024-01-15T12:00:00.000Z" |} |]
+                         cursor = "page2" |}
+
+              let uri = parseAtUri "at://did:plc:test/app.bsky.feed.post/abc"
+
+              let result =
+                  Bluesky.getQuotes agent uri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.feed.getQuotes" "correct endpoint"
+
+          testCase "getQuotes returns Page with cursor and items"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                         posts =
+                          [| {| uri = "at://did:plc:test/app.bsky.feed.post/quote1"
+                                cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                author = {| did = "did:plc:test"; handle = "test.bsky.social" |}
+                                record = {| |}
+                                indexedAt = "2024-01-15T12:00:00.000Z" |} |]
+                         cursor = "page2" |}
+
+              let uri = parseAtUri "at://did:plc:test/app.bsky.feed.post/abc"
+
+              let result =
+                  Bluesky.getQuotes agent uri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "page2") "cursor"
+              Expect.equal page.Items.Length 1 "one quote" ]
+
+[<Tests>]
+let getPostsTests =
+    testList
+        "Bluesky.getPosts"
+        [ testCase "getPosts calls correct XRPC endpoint with uris param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| posts =
+                          [| {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                                cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                author = {| did = "did:plc:test"; handle = "test.bsky.social" |}
+                                record = {| |}
+                                indexedAt = "2024-01-15T12:00:00.000Z" |} |] |}
+
+              let uris =
+                  [ parseAtUri "at://did:plc:test/app.bsky.feed.post/abc" ]
+
+              let result =
+                  Bluesky.getPosts agent uris |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.feed.getPosts" "correct endpoint"
+
+          testCase "getPosts returns TimelinePost list"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| posts =
+                          [| {| uri = "at://did:plc:test/app.bsky.feed.post/abc"
+                                cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                author = {| did = "did:plc:test"; handle = "test.bsky.social" |}
+                                record = {| |}
+                                indexedAt = "2024-01-15T12:00:00.000Z" |} |] |}
+
+              let uris =
+                  [ parseAtUri "at://did:plc:test/app.bsky.feed.post/abc" ]
+
+              let result =
+                  Bluesky.getPosts agent uris |> Async.AwaitTask |> Async.RunSynchronously
+
+              let posts = Expect.wantOk result "should succeed"
+              Expect.equal posts.Length 1 "one post" ]
+
+[<Tests>]
+let getProfilesTests =
+    testList
+        "Bluesky.getProfiles"
+        [ testCase "getProfiles calls correct XRPC endpoint with actors param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| profiles =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User"
+                                description = "A test profile"
+                                postsCount = 42L
+                                followersCount = 100L
+                                followsCount = 50L |} |] |}
+
+              let result =
+                  Bluesky.getProfiles agent [ "test.bsky.social" ]
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.actor.getProfiles" "correct endpoint"
+
+          testCase "getProfiles returns Profile list"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| profiles =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User"
+                                description = "A test profile"
+                                postsCount = 42L
+                                followersCount = 100L
+                                followsCount = 50L |} |] |}
+
+              let result =
+                  Bluesky.getProfiles agent [ "test.bsky.social" ]
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let profiles = Expect.wantOk result "should succeed"
+              Expect.equal profiles.Length 1 "one profile" ]
+
+[<Tests>]
+let getSuggestedFollowsTests =
+    testList
+        "Bluesky.getSuggestedFollows"
+        [ testCase "getSuggestedFollows calls correct XRPC endpoint with actor param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| suggestions =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User" |} |] |}
+
+              let result =
+                  Bluesky.getSuggestedFollows agent "alice.bsky.social"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "app.bsky.graph.getSuggestedFollowsByActor"
+                  "correct endpoint"
+
+              Expect.stringContains (req.RequestUri.ToString ()) "alice.bsky.social" "actor param"
+
+          testCase "getSuggestedFollows returns ProfileSummary list"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| suggestions =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User" |} |] |}
+
+              let result =
+                  Bluesky.getSuggestedFollows agent "alice.bsky.social"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let suggestions = Expect.wantOk result "should succeed"
+              Expect.equal suggestions.Length 1 "one suggestion" ]
+
+[<Tests>]
+let getUnreadNotificationCountTests =
+    testList
+        "Bluesky.getUnreadNotificationCount"
+        [ testCase "getUnreadNotificationCount calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = queryAgent (fun req -> captured <- Some req) {| count = 7L |}
+
+              let result =
+                  Bluesky.getUnreadNotificationCount agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "app.bsky.notification.getUnreadCount"
+                  "correct endpoint"
+
+          testCase "getUnreadNotificationCount returns count from response"
+          <| fun _ ->
+              let agent = queryAgent (fun _ -> ()) {| count = 42L |}
+
+              let result =
+                  Bluesky.getUnreadNotificationCount agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let count = Expect.wantOk result "should succeed"
+              Expect.equal count 42L "notification count" ]
+
+[<Tests>]
+let markNotificationsSeenTests =
+    testList
+        "Bluesky.markNotificationsSeen"
+        [ testCase "markNotificationsSeen calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.markNotificationsSeen agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "app.bsky.notification.updateSeen"
+                  "correct endpoint"
+
+          testCase "markNotificationsSeen sends seenAt in request body"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+
+              let _result =
+                  Bluesky.markNotificationsSeen agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "seenAt" "seenAt in body" ]
+
+[<Tests>]
+let getPreferencesTests =
+    testList
+        "Bluesky.getPreferences"
+        [ testCase "getPreferences calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = queryAgent (fun req -> captured <- Some req) {| preferences = ([||] : obj array) |}
+
+              let result =
+                  Bluesky.getPreferences agent |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "app.bsky.actor.getPreferences"
+                  "correct endpoint"
+
+          testCase "getPreferences returns Preferences from response"
+          <| fun _ ->
+              let agent = queryAgent (fun _ -> ()) {| preferences = ([||] : obj array) |}
+
+              let result =
+                  Bluesky.getPreferences agent |> Async.AwaitTask |> Async.RunSynchronously
+
+              let prefs = Expect.wantOk result "should succeed"
+              Expect.isEmpty prefs "empty preferences" ]
+
+[<Tests>]
+let getBookmarksTests =
+    testList
+        "Bluesky.getBookmarks"
+        [ testCase "getBookmarks calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              // Use empty bookmarks list to avoid BookmarkViewItemUnion deserialization
+              // (inline union $type tag conflicts with global JsonFSharpConverter -- known limitation).
+              let agent =
+                  queryAgent (fun req -> captured <- Some req) {| bookmarks = ([||] : obj array); cursor = "page2" |}
+
+              let result =
+                  Bluesky.getBookmarks agent None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.bookmark.getBookmarks" "correct endpoint"
+
+          testCase "getBookmarks returns Page with cursor"
+          <| fun _ ->
+              let agent =
+                  queryAgent (fun _ -> ()) {| bookmarks = ([||] : obj array); cursor = "page2" |}
+
+              let result =
+                  Bluesky.getBookmarks agent None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "page2") "cursor"
+              Expect.equal page.Items [] "empty items from empty bookmarks"
+
+          testCase "getBookmarks passes limit and cursor params"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| bookmarks = ([||] : obj array)
+                         cursor = null |}
+
+              let result =
+                  Bluesky.getBookmarks agent (Some 10L) (Some "prev-cursor")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let url = captured.Value.RequestUri.ToString ()
+              Expect.stringContains url "limit=10" "limit in query"
+              Expect.stringContains url "cursor=prev-cursor" "cursor in query" ]

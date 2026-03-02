@@ -198,3 +198,89 @@ module Chat =
             let! result = ChatBskyConvo.UnmuteConvo.call (ensureChatProxy agent) { ConvoId = convoId }
             return result |> Result.map ignore
         }
+
+    /// <summary>
+    /// Accept a conversation request, allowing messages to be exchanged.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="convoId">The ID of the conversation to accept.</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let acceptConvo (agent : AtpAgent) (convoId : string) : Task<Result<unit, XrpcError>> =
+        task {
+            let! result = ChatBskyConvo.AcceptConvo.call (ensureChatProxy agent) { ConvoId = convoId }
+            return result |> Result.map ignore
+        }
+
+    /// <summary>
+    /// Leave a conversation. The conversation will no longer appear in your list.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="convoId">The ID of the conversation to leave.</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let leaveConvo (agent : AtpAgent) (convoId : string) : Task<Result<unit, XrpcError>> =
+        task {
+            let! result = ChatBskyConvo.LeaveConvo.call (ensureChatProxy agent) { ConvoId = convoId }
+            return result |> Result.map ignore
+        }
+
+    /// <summary>
+    /// Add an emoji reaction to a message in a conversation.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="convoId">The ID of the conversation containing the message.</param>
+    /// <param name="messageId">The ID of the message to react to.</param>
+    /// <param name="emoji">The emoji reaction value (e.g., a Unicode emoji string).</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let addReaction
+        (agent : AtpAgent)
+        (convoId : string)
+        (messageId : string)
+        (emoji : string)
+        : Task<Result<unit, XrpcError>> =
+        task {
+            let! result =
+                ChatBskyConvo.AddReaction.call
+                    (ensureChatProxy agent)
+                    { ConvoId = convoId
+                      MessageId = messageId
+                      Value = emoji }
+
+            return result |> Result.map ignore
+        }
+
+    /// <summary>
+    /// Remove an emoji reaction from a message in a conversation.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="convoId">The ID of the conversation containing the message.</param>
+    /// <param name="messageId">The ID of the message to remove the reaction from.</param>
+    /// <param name="emoji">The emoji reaction value to remove.</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let removeReaction
+        (agent : AtpAgent)
+        (convoId : string)
+        (messageId : string)
+        (emoji : string)
+        : Task<Result<unit, XrpcError>> =
+        task {
+            let! result =
+                ChatBskyConvo.RemoveReaction.call
+                    (ensureChatProxy agent)
+                    { ConvoId = convoId
+                      MessageId = messageId
+                      Value = emoji }
+
+            return result |> Result.map ignore
+        }
+
+    /// <summary>
+    /// Get a single conversation by its ID.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="convoId">The ID of the conversation to retrieve.</param>
+    /// <returns>A <see cref="ConvoSummary"/> on success, or an <see cref="XrpcError"/>.</returns>
+    let getConvo (agent : AtpAgent) (convoId : string) : Task<Result<ConvoSummary, XrpcError>> =
+        task {
+            let! result = ChatBskyConvo.GetConvo.query (ensureChatProxy agent) { ConvoId = convoId }
+            return result |> Result.map (fun output -> ConvoSummary.ofConvoView output.Convo)
+        }

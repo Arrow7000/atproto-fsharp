@@ -141,3 +141,318 @@ let chatProxyTests =
                   |> Async.RunSynchronously
 
               Expect.isEmpty agent.ExtraHeaders "agent unchanged after call" ]
+
+// ── Helpers for new chat operation tests ────────────────────────────
+
+/// Creates a mock agent with session set returning a minimal AcceptConvo/LeaveConvo-shaped response.
+let private createVoidChatAgent (captureRequest : HttpRequestMessage -> unit) (responseBody : obj) =
+    let agent =
+        createMockAgent (fun req ->
+            captureRequest req
+            jsonResponse HttpStatusCode.OK responseBody)
+
+    agent.Session <- Some testSession
+    agent
+
+// ── New chat operation tests ─────────────────────────────────────────
+
+[<Tests>]
+let acceptConvoTests =
+    testList
+        "Chat.acceptConvo"
+        [ testCase "acceptConvo calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent (fun req -> captured <- Some req) {| rev = "rev1" |}
+
+              let result =
+                  Chat.acceptConvo agent "convo-123"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "chat.bsky.convo.acceptConvo"
+                  "correct endpoint"
+
+          testCase "acceptConvo auto-adds chat proxy header"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent (fun req -> captured <- Some req) {| rev = "rev1" |}
+
+              let _result =
+                  Chat.acceptConvo agent "convo-123"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let req = captured.Value
+              let proxyValues = req.Headers.GetValues ("atproto-proxy") |> Seq.toList
+              Expect.contains proxyValues "did:web:api.bsky.chat#bsky_chat" "proxy header present"
+
+          testCase "acceptConvo sends convoId in request body"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent (fun req -> captured <- Some req) {| rev = "rev1" |}
+
+              let _result =
+                  Chat.acceptConvo agent "convo-abc"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-abc" "convoId in body" ]
+
+[<Tests>]
+let leaveConvoTests =
+    testList
+        "Chat.leaveConvo"
+        [ testCase "leaveConvo calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| convoId = "convo-123"; rev = "rev1" |}
+
+              let result =
+                  Chat.leaveConvo agent "convo-123"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "chat.bsky.convo.leaveConvo"
+                  "correct endpoint"
+
+          testCase "leaveConvo auto-adds chat proxy header"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| convoId = "convo-123"; rev = "rev1" |}
+
+              let _result =
+                  Chat.leaveConvo agent "convo-123"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let req = captured.Value
+              let proxyValues = req.Headers.GetValues ("atproto-proxy") |> Seq.toList
+              Expect.contains proxyValues "did:web:api.bsky.chat#bsky_chat" "proxy header present"
+
+          testCase "leaveConvo sends convoId in request body"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| convoId = "convo-leave"; rev = "rev1" |}
+
+              let _result =
+                  Chat.leaveConvo agent "convo-leave"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-leave" "convoId in body" ]
+
+[<Tests>]
+let addReactionTests =
+    testList
+        "Chat.addReaction"
+        [ testCase "addReaction calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| message =
+                          {| id = "msg-1"
+                             rev = "rev1"
+                             sender = {| did = "did:plc:testuser" |}
+                             text = "hello"
+                             sentAt = "2026-02-26T00:00:00.000Z" |} |}
+
+              let result =
+                  Chat.addReaction agent "convo-123" "msg-1" "\U0001F44D"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "chat.bsky.convo.addReaction"
+                  "correct endpoint"
+
+          testCase "addReaction auto-adds chat proxy header"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| message =
+                          {| id = "msg-1"
+                             rev = "rev1"
+                             sender = {| did = "did:plc:testuser" |}
+                             text = "hello"
+                             sentAt = "2026-02-26T00:00:00.000Z" |} |}
+
+              let _result =
+                  Chat.addReaction agent "convo-123" "msg-1" "\U0001F44D"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let req = captured.Value
+              let proxyValues = req.Headers.GetValues ("atproto-proxy") |> Seq.toList
+              Expect.contains proxyValues "did:web:api.bsky.chat#bsky_chat" "proxy header present"
+
+          testCase "addReaction sends convoId, messageId, and value in request body"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| message =
+                          {| id = "msg-1"
+                             rev = "rev1"
+                             sender = {| did = "did:plc:testuser" |}
+                             text = "hello"
+                             sentAt = "2026-02-26T00:00:00.000Z" |} |}
+
+              let _result =
+                  Chat.addReaction agent "convo-react" "msg-react" "\u2764\uFE0F"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-react" "convoId in body"
+              Expect.stringContains body "msg-react" "messageId in body" ]
+
+[<Tests>]
+let removeReactionTests =
+    testList
+        "Chat.removeReaction"
+        [ testCase "removeReaction calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| message =
+                          {| id = "msg-1"
+                             rev = "rev1"
+                             sender = {| did = "did:plc:testuser" |}
+                             text = "hello"
+                             sentAt = "2026-02-26T00:00:00.000Z" |} |}
+
+              let result =
+                  Chat.removeReaction agent "convo-123" "msg-1" "\U0001F44D"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "chat.bsky.convo.removeReaction"
+                  "correct endpoint"
+
+          testCase "removeReaction auto-adds chat proxy header"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| message =
+                          {| id = "msg-1"
+                             rev = "rev1"
+                             sender = {| did = "did:plc:testuser" |}
+                             text = "hello"
+                             sentAt = "2026-02-26T00:00:00.000Z" |} |}
+
+              let _result =
+                  Chat.removeReaction agent "convo-123" "msg-1" "\U0001F44D"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let req = captured.Value
+              let proxyValues = req.Headers.GetValues ("atproto-proxy") |> Seq.toList
+              Expect.contains proxyValues "did:web:api.bsky.chat#bsky_chat" "proxy header present" ]
+
+[<Tests>]
+let getConvoTests =
+    testList
+        "Chat.getConvo"
+        [ testCase "getConvo calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createConvoViewAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Chat.getConvo agent "convo-1"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "chat.bsky.convo.getConvo" "correct endpoint"
+
+          testCase "getConvo auto-adds chat proxy header"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createConvoViewAgent (fun req -> captured <- Some req)
+
+              let _result =
+                  Chat.getConvo agent "convo-1"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let req = captured.Value
+              let proxyValues = req.Headers.GetValues ("atproto-proxy") |> Seq.toList
+              Expect.contains proxyValues "did:web:api.bsky.chat#bsky_chat" "proxy header present"
+
+          testCase "getConvo returns ConvoSummary from response"
+          <| fun _ ->
+              let agent =
+                  createConvoViewAgent (fun _ -> ())
+
+              let result =
+                  Chat.getConvo agent "convo-1"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let convo = Expect.wantOk result "should succeed"
+              Expect.equal convo.Id "convo-1" "convo ID" ]

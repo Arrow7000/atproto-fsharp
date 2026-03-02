@@ -453,6 +453,12 @@ module ThreadNode =
         | AppBskyFeed.GetPostThread.OutputThreadUnion.BlockedPost bp -> ThreadNode.Blocked bp.Uri
         | _ -> ThreadNode.NotFound(AtUri.parse "at://unknown/unknown/unknown" |> Result.defaultWith failwith)
 
+/// <summary>The subject of a content report.</summary>
+[<RequireQualifiedAccess>]
+type ReportSubject =
+    | Account of Did
+    | Record of PostRef
+
 /// <summary>
 /// High-level convenience methods for common Bluesky operations:
 /// posting, replying, liking, reposting, following, blocking, uploading blobs, and deleting records.
@@ -1203,6 +1209,106 @@ module Bluesky =
                 return result |> Result.map toPostRef
         }
 
+    // ── Mute / report / bookmark / handle ───────────────────────────────
+
+    /// <summary>
+    /// Mute an account. Muted accounts are hidden from your feeds but not blocked.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">The actor identifier (handle or DID string) to mute.</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let muteUser (agent : AtpAgent) (actor : string) : Task<Result<unit, XrpcError>> =
+        AppBskyGraph.MuteActor.call agent { Actor = actor }
+
+    /// <summary>
+    /// Unmute a previously muted account.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">The actor identifier (handle or DID string) to unmute.</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let unmuteUser (agent : AtpAgent) (actor : string) : Task<Result<unit, XrpcError>> =
+        AppBskyGraph.UnmuteActor.call agent { Actor = actor }
+
+    /// <summary>
+    /// Mute a thread. Posts in the muted thread are hidden from your notifications.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="root">The AT-URI of the thread root post.</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let muteThread (agent : AtpAgent) (root : AtUri) : Task<Result<unit, XrpcError>> =
+        AppBskyGraph.MuteThread.call agent { Root = root }
+
+    /// <summary>
+    /// Unmute a previously muted thread.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="root">The AT-URI of the thread root post.</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let unmuteThread (agent : AtpAgent) (root : AtUri) : Task<Result<unit, XrpcError>> =
+        AppBskyGraph.UnmuteThread.call agent { Root = root }
+
+    /// <summary>
+    /// Report content to moderation. Use <see cref="ReportSubject.Account"/> to report an account
+    /// or <see cref="ReportSubject.Record"/> to report a specific post.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="subject">The subject of the report (account or post).</param>
+    /// <param name="reason">The reason type from <see cref="ComAtprotoModeration.Defs.ReasonType"/>.</param>
+    /// <param name="description">An optional free-text description of the report.</param>
+    /// <returns>The report ID on success, or an <see cref="XrpcError"/>.</returns>
+    let reportContent
+        (agent : AtpAgent)
+        (subject : ReportSubject)
+        (reason : ComAtprotoModeration.Defs.ReasonType)
+        (description : string option)
+        : Task<Result<int64, XrpcError>> =
+        task {
+            let subjectUnion =
+                match subject with
+                | ReportSubject.Account did ->
+                    ComAtprotoModeration.CreateReport.InputSubjectUnion.RepoRef { Did = did }
+                | ReportSubject.Record postRef ->
+                    ComAtprotoModeration.CreateReport.InputSubjectUnion.StrongRef
+                        { Uri = postRef.Uri; Cid = postRef.Cid }
+
+            let! result =
+                ComAtprotoModeration.CreateReport.call
+                    agent
+                    { Subject = subjectUnion
+                      ReasonType = reason
+                      Reason = description
+                      ModTool = None }
+
+            return result |> Result.map (fun output -> output.Id)
+        }
+
+    /// <summary>
+    /// Add a post to your bookmarks.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="postRef">A <see cref="PostRef"/> identifying the post to bookmark.</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let addBookmark (agent : AtpAgent) (postRef : PostRef) : Task<Result<unit, XrpcError>> =
+        AppBskyBookmark.CreateBookmark.call agent { Uri = postRef.Uri; Cid = postRef.Cid }
+
+    /// <summary>
+    /// Remove a post from your bookmarks.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="uri">The AT-URI of the bookmarked post to remove.</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let removeBookmark (agent : AtpAgent) (uri : AtUri) : Task<Result<unit, XrpcError>> =
+        AppBskyBookmark.DeleteBookmark.call agent { Uri = uri }
+
+    /// <summary>
+    /// Update the authenticated user's handle.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="handle">The new <see cref="Handle"/> to set.</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let updateHandle (agent : AtpAgent) (handle : Handle) : Task<Result<unit, XrpcError>> =
+        ComAtprotoIdentity.UpdateHandle.call agent { Handle = handle }
+
     // ── Read convenience methods ────────────────────────────────────────
 
     [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
@@ -1383,6 +1489,328 @@ module Bluesky =
                 result
                 |> Result.map (fun output ->
                     { Items = output.Follows |> List.map ProfileSummary.ofView
+                      Cursor = output.Cursor })
+        }
+
+    /// <summary>
+    /// Search for posts matching a query string.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="query">The search query string.</param>
+    /// <param name="limit">Maximum number of posts to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="TimelinePost"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let searchPosts
+        (agent : AtpAgent)
+        (query : string)
+        (limit : int64 option)
+        (cursor : string option)
+        : Task<Result<Page<TimelinePost>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyFeed.SearchPosts.query
+                    agent
+                    { Q = query
+                      Author = None
+                      Cursor = cursor
+                      Domain = None
+                      Lang = None
+                      Limit = limit
+                      Mentions = None
+                      Since = None
+                      Sort = None
+                      Tag = None
+                      Until = None
+                      Url = None }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.Posts |> List.map TimelinePost.ofPostView
+                      Cursor = output.Cursor })
+        }
+
+    /// <summary>
+    /// Search for actors (users) matching a query string.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="query">The search query string.</param>
+    /// <param name="limit">Maximum number of actors to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let searchActors
+        (agent : AtpAgent)
+        (query : string)
+        (limit : int64 option)
+        (cursor : string option)
+        : Task<Result<Page<ProfileSummary>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyActor.SearchActors.query
+                    agent
+                    { Q = Some query
+                      Cursor = cursor
+                      Limit = limit
+                      Term = None }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.Actors |> List.map ProfileSummary.ofView
+                      Cursor = output.Cursor })
+        }
+
+    /// <summary>
+    /// Get a specific user's feed (posts by that actor).
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">The actor identifier (handle or DID string).</param>
+    /// <param name="limit">Maximum number of posts to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="FeedItem"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let getAuthorFeed
+        (agent : AtpAgent)
+        (actor : string)
+        (limit : int64 option)
+        (cursor : string option)
+        : Task<Result<Page<FeedItem>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyFeed.GetAuthorFeed.query
+                    agent
+                    { Actor = actor
+                      Cursor = cursor
+                      Filter = None
+                      IncludePins = None
+                      Limit = limit }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.Feed |> List.map FeedItem.ofFeedViewPost
+                      Cursor = output.Cursor })
+        }
+
+    /// <summary>
+    /// Get the posts that a specific actor has liked.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">The actor identifier (handle or DID string).</param>
+    /// <param name="limit">Maximum number of posts to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="FeedItem"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let getActorLikes
+        (agent : AtpAgent)
+        (actor : string)
+        (limit : int64 option)
+        (cursor : string option)
+        : Task<Result<Page<FeedItem>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyFeed.GetActorLikes.query
+                    agent
+                    { Actor = actor
+                      Cursor = cursor
+                      Limit = limit }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.Feed |> List.map FeedItem.ofFeedViewPost
+                      Cursor = output.Cursor })
+        }
+
+    /// <summary>
+    /// Get the accounts that have liked a specific post.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="uri">The AT-URI of the post.</param>
+    /// <param name="limit">Maximum number of likes to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let getLikes
+        (agent : AtpAgent)
+        (uri : AtUri)
+        (limit : int64 option)
+        (cursor : string option)
+        : Task<Result<Page<ProfileSummary>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyFeed.GetLikes.query
+                    agent
+                    { Uri = uri
+                      Cid = None
+                      Cursor = cursor
+                      Limit = limit }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.Likes |> List.map (fun l -> ProfileSummary.ofView l.Actor)
+                      Cursor = output.Cursor })
+        }
+
+    /// <summary>
+    /// Get the accounts that have reposted a specific post.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="uri">The AT-URI of the post.</param>
+    /// <param name="limit">Maximum number of reposts to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let getRepostedBy
+        (agent : AtpAgent)
+        (uri : AtUri)
+        (limit : int64 option)
+        (cursor : string option)
+        : Task<Result<Page<ProfileSummary>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyFeed.GetRepostedBy.query
+                    agent
+                    { Uri = uri
+                      Cid = None
+                      Cursor = cursor
+                      Limit = limit }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.RepostedBy |> List.map ProfileSummary.ofView
+                      Cursor = output.Cursor })
+        }
+
+    /// <summary>
+    /// Get posts that quote a specific post.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="uri">The AT-URI of the quoted post.</param>
+    /// <param name="limit">Maximum number of quotes to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="TimelinePost"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let getQuotes
+        (agent : AtpAgent)
+        (uri : AtUri)
+        (limit : int64 option)
+        (cursor : string option)
+        : Task<Result<Page<TimelinePost>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyFeed.GetQuotes.query
+                    agent
+                    { Uri = uri
+                      Cid = None
+                      Cursor = cursor
+                      Limit = limit }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.Posts |> List.map TimelinePost.ofPostView
+                      Cursor = output.Cursor })
+        }
+
+    /// <summary>
+    /// Get multiple posts by their AT-URIs in a single request.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="uris">A list of AT-URIs identifying the posts to retrieve.</param>
+    /// <returns>A list of <see cref="TimelinePost"/> on success, or an <see cref="XrpcError"/>.</returns>
+    let getPosts (agent : AtpAgent) (uris : AtUri list) : Task<Result<TimelinePost list, XrpcError>> =
+        task {
+            let! result = AppBskyFeed.GetPosts.query agent { Uris = uris }
+            return result |> Result.map (fun output -> output.Posts |> List.map TimelinePost.ofPostView)
+        }
+
+    /// <summary>
+    /// Get multiple profiles by their identifiers in a single request.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actors">A list of actor identifiers (handles or DID strings).</param>
+    /// <returns>A list of <see cref="Profile"/> on success, or an <see cref="XrpcError"/>.</returns>
+    let getProfiles (agent : AtpAgent) (actors : string list) : Task<Result<Profile list, XrpcError>> =
+        task {
+            let! result = AppBskyActor.GetProfiles.query agent { Actors = actors }
+            return result |> Result.map (fun output -> output.Profiles |> List.map Profile.ofDetailed)
+        }
+
+    /// <summary>
+    /// Get suggested accounts to follow based on a given actor.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">The actor identifier (handle or DID string) to base suggestions on.</param>
+    /// <returns>A list of <see cref="ProfileSummary"/> on success, or an <see cref="XrpcError"/>.</returns>
+    let getSuggestedFollows (agent : AtpAgent) (actor : string) : Task<Result<ProfileSummary list, XrpcError>> =
+        task {
+            let! result = AppBskyGraph.GetSuggestedFollowsByActor.query agent { Actor = actor }
+            return result |> Result.map (fun output -> output.Suggestions |> List.map ProfileSummary.ofView)
+        }
+
+    /// <summary>
+    /// Get the count of unread notifications for the authenticated user.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <returns>The unread notification count on success, or an <see cref="XrpcError"/>.</returns>
+    let getUnreadNotificationCount (agent : AtpAgent) : Task<Result<int64, XrpcError>> =
+        task {
+            let! result =
+                AppBskyNotification.GetUnreadCount.query
+                    agent
+                    { Priority = None
+                      SeenAt = None }
+
+            return result |> Result.map (fun output -> output.Count)
+        }
+
+    /// <summary>
+    /// Mark all notifications as seen up to the current time.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let markNotificationsSeen (agent : AtpAgent) : Task<Result<unit, XrpcError>> =
+        let now = AtDateTime.parse (DateTimeOffset.UtcNow.ToString ("o")) |> Result.defaultWith failwith
+        AppBskyNotification.UpdateSeen.call agent { SeenAt = now }
+
+    /// <summary>
+    /// Get the authenticated user's preferences (saved feeds, content filters, etc.).
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <returns>The user's preferences on success, or an <see cref="XrpcError"/>.</returns>
+    let getPreferences (agent : AtpAgent) : Task<Result<AppBskyActor.Defs.Preferences, XrpcError>> =
+        task {
+            let! result = AppBskyActor.GetPreferences.query agent
+            return result |> Result.map (fun output -> output.Preferences)
+        }
+
+    /// <summary>
+    /// Get the authenticated user's bookmarked posts.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="limit">Maximum number of bookmarks to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="TimelinePost"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let getBookmarks
+        (agent : AtpAgent)
+        (limit : int64 option)
+        (cursor : string option)
+        : Task<Result<Page<TimelinePost>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyBookmark.GetBookmarks.query
+                    agent
+                    { Limit = limit
+                      Cursor = cursor }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items =
+                        output.Bookmarks
+                        |> List.choose (fun bv ->
+                            match bv.Item with
+                            | AppBskyBookmark.Defs.BookmarkViewItemUnion.PostView pv ->
+                                Some(TimelinePost.ofPostView pv)
+                            | _ -> None)
                       Cursor = output.Cursor })
         }
 
