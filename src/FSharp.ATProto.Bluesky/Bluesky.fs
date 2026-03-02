@@ -158,6 +158,301 @@ type ActorWitness =
 /// </summary>
 type ThreadResult = AppBskyFeed.GetPostThread.OutputThreadUnion
 
+// ── Read domain types ──────────────────────────────────────────────
+
+/// <summary>A paginated result containing a list of items and an optional cursor for the next page.</summary>
+type Page<'T> = { Items : 'T list; Cursor : string option }
+
+/// <summary>
+/// A lightweight profile summary used in feeds, notifications, and conversations.
+/// Maps from <c>ProfileViewBasic</c> / <c>ProfileView</c>.
+/// </summary>
+type ProfileSummary =
+    { Did : Did
+      Handle : Handle
+      DisplayName : string
+      Avatar : string option }
+
+module ProfileSummary =
+
+    let internal toDateTimeOffset (dt : AtDateTime) =
+        System.DateTimeOffset.Parse(
+            AtDateTime.value dt,
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.RoundtripKind
+        )
+
+    let ofBasic (p : AppBskyActor.Defs.ProfileViewBasic) : ProfileSummary =
+        { Did = p.Did
+          Handle = p.Handle
+          DisplayName = p.DisplayName |> Option.defaultValue ""
+          Avatar = p.Avatar |> Option.map string }
+
+    let ofView (p : AppBskyActor.Defs.ProfileView) : ProfileSummary =
+        { Did = p.Did
+          Handle = p.Handle
+          DisplayName = p.DisplayName |> Option.defaultValue ""
+          Avatar = p.Avatar |> Option.map string }
+
+    let ofChatBasic (p : ChatBskyActor.Defs.ProfileViewBasic) : ProfileSummary =
+        { Did = p.Did
+          Handle = p.Handle
+          DisplayName = p.DisplayName |> Option.defaultValue ""
+          Avatar = p.Avatar |> Option.map string }
+
+/// <summary>
+/// A full user profile with engagement counts and relationship state.
+/// Maps from <c>ProfileViewDetailed</c>.
+/// </summary>
+type Profile =
+    { Did : Did
+      Handle : Handle
+      DisplayName : string
+      Description : string
+      Avatar : string option
+      Banner : string option
+      PostsCount : int64
+      FollowersCount : int64
+      FollowsCount : int64
+      IsFollowing : bool
+      IsFollowedBy : bool
+      IsBlocking : bool
+      IsBlockedBy : bool
+      IsMuted : bool }
+
+module Profile =
+
+    let ofDetailed (p : AppBskyActor.Defs.ProfileViewDetailed) : Profile =
+        let viewer = p.Viewer
+
+        { Did = p.Did
+          Handle = p.Handle
+          DisplayName = p.DisplayName |> Option.defaultValue ""
+          Description = p.Description |> Option.defaultValue ""
+          Avatar = p.Avatar |> Option.map string
+          Banner = p.Banner |> Option.map string
+          PostsCount = p.PostsCount |> Option.defaultValue 0L
+          FollowersCount = p.FollowersCount |> Option.defaultValue 0L
+          FollowsCount = p.FollowsCount |> Option.defaultValue 0L
+          IsFollowing = viewer |> Option.bind (fun v -> v.Following) |> Option.isSome
+          IsFollowedBy = viewer |> Option.bind (fun v -> v.FollowedBy) |> Option.isSome
+          IsBlocking = viewer |> Option.bind (fun v -> v.Blocking) |> Option.isSome
+          IsBlockedBy =
+              viewer
+              |> Option.bind (fun v -> v.BlockedBy)
+              |> Option.defaultValue false
+          IsMuted =
+              viewer
+              |> Option.bind (fun v -> v.Muted)
+              |> Option.defaultValue false }
+
+/// <summary>
+/// A post with engagement counts and viewer state, used in feeds and timelines.
+/// Maps from <c>PostView</c>.
+/// </summary>
+type TimelinePost =
+    { Uri : AtUri
+      Cid : Cid
+      Author : ProfileSummary
+      Text : string
+      Facets : AppBskyRichtext.Facet.Facet list
+      LikeCount : int64
+      RepostCount : int64
+      ReplyCount : int64
+      QuoteCount : int64
+      IndexedAt : DateTimeOffset
+      IsLiked : bool
+      IsReposted : bool
+      IsBookmarked : bool }
+
+module TimelinePost =
+
+    let ofPostView (pv : AppBskyFeed.Defs.PostView) : TimelinePost =
+        let viewer = pv.Viewer
+
+        { Uri = pv.Uri
+          Cid = pv.Cid
+          Author = ProfileSummary.ofBasic pv.Author
+          Text = pv.Text
+          Facets = pv.Facets
+          LikeCount = pv.LikeCount |> Option.defaultValue 0L
+          RepostCount = pv.RepostCount |> Option.defaultValue 0L
+          ReplyCount = pv.ReplyCount |> Option.defaultValue 0L
+          QuoteCount = pv.QuoteCount |> Option.defaultValue 0L
+          IndexedAt = ProfileSummary.toDateTimeOffset pv.IndexedAt
+          IsLiked = viewer |> Option.bind (fun v -> v.Like) |> Option.isSome
+          IsReposted = viewer |> Option.bind (fun v -> v.Repost) |> Option.isSome
+          IsBookmarked =
+              viewer
+              |> Option.bind (fun v -> v.Bookmarked)
+              |> Option.defaultValue false }
+
+/// <summary>Reason a post appeared in a feed.</summary>
+type FeedReason =
+    | Repost of by : ProfileSummary
+    | Pin
+
+/// <summary>A single item in a feed or timeline.</summary>
+type FeedItem =
+    { Post : TimelinePost
+      Reason : FeedReason option }
+
+module FeedItem =
+
+    let ofFeedViewPost (fvp : AppBskyFeed.Defs.FeedViewPost) : FeedItem =
+        let reason =
+            fvp.Reason
+            |> Option.bind (fun r ->
+                match r with
+                | AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonRepost rr ->
+                    Some(FeedReason.Repost(ProfileSummary.ofBasic rr.By))
+                | AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin _ -> Some FeedReason.Pin
+                | _ -> None)
+
+        { Post = TimelinePost.ofPostView fvp.Post
+          Reason = reason }
+
+/// <summary>The kind of notification received.</summary>
+[<RequireQualifiedAccess>]
+type NotificationKind =
+    | Like
+    | Repost
+    | Follow
+    | Mention
+    | Reply
+    | Quote
+    | StarterpackJoined
+    | Unknown of string
+
+module NotificationKind =
+
+    let ofReason (r : AppBskyNotification.ListNotifications.NotificationReason) : NotificationKind =
+        match r with
+        | AppBskyNotification.ListNotifications.NotificationReason.Like -> NotificationKind.Like
+        | AppBskyNotification.ListNotifications.NotificationReason.Repost -> NotificationKind.Repost
+        | AppBskyNotification.ListNotifications.NotificationReason.Follow -> NotificationKind.Follow
+        | AppBskyNotification.ListNotifications.NotificationReason.Mention -> NotificationKind.Mention
+        | AppBskyNotification.ListNotifications.NotificationReason.Reply -> NotificationKind.Reply
+        | AppBskyNotification.ListNotifications.NotificationReason.Quote -> NotificationKind.Quote
+        | AppBskyNotification.ListNotifications.NotificationReason.StarterpackJoined ->
+            NotificationKind.StarterpackJoined
+        | AppBskyNotification.ListNotifications.NotificationReason.Unknown s -> NotificationKind.Unknown s
+        | other -> NotificationKind.Unknown(string other)
+
+/// <summary>A notification from the user's notification feed.</summary>
+type Notification =
+    { Kind : NotificationKind
+      Author : ProfileSummary
+      SubjectUri : AtUri option
+      IsRead : bool
+      IndexedAt : DateTimeOffset }
+
+module Notification =
+
+    let ofRaw (n : AppBskyNotification.ListNotifications.Notification) : Notification =
+        { Kind = NotificationKind.ofReason n.Reason
+          Author = ProfileSummary.ofView n.Author
+          SubjectUri = n.ReasonSubject
+          IsRead = n.IsRead
+          IndexedAt = ProfileSummary.toDateTimeOffset n.IndexedAt }
+
+/// <summary>A message in a chat conversation.</summary>
+[<RequireQualifiedAccess>]
+type ChatMessage =
+    | Message of
+        {| Id : string
+           Text : string
+           Sender : Did
+           SentAt : DateTimeOffset |}
+    | Deleted of {| Id : string; Sender : Did |}
+
+module ChatMessage =
+
+    let ofMessagesItem (item : ChatBskyConvo.GetMessages.OutputMessagesItem) : ChatMessage option =
+        match item with
+        | ChatBskyConvo.GetMessages.OutputMessagesItem.MessageView mv ->
+            Some(
+                ChatMessage.Message
+                    {| Id = mv.Id
+                       Text = mv.Text
+                       Sender = mv.Sender.Did
+                       SentAt = ProfileSummary.toDateTimeOffset mv.SentAt |}
+            )
+        | ChatBskyConvo.GetMessages.OutputMessagesItem.DeletedMessageView dv ->
+            Some(ChatMessage.Deleted {| Id = dv.Id; Sender = dv.Sender.Did |})
+        | _ -> None
+
+/// <summary>A summary of a chat conversation.</summary>
+type ConvoSummary =
+    { Id : string
+      Members : ProfileSummary list
+      LastMessageText : string option
+      UnreadCount : int64
+      IsMuted : bool }
+
+module ConvoSummary =
+
+    let ofConvoView (cv : ChatBskyConvo.Defs.ConvoView) : ConvoSummary =
+        let lastText =
+            cv.LastMessage
+            |> Option.bind (fun lm ->
+                match lm with
+                | ChatBskyConvo.Defs.ConvoViewLastMessageUnion.MessageView mv -> Some mv.Text
+                | _ -> None)
+
+        { Id = cv.Id
+          Members = cv.Members |> List.map ProfileSummary.ofChatBasic
+          LastMessageText = lastText
+          UnreadCount = cv.UnreadCount
+          IsMuted = cv.Muted }
+
+/// <summary>A node in a post thread tree.</summary>
+[<RequireQualifiedAccess>]
+type ThreadNode =
+    | Post of ThreadPost
+    | NotFound of AtUri
+    | Blocked of AtUri
+
+/// <summary>A post within a thread, with parent and reply context.</summary>
+and ThreadPost =
+    { Post : TimelinePost
+      Parent : ThreadNode option
+      Replies : ThreadNode list }
+
+module ThreadNode =
+
+    let rec ofParentUnion (u : AppBskyFeed.Defs.ThreadViewPostParentUnion) : ThreadNode =
+        match u with
+        | AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost tvp ->
+            ThreadNode.Post(ofThreadViewPost tvp)
+        | AppBskyFeed.Defs.ThreadViewPostParentUnion.NotFoundPost nfp -> ThreadNode.NotFound nfp.Uri
+        | AppBskyFeed.Defs.ThreadViewPostParentUnion.BlockedPost bp -> ThreadNode.Blocked bp.Uri
+        | _ -> ThreadNode.NotFound(AtUri.parse "at://unknown/unknown/unknown" |> Result.defaultWith failwith)
+
+    and ofThreadViewPost (tvp : AppBskyFeed.Defs.ThreadViewPost) : ThreadPost =
+        { Post = TimelinePost.ofPostView tvp.Post
+          Parent = tvp.Parent |> Option.map ofParentUnion
+          Replies =
+              tvp.Replies
+              |> Option.defaultValue []
+              |> List.choose (fun r ->
+                  match r with
+                  | AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost tvp ->
+                      Some(ThreadNode.Post(ofThreadViewPost tvp))
+                  | AppBskyFeed.Defs.ThreadViewPostParentUnion.NotFoundPost nfp ->
+                      Some(ThreadNode.NotFound nfp.Uri)
+                  | AppBskyFeed.Defs.ThreadViewPostParentUnion.BlockedPost bp ->
+                      Some(ThreadNode.Blocked bp.Uri)
+                  | _ -> None) }
+
+    let ofOutputThreadUnion (u : AppBskyFeed.GetPostThread.OutputThreadUnion) : ThreadNode =
+        match u with
+        | AppBskyFeed.GetPostThread.OutputThreadUnion.ThreadViewPost tvp ->
+            ThreadNode.Post(ofThreadViewPost tvp)
+        | AppBskyFeed.GetPostThread.OutputThreadUnion.NotFoundPost nfp -> ThreadNode.NotFound nfp.Uri
+        | AppBskyFeed.GetPostThread.OutputThreadUnion.BlockedPost bp -> ThreadNode.Blocked bp.Uri
+        | _ -> ThreadNode.NotFound(AtUri.parse "at://unknown/unknown/unknown" |> Result.defaultWith failwith)
+
 /// <summary>
 /// High-level convenience methods for common Bluesky operations:
 /// posting, replying, liking, reposting, following, blocking, uploading blobs, and deleting records.
@@ -910,15 +1205,21 @@ module Bluesky =
 
     // ── Read convenience methods ────────────────────────────────────────
 
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let getProfileImpl (agent : AtpAgent) (actorStr : string) : Task<Result<Profile, XrpcError>> =
+        task {
+            let! result = AppBskyActor.GetProfile.query agent { Actor = actorStr }
+            return result |> Result.map Profile.ofDetailed
+        }
+
     /// <summary>
     /// Get a user's profile. Accepts a <see cref="Handle"/>, <see cref="Did"/>, or plain <c>string</c>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="actor">A <see cref="Handle"/>, <see cref="Did"/>, or string identifier.</param>
-    /// <returns>The profile view on success, or an <see cref="XrpcError"/>.</returns>
-    let inline getProfile (agent : AtpAgent) (actor : ^a) : Task<Result<AppBskyActor.GetProfile.Output, XrpcError>> =
-        let actorStr = toActorString actor
-        AppBskyActor.GetProfile.query agent { Actor = actorStr }
+    /// <returns>A <see cref="Profile"/> on success, or an <see cref="XrpcError"/>.</returns>
+    let inline getProfile (agent : AtpAgent) (actor : ^a) : Task<Result<Profile, XrpcError>> =
+        getProfileImpl agent (toActorString actor)
 
     /// <summary>
     /// Get the authenticated user's home timeline.
@@ -926,61 +1227,75 @@ module Bluesky =
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="limit">Maximum number of posts to return (optional, pass <c>None</c> for server default).</param>
     /// <param name="cursor">Pagination cursor from a previous response (optional, pass <c>None</c> to start from the beginning).</param>
-    /// <returns>A feed of posts with an optional cursor for pagination, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>A page of <see cref="FeedItem"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
     let getTimeline
         (agent : AtpAgent)
         (limit : int64 option)
         (cursor : string option)
-        : Task<Result<AppBskyFeed.GetTimeline.Output, XrpcError>> =
-        AppBskyFeed.GetTimeline.query
-            agent
-            { Algorithm = None
-              Cursor = cursor
-              Limit = limit }
+        : Task<Result<Page<FeedItem>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyFeed.GetTimeline.query
+                    agent
+                    { Algorithm = None
+                      Cursor = cursor
+                      Limit = limit }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.Feed |> List.map FeedItem.ofFeedViewPost
+                      Cursor = output.Cursor })
+        }
 
     /// <summary>
-    /// Get a post thread by its AT-URI, including parent and reply context.
+    /// Get a post thread by its AT-URI, returning a <see cref="ThreadNode"/> tree.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="uri">The AT-URI of the post (e.g., <c>at://did:plc:.../app.bsky.feed.post/...</c>).</param>
     /// <param name="depth">How many levels of replies to include (optional, pass <c>None</c> for server default).</param>
     /// <param name="parentHeight">How many levels of parent context to include (optional, pass <c>None</c> for server default).</param>
-    /// <returns>The thread view on success, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>A <see cref="ThreadNode"/> tree on success, or an <see cref="XrpcError"/>.</returns>
     let getPostThread
         (agent : AtpAgent)
         (uri : AtUri)
         (depth : int64 option)
         (parentHeight : int64 option)
-        : Task<Result<AppBskyFeed.GetPostThread.Output, XrpcError>> =
-        AppBskyFeed.GetPostThread.query
-            agent
-            { Depth = depth
-              ParentHeight = parentHeight
-              Uri = uri }
+        : Task<Result<ThreadNode, XrpcError>> =
+        task {
+            let! result =
+                AppBskyFeed.GetPostThread.query
+                    agent
+                    { Depth = depth
+                      ParentHeight = parentHeight
+                      Uri = uri }
+
+            return result |> Result.map (fun output -> ThreadNode.ofOutputThreadUnion output.Thread)
+        }
 
     /// <summary>
-    /// Get a post thread, returning just the thread view post if available.
-    /// Returns <c>Some threadViewPost</c> for normal threads, <c>None</c> for not-found or blocked posts.
+    /// Get a post thread, returning just the <see cref="ThreadPost"/> if available.
+    /// Returns <c>Some threadPost</c> for normal threads, <c>None</c> for not-found or blocked posts.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="uri">The AT-URI of the post.</param>
     /// <param name="depth">How many levels of replies to include (optional).</param>
     /// <param name="parentHeight">How many levels of parent context to include (optional).</param>
-    /// <returns><c>Some ThreadViewPost</c> if the post is accessible, <c>None</c> if not found or blocked, or an <see cref="XrpcError"/>.</returns>
+    /// <returns><c>Some ThreadPost</c> if the post is accessible, <c>None</c> if not found or blocked, or an <see cref="XrpcError"/>.</returns>
     let getPostThreadView
         (agent : AtpAgent)
         (uri : AtUri)
         (depth : int64 option)
         (parentHeight : int64 option)
-        : Task<Result<AppBskyFeed.Defs.ThreadViewPost option, XrpcError>> =
+        : Task<Result<ThreadPost option, XrpcError>> =
         task {
             let! result = getPostThread agent uri depth parentHeight
 
             return
                 result
-                |> Result.map (fun output ->
-                    match output.Thread with
-                    | AppBskyFeed.GetPostThread.OutputThreadUnion.ThreadViewPost tvp -> Some tvp
+                |> Result.map (fun node ->
+                    match node with
+                    | ThreadNode.Post tp -> Some tp
                     | _ -> None)
         }
 
@@ -990,19 +1305,28 @@ module Bluesky =
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="limit">Maximum number of notifications to return (optional, pass <c>None</c> for server default).</param>
     /// <param name="cursor">Pagination cursor from a previous response (optional, pass <c>None</c> to start from the beginning).</param>
-    /// <returns>A list of notifications with an optional cursor for pagination, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>A page of <see cref="Notification"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
     let getNotifications
         (agent : AtpAgent)
         (limit : int64 option)
         (cursor : string option)
-        : Task<Result<AppBskyNotification.ListNotifications.Output, XrpcError>> =
-        AppBskyNotification.ListNotifications.query
-            agent
-            { Cursor = cursor
-              Limit = limit
-              Priority = None
-              Reasons = None
-              SeenAt = None }
+        : Task<Result<Page<Notification>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyNotification.ListNotifications.query
+                    agent
+                    { Cursor = cursor
+                      Limit = limit
+                      Priority = None
+                      Reasons = None
+                      SeenAt = None }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.Notifications |> List.map Notification.ofRaw
+                      Cursor = output.Cursor })
+        }
 
     /// <summary>
     /// Get the followers of an actor.
@@ -1011,18 +1335,27 @@ module Bluesky =
     /// <param name="actor">The actor identifier (handle or DID string).</param>
     /// <param name="limit">Maximum number of followers to return (optional).</param>
     /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
-    /// <returns>A list of followers with an optional cursor for pagination, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
     let getFollowers
         (agent : AtpAgent)
         (actor : string)
         (limit : int64 option)
         (cursor : string option)
-        : Task<Result<AppBskyGraph.GetFollowers.Output, XrpcError>> =
-        AppBskyGraph.GetFollowers.query
-            agent
-            { Actor = actor
-              Cursor = cursor
-              Limit = limit }
+        : Task<Result<Page<ProfileSummary>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyGraph.GetFollowers.query
+                    agent
+                    { Actor = actor
+                      Cursor = cursor
+                      Limit = limit }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.Followers |> List.map ProfileSummary.ofView
+                      Cursor = output.Cursor })
+        }
 
     /// <summary>
     /// Get the accounts that an actor follows.
@@ -1031,24 +1364,46 @@ module Bluesky =
     /// <param name="actor">The actor identifier (handle or DID string).</param>
     /// <param name="limit">Maximum number of follows to return (optional).</param>
     /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
-    /// <returns>A list of followed accounts with an optional cursor for pagination, or an <see cref="XrpcError"/>.</returns>
+    /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
     let getFollows
         (agent : AtpAgent)
         (actor : string)
         (limit : int64 option)
         (cursor : string option)
-        : Task<Result<AppBskyGraph.GetFollows.Output, XrpcError>> =
-        AppBskyGraph.GetFollows.query
-            agent
-            { Actor = actor
-              Cursor = cursor
-              Limit = limit }
+        : Task<Result<Page<ProfileSummary>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyGraph.GetFollows.query
+                    agent
+                    { Actor = actor
+                      Cursor = cursor
+                      Limit = limit }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.Follows |> List.map ProfileSummary.ofView
+                      Cursor = output.Cursor })
+        }
 
     // ── Pre-built paginators ───────────────────────────────────────────
 
+    let private mapAsyncEnum
+        (f : 'a -> 'b)
+        (source : System.Collections.Generic.IAsyncEnumerable<Result<'a, XrpcError>>)
+        : System.Collections.Generic.IAsyncEnumerable<Result<'b, XrpcError>> =
+        { new System.Collections.Generic.IAsyncEnumerable<Result<'b, XrpcError>> with
+            member _.GetAsyncEnumerator(ct) =
+                let inner = source.GetAsyncEnumerator(ct)
+
+                { new System.Collections.Generic.IAsyncEnumerator<Result<'b, XrpcError>> with
+                    member _.Current = inner.Current |> Result.map f
+                    member _.MoveNextAsync() = inner.MoveNextAsync()
+                    member _.DisposeAsync() = inner.DisposeAsync() } }
+
     /// <summary>
     /// Paginate the home timeline. Returns an async enumerable of pages.
-    /// Each element is a <c>Result</c> containing one page of timeline posts.
+    /// Each element is a <c>Result</c> containing one page of feed items.
     /// Pagination stops automatically when the server returns no cursor.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
@@ -1057,7 +1412,7 @@ module Bluesky =
     let paginateTimeline
         (agent : AtpAgent)
         (pageSize : int64 option)
-        : System.Collections.Generic.IAsyncEnumerable<Result<AppBskyFeed.GetTimeline.Output, XrpcError>> =
+        : System.Collections.Generic.IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>> =
         Xrpc.paginate<AppBskyFeed.GetTimeline.Params, AppBskyFeed.GetTimeline.Output>
             AppBskyFeed.GetTimeline.TypeId
             { Algorithm = None
@@ -1066,6 +1421,9 @@ module Bluesky =
             (fun o -> o.Cursor)
             (fun c p -> { p with Cursor = c })
             agent
+        |> mapAsyncEnum (fun output ->
+            { Items = output.Feed |> List.map FeedItem.ofFeedViewPost
+              Cursor = output.Cursor })
 
     /// <summary>
     /// Paginate followers for an actor. Returns an async enumerable of pages.
@@ -1080,7 +1438,7 @@ module Bluesky =
         (agent : AtpAgent)
         (actor : string)
         (pageSize : int64 option)
-        : System.Collections.Generic.IAsyncEnumerable<Result<AppBskyGraph.GetFollowers.Output, XrpcError>> =
+        : System.Collections.Generic.IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>> =
         Xrpc.paginate<AppBskyGraph.GetFollowers.Params, AppBskyGraph.GetFollowers.Output>
             AppBskyGraph.GetFollowers.TypeId
             { Actor = actor
@@ -1089,6 +1447,9 @@ module Bluesky =
             (fun o -> o.Cursor)
             (fun c p -> { p with Cursor = c })
             agent
+        |> mapAsyncEnum (fun output ->
+            { Items = output.Followers |> List.map ProfileSummary.ofView
+              Cursor = output.Cursor })
 
     /// <summary>
     /// Paginate notifications for the authenticated user. Returns an async enumerable of pages.
@@ -1101,7 +1462,7 @@ module Bluesky =
     let paginateNotifications
         (agent : AtpAgent)
         (pageSize : int64 option)
-        : System.Collections.Generic.IAsyncEnumerable<Result<AppBskyNotification.ListNotifications.Output, XrpcError>> =
+        : System.Collections.Generic.IAsyncEnumerable<Result<Page<Notification>, XrpcError>> =
         Xrpc.paginate<AppBskyNotification.ListNotifications.Params, AppBskyNotification.ListNotifications.Output>
             AppBskyNotification.ListNotifications.TypeId
             { Cursor = None
@@ -1112,3 +1473,6 @@ module Bluesky =
             (fun o -> o.Cursor)
             (fun c p -> { p with Cursor = c })
             agent
+        |> mapAsyncEnum (fun output ->
+            { Items = output.Notifications |> List.map Notification.ofRaw
+              Cursor = output.Cursor })
