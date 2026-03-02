@@ -29,101 +29,88 @@ dotnet add package FSharp.ATProto.Bluesky
 Replace the contents of `Program.fs`:
 
 ```fsharp
+open FSharp.ATProto.Syntax
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 
 [<EntryPoint>]
 let main _ =
-    task {
-        let agent = AtpAgent.create "https://bsky.social"
+    let result =
+        taskResult {
+            let! agent = Bluesky.login "https://bsky.social" "your-handle.bsky.social" "your-app-password"
+            printfn "Logged in as %s" (Handle.value agent.Session.Value.Handle)
+            return 0
+        }
 
-        let! loginResult =
-            AtpAgent.login "your-handle.bsky.social" "your-app-password" agent
-
-        match loginResult with
-        | Ok session ->
-            printfn "Logged in as %s (%s)" session.Handle session.Did
-        | Error e ->
-            printfn "Login failed: %A" e
-            return 1
-
-        return 0
-    }
-    |> fun t -> t.GetAwaiter().GetResult()
+    result.Result
+    |> function
+        | Ok code -> code
+        | Error e -> printfn "Error: %A" e; 1
 ```
 
 Run it:
 
 ```bash
 dotnet run
-# Logged in as your-handle.bsky.social (did:plc:...)
+# Logged in as your-handle.bsky.social
 ```
+
+`Bluesky.login` creates the agent, authenticates, and returns it ready to use -- all in one call. If anything fails, you get an `Error` with details. No exceptions.
 
 ## Make Your First Post
 
 `Bluesky.post` automatically detects @mentions, links, and #hashtags in your text and creates the correct rich text facets:
 
 ```fsharp
-open FSharp.ATProto.Syntax
-
-let! postResult = Bluesky.post agent "Hello world from F#! #atproto"
-
-match postResult with
-| Ok post -> printfn "Posted! URI: %s" (AtUri.value post.Uri)
-| Error e -> printfn "Post failed: %A" e
+let! post = Bluesky.post agent "Hello world from F#! #atproto"
+printfn "Posted! URI: %s" (AtUri.value post.Uri)
 ```
 
-Every `@handle.domain` in the text is resolved to a DID via the API. Links and hashtags are detected by pattern. You don't need to compute byte offsets or construct facet objects yourself.
+Every `@handle.domain` in the text is resolved to a DID via the API. Links and hashtags are detected by pattern. You never need to compute byte offsets or construct facet objects yourself. The result is a `PostRef` containing the AT-URI and CID of the new post.
 
 ## Read Your Timeline
 
-Use the generated XRPC wrapper for `app.bsky.feed.getTimeline`:
+`Bluesky.getTimeline` wraps the `app.bsky.feed.getTimeline` endpoint with a simpler signature:
 
 ```fsharp
-let! timelineResult =
-    AppBskyFeed.GetTimeline.query agent
-        { Algorithm = None; Cursor = None; Limit = Some 10L }
+open FSharp.ATProto.Syntax
 
-match timelineResult with
-| Ok timeline ->
-    for item in timeline.Feed do
-        let author = Handle.value item.Post.Author.Handle
-        let text =
-            item.Post.Record.GetProperty("text").GetString()
-        printfn "@%s: %s" author text
-| Error e ->
-    printfn "Timeline failed: %A" e
+let! timeline = Bluesky.getTimeline agent (Some 10L) None
+
+for item in timeline.Feed do
+    let author = Handle.value item.Post.Author.Handle
+    let text = item.Post.Text
+    printfn "@%s: %s" author text
 ```
 
-All 237 XRPC endpoints on Bluesky are available as typed wrappers under their Lexicon namespace (`AppBskyFeed`, `AppBskyActor`, `ComAtprotoRepo`, etc.). Query endpoints use `.query`, procedure endpoints use `.call`.
+The `PostView.Text` extension property gives you the post text directly -- no need to dig into raw JSON.
 
 ## Like a Post
 
-```fsharp
-// Like the first post from the timeline
-match timelineResult with
-| Ok timeline when timeline.Feed.Length > 0 ->
-    let first = timeline.Feed.[0].Post
-    let! likeResult = Bluesky.like agent first.Uri first.Cid
+Construct a `PostRef` from any `PostView`, then pass it to `Bluesky.like`:
 
-    match likeResult with
-    | Ok likeUri -> printfn "Liked! %s" (AtUri.value likeUri)
-    | Error e -> printfn "Like failed: %A" e
-| _ -> ()
+```fsharp
+let firstPost = timeline.Feed.[0].Post
+let postRef = { PostRef.Uri = firstPost.Uri; Cid = firstPost.Cid }
+
+let! like = Bluesky.like agent postRef
+printfn "Liked! %s" (AtUri.value like.Uri)
+```
+
+The result is a `LikeRef` you can hold on to. To undo the like later, just pass it to `Bluesky.undo`:
+
+```fsharp
+let! undoResult = Bluesky.undo agent like
+// undoResult is Undone or WasNotPresent
 ```
 
 ## Reply to a Post
 
-`Bluesky.replyTo` fetches the parent post to resolve the thread root automatically. You only need the `PostRef` of the post you are replying to:
+`Bluesky.replyTo` fetches the parent post to resolve the thread root automatically. You only need the text and the `PostRef` of the post you are replying to:
 
 ```fsharp
-let parentRef : PostRef = { Uri = first.Uri; Cid = first.Cid }
-let! replyResult =
-    Bluesky.replyTo agent "Great post!" parentRef
-
-match replyResult with
-| Ok r -> printfn "Replied: %s" (AtUri.value r.Uri)
-| Error e -> printfn "Reply failed: %A" e
+let! reply = Bluesky.replyTo agent "Great post!" postRef
+printfn "Replied: %s" (AtUri.value reply.Uri)
 ```
 
 ## Post with Images
@@ -133,17 +120,17 @@ match replyResult with
 ```fsharp
 let imageBytes = System.IO.File.ReadAllBytes("photo.jpg")
 
-let! result =
+let! post =
     Bluesky.postWithImages agent "Check out this photo!" [
-        { Data = imageBytes; MimeType = "image/jpeg"; AltText = "A sunny landscape" }
+        { Data = imageBytes; MimeType = Jpeg; AltText = "A sunny landscape" }
     ]
 ```
 
-Up to 4 images per post.
+`MimeType` is an `ImageMime` discriminated union with cases `Jpeg`, `Png`, `Gif`, `Webp`, and `Custom of string`. Up to 4 images per post.
 
 ## Complete Example
 
-Putting it all together:
+Here is a full program that ties everything together using the `taskResult` computation expression. Every `let!` binding short-circuits to the `Error` case if something fails -- no nested match trees needed:
 
 ```fsharp
 open FSharp.ATProto.Syntax
@@ -152,51 +139,60 @@ open FSharp.ATProto.Bluesky
 
 [<EntryPoint>]
 let main _ =
-    task {
-        let agent = AtpAgent.create "https://bsky.social"
-        let! _ = AtpAgent.login "your-handle.bsky.social" "your-app-password" agent
+    let result =
+        taskResult {
+            // Log in
+            let! agent = Bluesky.login "https://bsky.social" "your-handle.bsky.social" "your-app-password"
+            printfn "Logged in!"
 
-        // Post
-        let! postResult = Bluesky.post agent "Hello from F#! #fsharp #atproto"
-        let post =
-            match postResult with
-            | Ok p -> printfn "Posted: %s" (AtUri.value p.Uri); p
-            | Error e -> failwithf "Post failed: %A" e
+            // Create a post with auto-detected rich text
+            let! post = Bluesky.post agent "Hello from F#! #fsharp #atproto"
+            printfn "Posted: %s" (AtUri.value post.Uri)
 
-        // Read timeline
-        let! tl =
-            AppBskyFeed.GetTimeline.query agent
-                { Algorithm = None; Cursor = None; Limit = Some 5L }
+            // Read timeline
+            let! timeline = Bluesky.getTimeline agent (Some 5L) None
+            printfn "Timeline (%d posts):" timeline.Feed.Length
 
-        match tl with
-        | Ok t ->
-            printfn "Timeline (%d posts):" t.Feed.Length
-            for item in t.Feed do
-                printfn "  @%s" (Handle.value item.Post.Author.Handle)
-        | Error e ->
-            printfn "Timeline: %A" e
+            for item in timeline.Feed do
+                printfn "  @%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
 
-        // Like our own post
-        let! _ = Bluesky.like agent post.Uri post.Cid
+            // Like the first post from the timeline
+            if timeline.Feed.Length > 0 then
+                let first = timeline.Feed.[0].Post
+                let firstRef = { PostRef.Uri = first.Uri; Cid = first.Cid }
+                let! like = Bluesky.like agent firstRef
+                printfn "Liked: %s" (AtUri.value like.Uri)
 
-        // Clean up
-        let! _ = Bluesky.deleteRecord agent post.Uri
+                // Reply to it
+                let! reply = Bluesky.replyTo agent "Nice post!" firstRef
+                printfn "Replied: %s" (AtUri.value reply.Uri)
 
-        printfn "Done!"
-        return 0
-    }
-    |> fun t -> t.GetAwaiter().GetResult()
+                // Clean up: undo the like and delete the reply
+                let! _ = Bluesky.undo agent like
+                let! _ = Bluesky.deleteRecord agent reply.Uri
+                printfn "Cleaned up."
+
+            // Delete our original post
+            let! _ = Bluesky.deleteRecord agent post.Uri
+
+            printfn "Done!"
+            return 0
+        }
+
+    result.Result
+    |> function
+        | Ok code -> code
+        | Error e -> printfn "Error: %A" e; 1
 ```
 
 ## What's Next
 
-- [Rich Text Guide](guides/rich-text.html) -- finer control over mention/link/hashtag detection
 - [Posts Guide](guides/posts.html) -- reading posts, threads, and search
-- [Social Actions Guide](guides/social.html) -- like, repost, follow, block
+- [Social Actions Guide](guides/social.html) -- like, repost, follow, block, and undo
+- [Rich Text Guide](guides/rich-text.html) -- finer control over mention/link/hashtag detection
 - [Feeds Guide](guides/feeds.html) -- timelines and custom feeds
 - [Media Guide](guides/media.html) -- image uploads
+- [Profiles Guide](guides/profiles.html) -- fetch user profiles
 - [Chat / DM Guide](guides/chat.html) -- direct messaging
 - [Identity Guide](guides/identity.html) -- resolve handles and DIDs
-- [Profiles Guide](guides/profiles.html) -- fetch user profiles
 - [Pagination Guide](guides/pagination.html) -- iterate through large result sets
-- [API Reference](reference/index.html) -- full generated API documentation

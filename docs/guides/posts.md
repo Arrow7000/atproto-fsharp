@@ -3,15 +3,15 @@ title: Posts
 category: Guides
 categoryindex: 1
 index: 2
-description: Create, read, reply to, and delete Bluesky posts with FSharp.ATProto
-keywords: posts, create, reply, delete, thread, bluesky
+description: Create, read, quote, reply to, search, and delete Bluesky posts with FSharp.ATProto
+keywords: posts, create, reply, delete, thread, quote, search, bluesky
 ---
 
 # Posts
 
-Posts are the primary content type on Bluesky. FSharp.ATProto provides convenience methods for creating and deleting posts, and generated XRPC wrappers for reading them.
+Posts are the primary content type on Bluesky. FSharp.ATProto gives you convenience methods for the most common operations and generated XRPC wrappers when you need full control.
 
-All examples below assume you have an authenticated agent:
+All examples below assume you have an authenticated `AtpAgent` and these namespaces open:
 
 ```fsharp
 open FSharp.ATProto.Core
@@ -21,7 +21,7 @@ open FSharp.ATProto.Syntax
 
 ## Creating a Post
 
-`Bluesky.post` creates a post with automatic rich text detection. Mentions, links, and hashtags in the text are detected, resolved, and attached as facets:
+`Bluesky.post` creates a post with automatic rich text detection. Mentions (`@handle`), links, and hashtags in the text are detected, resolved, and attached as facets -- you do not need to handle any of that yourself:
 
 ```fsharp
 task {
@@ -35,7 +35,7 @@ task {
 }
 ```
 
-On success, you get a `PostRef` containing the AT-URI and CID of the new post:
+On success you get a `PostRef` containing the AT-URI and CID of the new post:
 
 ```fsharp
 type PostRef = { Uri: AtUri; Cid: Cid }
@@ -58,20 +58,45 @@ task {
     match result with
     | Ok output ->
         for post in output.Posts do
-            let text = post.Record.GetProperty("text").GetString()
-            let author = post.Author.Handle
-            printfn "@%s: %s" (Handle.value author) text
+            let author = Handle.value post.Author.Handle
+            printfn "@%s: %s" author post.Text
             printfn "  Likes: %A  Replies: %A" post.LikeCount post.ReplyCount
     | Error err ->
         printfn "Failed: %A" err
 }
 ```
 
-`PostView.Record` is a `JsonElement` because the post record schema is open-ended. Use `GetProperty` to access fields like `text`, `createdAt`, or `reply`.
+`PostView` provides three extension properties for working with post content:
+
+| Extension | Type | Description |
+|-----------|------|-------------|
+| `.Text` | `string` | The post text (empty string if not a post record) |
+| `.Facets` | `Facet list` | Rich text facets -- mentions, links, hashtags (empty list if none) |
+| `.AsPost` | `Post option` | Full deserialized `AppBskyFeed.Post.Post` record, if the record type matches |
+
+These extensions are the recommended way to access post content. No need to dig into `Record` manually.
+
+## Quote Posts
+
+`Bluesky.quotePost` creates a post that quotes another post. The quoted post appears as an embedded card below your text:
+
+```fsharp
+task {
+    let! result = Bluesky.quotePost agent "This is a great take" originalPostRef
+
+    match result with
+    | Ok quoteRef ->
+        printfn "Quote posted: %s" (AtUri.value quoteRef.Uri)
+    | Error err ->
+        printfn "Failed: %A" err
+}
+```
+
+Like `Bluesky.post`, mentions, links, and hashtags in the text are auto-detected and resolved. The `originalPostRef` is the `PostRef` of the post you want to quote.
 
 ## Replying to a Post
 
-`Bluesky.replyTo` creates a reply with automatic rich text detection and automatic thread root resolution. You only need the `PostRef` of the post you are replying to:
+`Bluesky.replyTo` creates a reply with automatic rich text detection and automatic thread root resolution. You only need the `PostRef` of the post you are replying to -- the library figures out the thread root for you:
 
 ```fsharp
 task {
@@ -85,9 +110,9 @@ task {
 }
 ```
 
-The library fetches the parent post to determine the thread root automatically. If the parent is a top-level post, it is used as both parent and root. If the parent is itself a reply, the original thread root is extracted.
+Under the hood, the library fetches the parent post to determine the thread root. If the parent is a top-level post, it becomes both parent and root. If the parent is itself a reply, the original thread root is extracted automatically.
 
-If you have a `PostView` (from a query), construct a `PostRef` from it:
+If you have a `PostView` (from a query result), you can build a `PostRef` from it:
 
 ```fsharp
 let toPostRef (pv: AppBskyFeed.Defs.PostView) : PostRef =
@@ -96,15 +121,19 @@ let toPostRef (pv: AppBskyFeed.Defs.PostView) : PostRef =
 
 ### Explicit Parent and Root
 
-If you already know both the parent and root `PostRef`s (for example, when building a thread yourself), use `Bluesky.replyWithKnownRoot` to skip the fetch:
+If you already know both the parent and root `PostRef`s (for example, when building a thread yourself), use `Bluesky.replyWithKnownRoot` to skip the network fetch:
 
 ```fsharp
 let! result = Bluesky.replyWithKnownRoot agent "I agree!" someoneElsesReply originalPost
 ```
 
+The parameter order is: agent, text, parent, root.
+
 ## Threads
 
-Use `AppBskyFeed.GetPostThread.query` to fetch a full thread (the post, its parent chain, and its replies):
+### The Simple Way
+
+`Bluesky.getPostThreadView` returns just the `ThreadViewPost option` -- `Some` for a normal accessible thread, `None` for deleted or blocked posts:
 
 ```fsharp
 task {
@@ -112,47 +141,54 @@ task {
         AtUri.parse "at://did:plc:xxx/app.bsky.feed.post/3k2la3b"
         |> Result.defaultWith failwith
 
-    let! result =
-        AppBskyFeed.GetPostThread.query agent
-            { Uri = uri; Depth = Some 6L; ParentHeight = Some 3L }
+    let! result = Bluesky.getPostThreadView agent uri (Some 6L) (Some 3L)
 
     match result with
-    | Ok output ->
-        match output.Thread with
-        | AppBskyFeed.GetPostThread.OutputThreadUnion.ThreadViewPost thread ->
-            let text = thread.Post.Record.GetProperty("text").GetString()
-            printfn "Post: %s" text
+    | Ok (Some thread) ->
+        printfn "Post: %s" thread.Post.Text
 
-            // Walk the replies
-            match thread.Replies with
-            | Some replies ->
-                for reply in replies do
-                    match reply with
-                    | AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost r ->
-                        let replyText = r.Post.Record.GetProperty("text").GetString()
-                        printfn "  Reply: %s" replyText
-                    | AppBskyFeed.Defs.ThreadViewPostParentUnion.NotFoundPost _ ->
-                        printfn "  [deleted]"
-                    | AppBskyFeed.Defs.ThreadViewPostParentUnion.BlockedPost _ ->
-                        printfn "  [blocked]"
-                    | AppBskyFeed.Defs.ThreadViewPostParentUnion.Unknown _ ->
-                        printfn "  [unknown type]"
-            | None -> ()
-
-        | AppBskyFeed.GetPostThread.OutputThreadUnion.NotFoundPost _ ->
-            printfn "Post not found"
-        | AppBskyFeed.GetPostThread.OutputThreadUnion.BlockedPost _ ->
-            printfn "Post is blocked"
-        | AppBskyFeed.GetPostThread.OutputThreadUnion.Unknown _ ->
-            printfn "Unknown thread type"
+        match thread.Replies with
+        | Some replies ->
+            for reply in replies do
+                match reply with
+                | AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost r ->
+                    printfn "  Reply: %s" r.Post.Text
+                | _ -> ()
+        | None -> ()
+    | Ok None ->
+        printfn "Post is not available (deleted or blocked)"
     | Error err ->
         printfn "Failed: %A" err
 }
 ```
 
-The `Depth` parameter controls how many levels of replies to fetch (default varies by server). `ParentHeight` controls how many parent posts to include above the target post.
+The first `int64 option` is the reply depth (how many levels of replies to fetch). The second is the parent height (how many parent posts to include above the target post). Pass `None` for either to use the server default.
 
-The thread union has four cases: `ThreadViewPost` for normal posts, `NotFoundPost` for deleted posts, `BlockedPost` for posts from users you have blocked or who have blocked you, and `Unknown` for future protocol additions.
+### Full Pattern Matching
+
+For cases where you need to distinguish between not-found and blocked posts, use `Bluesky.getPostThread` with the `ThreadResult` type alias:
+
+```fsharp
+task {
+    let! result = Bluesky.getPostThread agent uri (Some 6L) (Some 3L)
+
+    match result with
+    | Ok output ->
+        match output.Thread with
+        | ThreadResult.ThreadViewPost thread ->
+            printfn "Post: %s" thread.Post.Text
+        | ThreadResult.NotFoundPost _ ->
+            printfn "Post not found"
+        | ThreadResult.BlockedPost _ ->
+            printfn "Post is blocked"
+        | ThreadResult.Unknown _ ->
+            printfn "Unknown thread type (future protocol addition)"
+    | Error err ->
+        printfn "Failed: %A" err
+}
+```
+
+`ThreadResult` is a type alias for `AppBskyFeed.GetPostThread.OutputThreadUnion`, giving you shorter pattern match arms.
 
 ## Searching Posts
 
@@ -170,7 +206,7 @@ task {
               Limit = Some 10L
               Mentions = None
               Since = None
-              Sort = Some "latest"
+              Sort = Some AppBskyFeed.SearchPosts.Latest
               Tag = None
               Until = None
               Url = None }
@@ -178,10 +214,8 @@ task {
     match result with
     | Ok output ->
         for post in output.Posts do
-            let text = post.Record.GetProperty("text").GetString()
-            printfn "@%s: %s" (Handle.value post.Author.Handle) text
+            printfn "@%s: %s" (Handle.value post.Author.Handle) post.Text
 
-        // Use output.Cursor for pagination
         match output.Cursor with
         | Some cursor -> printfn "More results available (cursor: %s)" cursor
         | None -> printfn "No more results"
@@ -206,25 +240,17 @@ task {
 }
 ```
 
-The same function works for undoing likes, reposts, follows, and blocks -- any record you created. Pass the AT-URI that was returned when you created the record:
-
-```fsharp
-// Unlike a post (likeUri was returned by Bluesky.like)
-let! _ = Bluesky.deleteRecord agent likeUri
-
-// Unfollow someone (followUri was returned by Bluesky.follow)
-let! _ = Bluesky.deleteRecord agent followUri
-```
+The same function works for any record you have created -- likes, reposts, follows, and blocks. Pass the AT-URI that was returned when you created the record.
 
 ## Posting with Pre-Resolved Facets
 
-If you have already detected and resolved rich text facets yourself, use `Bluesky.postWith` to skip auto-detection:
+If you have already detected and resolved rich text facets yourself (or want to construct them manually), use `Bluesky.postWithFacets` to skip auto-detection:
 
 ```fsharp
 task {
-    let! facets = RichText.parse agent "Check @alice.bsky.social"
+    let! facets = RichText.parse agent "Check @my-handle.bsky.social"
     // Modify facets here if needed...
-    let! result = Bluesky.postWith agent "Check @alice.bsky.social" facets
+    let! result = Bluesky.postWithFacets agent "Check @my-handle.bsky.social" facets
 
     match result with
     | Ok postRef -> printfn "Posted: %s" (AtUri.value postRef.Uri)

@@ -1,8 +1,8 @@
 ---
 title: Rich Text
 category: Guides
-categoryindex: 2
-index: 2
+categoryindex: 1
+index: 7
 description: Understand and control rich text facet detection in FSharp.ATProto
 keywords: rich text, facets, mentions, links, hashtags, utf-8
 ---
@@ -23,11 +23,11 @@ open FSharp.ATProto.Bluesky
 
 let! result =
     Bluesky.post agent
-        "Hello @bob.bsky.social! Check https://atproto.com #atproto"
+        "Hello @other-user.bsky.social! Check https://atproto.com #atproto"
 ```
 
 This detects three facets:
-1. `@bob.bsky.social` -- resolved to its DID via the API
+1. `@other-user.bsky.social` -- resolved to its DID via the API
 2. `https://atproto.com` -- marked as a link
 3. `#atproto` -- marked as a hashtag
 
@@ -43,18 +43,18 @@ Byte offsets are in **UTF-8 bytes**, not characters. This matters for text with 
 
 ## Step-by-Step: Detect, Then Resolve
 
-For more control, split the process into detection and resolution:
+For more control, split the process into detection and resolution.
 
 ### Detection (Offline)
 
 `RichText.detect` scans text for patterns and returns `DetectedFacet` values with byte offsets. No network calls are made:
 
 ```fsharp
-let detected = RichText.detect "Hello @alice.bsky.social! #atproto"
+let detected = RichText.detect "Hello @my-handle.bsky.social! #atproto"
 
 // Returns:
-// [ DetectedMention(6, 27, "alice.bsky.social")
-//   DetectedTag(29, 37, "atproto") ]
+// [ DetectedMention(6, 28, "my-handle.bsky.social")
+//   DetectedTag(30, 38, "atproto") ]
 ```
 
 The `DetectedFacet` type is a discriminated union:
@@ -78,10 +78,10 @@ let! facets = RichText.resolve agent detected
 
 ### Combined: `RichText.parse`
 
-`RichText.parse` combines both steps:
+`RichText.parse` combines both steps -- detect and resolve in one call:
 
 ```fsharp
-let! facets = RichText.parse agent "Hello @alice.bsky.social! #atproto"
+let! facets = RichText.parse agent "Hello @my-handle.bsky.social! #atproto"
 ```
 
 ## Posting with Pre-Computed Facets
@@ -127,10 +127,12 @@ let text = "Check out https://example.com!"
 let! facets = RichText.parse agent text
 
 let! result =
-    ChatBskyConvo.SendMessage.call chatAgent
+    ChatBskyConvo.SendMessage.call (AtpAgent.withChatProxy agent)
         { ConvoId = convoId
           Message =
             { Text = text
               Facets = if facets.IsEmpty then None else Some facets
               Embed = None } }
 ```
+
+See the [Chat / DMs](chat.html) guide for more on sending messages.

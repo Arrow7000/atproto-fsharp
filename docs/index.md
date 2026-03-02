@@ -1,26 +1,29 @@
 ---
 title: FSharp.ATProto
-category: Overview
+category: Guides
 categoryindex: 1
-index: 1
+index: 0
 description: Idiomatic F# library for the AT Protocol and Bluesky
 keywords: fsharp, atproto, bluesky, at-protocol, decentralized, social
 ---
 
 # FSharp.ATProto
 
-A native, idiomatic F# library for the [AT Protocol](https://atproto.com) -- the decentralized social networking protocol that powers [Bluesky](https://bsky.app). Built from the ground up in F# with no C# wrapper dependencies, designed around functional principles: immutable data, pure functions, and composition.
+Welcome to FSharp.ATProto -- a native F# library for the [AT Protocol](https://atproto.com), the decentralized social networking protocol behind [Bluesky](https://bsky.app). Built from the ground up in pure F# with no C# wrapper dependencies, it embraces the functional style you already love: immutable data, composable functions, and types that make invalid states unrepresentable.
 
 ## Features
 
-- **Spec-compliant identifiers** -- DIDs, Handles, NSIDs, AT-URIs, TIDs, and more, all validated against the AT Protocol specification with 726 tests drawn from official interop test vectors
-- **XRPC client** -- Full HTTP transport for AT Protocol queries and procedures, with automatic session management, token refresh, and rate limit handling
-- **Code-generated types** -- All 324 Bluesky Lexicon schemas compiled to strongly-typed F# records and discriminated unions, with 228 XRPC endpoint wrappers
-- **Rich text** -- Automatic detection and resolution of @mentions, links, and #hashtags with correct UTF-8 byte offsets
-- **Chat / DMs** -- Convenience methods for Bluesky direct messaging: conversations, messages, reactions, muting
-- **Identity resolution** -- Resolve handles to DIDs and vice versa, with bidirectional verification and DID document parsing
-- **DRISL / CBOR** -- Low-level encoding for data integrity: content-addressed records, CID computation, canonical CBOR serialization
-- **Pagination** -- Cursor-based pagination via `IAsyncEnumerable` for any list endpoint
+- **Typed domain model** -- Distinct types for every concept: `PostRef`, `LikeRef`, `RepostRef`, `FollowRef`, `BlockRef`. If it compiles, it is correct -- the compiler catches mistakes so you don't have to.
+- **`taskResult` computation expression** -- Chain async operations with automatic error short-circuiting. No nested `match` trees, no thrown exceptions. Write straight-line code and let the CE handle the plumbing.
+- **237 XRPC wrappers from 324 Lexicon schemas** -- Every Bluesky API endpoint generated as a strongly-typed F# function with typed request/response records and discriminated unions.
+- **Rich text** -- Automatic detection and resolution of @mentions, links, and #hashtags with correct UTF-8 byte offsets. Just pass a string; the library does the rest.
+- **PostView extensions** -- `.Text` and `.Facets` extension properties for easy access to post content without touching raw JSON.
+- **SRTP-powered convenience** -- `Bluesky.getProfile` accepts a `Handle`, `Did`, or plain `string`. `Bluesky.undo` accepts any ref type (`LikeRef`, `RepostRef`, `FollowRef`, `BlockRef`) and returns a typed `UndoResult`.
+- **Pre-built paginators** -- Cursor-based pagination via `IAsyncEnumerable` for timeline, followers, follows, and any list endpoint.
+- **Chat / DMs** -- Convenience methods for Bluesky direct messaging: conversations, messages, muting.
+- **Identity resolution** -- Resolve handles to DIDs and vice versa, with bidirectional verification and DID document parsing.
+- **Spec-compliant identifiers** -- DIDs, Handles, NSIDs, AT-URIs, TIDs, and more, all validated against the AT Protocol specification.
+- **DRISL / CBOR** -- Content-addressed records, CID computation, and canonical CBOR serialization for data integrity.
 
 ## Installation
 
@@ -41,31 +44,31 @@ The `FSharp.ATProto.Bluesky` package pulls in all dependencies transitively (`Co
 Log in and make a post with auto-detected rich text:
 
 ```fsharp
+open FSharp.ATProto.Syntax
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 
-task {
-    // Create an agent and log in
-    let agent = AtpAgent.create "https://bsky.social"
-    let! _ = AtpAgent.login "alice.bsky.social" "app-password-here" agent
-
-    // Post with automatic @mention, link, and #hashtag detection
-    let! result = Bluesky.post agent "Hello from F#! Check https://atproto.com #atproto"
-
-    match result with
-    | Ok post -> printfn "Posted: %s" post.Uri
-    | Error e -> printfn "Failed: %A" e.Message
-}
+let result =
+    taskResult {
+        let! agent = Bluesky.login "https://bsky.social" "my-handle.bsky.social" "app-password-here"
+        let! post = Bluesky.post agent "Hello from F#! Check https://atproto.com #atproto"
+        printfn "Posted: %s" (AtUri.value post.Uri)
+        return post
+    }
 ```
 
 ## Next Steps
 
 - [Quickstart Guide](quickstart.html) -- get up and running in 5 minutes
+- [Posts Guide](guides/posts.html) -- create, reply to, and delete posts
+- [Profiles Guide](guides/profiles.html) -- fetch user profiles
+- [Feeds Guide](guides/feeds.html) -- timelines, author feeds, custom feeds
+- [Social Actions Guide](guides/social.html) -- like, repost, follow, block
 - [Rich Text Guide](guides/rich-text.html) -- control how mentions, links, and hashtags are processed
+- [Media Guide](guides/media.html) -- upload images
 - [Chat / DM Guide](guides/chat.html) -- send and receive direct messages
 - [Identity Guide](guides/identity.html) -- resolve handles and DIDs
 - [Pagination Guide](guides/pagination.html) -- iterate through paged API results
-- [Example Project](https://github.com/aronka/atproto-fsharp/tree/main/examples/BskyBotExample) -- a full bot example covering posts, replies, likes, follows, DMs, and more
 
 ## Architecture
 
@@ -79,7 +82,7 @@ The library is organized in layers, each building on the one below:
 | `FSharp.ATProto.Core` | XRPC client, session auth, rate limiting, pagination |
 | `FSharp.ATProto.Bluesky` | Generated types, rich text, identity, convenience methods |
 
-Each layer is independently testable with over 1,400 tests across the stack.
+Each layer is independently testable with 1,636 tests across the stack.
 
 ## License
 
