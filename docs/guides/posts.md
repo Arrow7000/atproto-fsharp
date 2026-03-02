@@ -45,7 +45,7 @@ The `Uri` uniquely identifies the post (e.g. `at://did:plc:xxx/app.bsky.feed.pos
 
 ## Reading Posts
 
-Use the generated `AppBskyFeed.GetPosts.query` to fetch one or more posts by AT-URI:
+`Bluesky.getPosts` fetches one or more posts by AT-URI and returns them as `TimelinePost` domain types:
 
 ```fsharp
 task {
@@ -53,28 +53,21 @@ task {
         AtUri.parse "at://did:plc:xxx/app.bsky.feed.post/3k2la3b"
         |> Result.defaultWith failwith
 
-    let! result = AppBskyFeed.GetPosts.query agent { Uris = [ uri ] }
+    let! result = Bluesky.getPosts agent [ uri ]
 
     match result with
-    | Ok output ->
-        for post in output.Posts do
-            let author = Handle.value post.Author.Handle
-            printfn "@%s: %s" author post.Text
-            printfn "  Likes: %A  Replies: %A" post.LikeCount post.ReplyCount
+    | Ok posts ->
+        for post in posts do
+            printfn "@%s: %s" post.Author.DisplayName post.Text
+            printfn "  Likes: %d  Replies: %d" post.LikeCount post.ReplyCount
     | Error err ->
         printfn "Failed: %A" err
 }
 ```
 
-`PostView` provides three extension properties for working with post content:
+`TimelinePost` gives you direct access to all fields -- `Uri`, `Cid`, `Author` (a `ProfileSummary`), `Text`, `Facets`, `LikeCount`, `RepostCount`, `ReplyCount`, `QuoteCount`, `IndexedAt`, `IsLiked`, `IsReposted`, and `IsBookmarked`. No need to dig into record internals.
 
-| Extension | Type | Description |
-|-----------|------|-------------|
-| `.Text` | `string` | The post text (empty string if not a post record) |
-| `.Facets` | `Facet list` | Rich text facets -- mentions, links, hashtags (empty list if none) |
-| `.AsPost` | `Post option` | Full deserialized `AppBskyFeed.Post.Post` record, if the record type matches |
-
-These extensions are the recommended way to access post content. No need to dig into `Record` manually.
+> **Power users**: If you need the raw `AppBskyFeed.Defs.PostView` from the generated types, use `AppBskyFeed.GetPosts.query` directly. `PostView` provides `.Text`, `.Facets`, and `.AsPost` extension properties for convenient access to post content at the raw layer.
 
 ## Quote Posts
 
@@ -93,6 +86,29 @@ task {
 ```
 
 Like `Bluesky.post`, mentions, links, and hashtags in the text are auto-detected and resolved. The `originalPostRef` is the `PostRef` of the post you want to quote.
+
+### Reading Quotes
+
+`Bluesky.getQuotes` returns a paginated list of posts that quote a given post:
+
+```fsharp
+task {
+    let! result = Bluesky.getQuotes agent postRef.Uri None None
+
+    match result with
+    | Ok page ->
+        for quote in page.Items do
+            printfn "@%s quoted: %s" quote.Author.DisplayName quote.Text
+
+        match page.Cursor with
+        | Some cursor -> printfn "More quotes available"
+        | None -> printfn "No more quotes"
+    | Error err ->
+        printfn "Failed: %A" err
+}
+```
+
+The first `int64 option` is the page size limit and the second `string option` is the pagination cursor. Pass `None` for both to use server defaults. See the [Pagination guide](pagination.html) for fetching additional pages.
 
 ## Replying to a Post
 
@@ -133,7 +149,7 @@ The parameter order is: agent, text, parent, root.
 
 ### The Simple Way
 
-`Bluesky.getPostThreadView` returns just the `ThreadViewPost option` -- `Some` for a normal accessible thread, `None` for deleted or blocked posts:
+`Bluesky.getPostThreadView` returns a `ThreadPost option` -- `Some` for a normal accessible thread, `None` for deleted or blocked posts. `ThreadPost` is a domain type with `Post` (a `TimelinePost`), `Parent`, and `Replies`:
 
 ```fsharp
 task {
@@ -147,14 +163,14 @@ task {
     | Ok (Some thread) ->
         printfn "Post: %s" thread.Post.Text
 
-        match thread.Replies with
-        | Some replies ->
-            for reply in replies do
-                match reply with
-                | AppBskyFeed.Defs.ThreadViewPostParentUnion.ThreadViewPost r ->
-                    printfn "  Reply: %s" r.Post.Text
-                | _ -> ()
-        | None -> ()
+        for reply in thread.Replies do
+            match reply with
+            | ThreadNode.Post r ->
+                printfn "  Reply by @%s: %s" r.Post.Author.DisplayName r.Post.Text
+            | ThreadNode.NotFound uri ->
+                printfn "  [deleted: %s]" (AtUri.value uri)
+            | ThreadNode.Blocked uri ->
+                printfn "  [blocked: %s]" (AtUri.value uri)
     | Ok None ->
         printfn "Post is not available (deleted or blocked)"
     | Error err ->
@@ -166,65 +182,62 @@ The first `int64 option` is the reply depth (how many levels of replies to fetch
 
 ### Full Pattern Matching
 
-For cases where you need to distinguish between not-found and blocked posts, use `Bluesky.getPostThread` with the `ThreadResult` type alias:
+For cases where you need to distinguish between not-found and blocked posts at the top level, use `Bluesky.getPostThread` which returns a `ThreadNode`:
 
 ```fsharp
 task {
     let! result = Bluesky.getPostThread agent uri (Some 6L) (Some 3L)
 
     match result with
-    | Ok output ->
-        match output.Thread with
-        | ThreadResult.ThreadViewPost thread ->
-            printfn "Post: %s" thread.Post.Text
-        | ThreadResult.NotFoundPost _ ->
-            printfn "Post not found"
-        | ThreadResult.BlockedPost _ ->
-            printfn "Post is blocked"
-        | ThreadResult.Unknown _ ->
-            printfn "Unknown thread type (future protocol addition)"
+    | Ok (ThreadNode.Post thread) ->
+        printfn "Post: %s" thread.Post.Text
+
+        // Walk the parent chain
+        let mutable current = thread.Parent
+        while current.IsSome do
+            match current.Value with
+            | ThreadNode.Post p ->
+                printfn "  Parent: %s" p.Post.Text
+                current <- p.Parent
+            | _ ->
+                current <- None
+    | Ok (ThreadNode.NotFound uri) ->
+        printfn "Post not found: %s" (AtUri.value uri)
+    | Ok (ThreadNode.Blocked uri) ->
+        printfn "Post is blocked: %s" (AtUri.value uri)
     | Error err ->
         printfn "Failed: %A" err
 }
 ```
 
-`ThreadResult` is a type alias for `AppBskyFeed.GetPostThread.OutputThreadUnion`, giving you shorter pattern match arms.
+`ThreadNode` is a discriminated union with three cases: `Post` (containing a `ThreadPost` with nested `Parent` and `Replies`), `NotFound`, and `Blocked`. This gives you full control over how to handle each case in the thread tree.
+
+> **Power users**: For access to the raw `AppBskyFeed.GetPostThread.OutputThreadUnion` (aliased as `ThreadResult`), call `AppBskyFeed.GetPostThread.query` directly.
 
 ## Searching Posts
 
-`AppBskyFeed.SearchPosts.query` runs a full-text search over indexed posts:
+`Bluesky.searchPosts` runs a full-text search over indexed posts and returns a paginated `Page<TimelinePost>`:
 
 ```fsharp
 task {
-    let! result =
-        AppBskyFeed.SearchPosts.query agent
-            { Q = "F# atproto"
-              Author = None
-              Cursor = None
-              Domain = None
-              Lang = None
-              Limit = Some 10L
-              Mentions = None
-              Since = None
-              Sort = Some AppBskyFeed.SearchPosts.Latest
-              Tag = None
-              Until = None
-              Url = None }
+    let! result = Bluesky.searchPosts agent "F# atproto" (Some 10L) None
 
     match result with
-    | Ok output ->
-        for post in output.Posts do
-            printfn "@%s: %s" (Handle.value post.Author.Handle) post.Text
+    | Ok page ->
+        for post in page.Items do
+            printfn "@%s: %s" post.Author.DisplayName post.Text
 
-        match output.Cursor with
-        | Some cursor -> printfn "More results available (cursor: %s)" cursor
+        match page.Cursor with
+        | Some cursor -> printfn "More results available"
         | None -> printfn "No more results"
     | Error err ->
         printfn "Failed: %A" err
 }
 ```
 
-The `Sort` parameter accepts `"top"` (relevance) or `"latest"` (chronological). See the [Pagination guide](pagination.html) for fetching additional pages with the cursor.
+The first `int64 option` is the page size limit and the second `string option` is the pagination cursor. Pass `None` for both to use server defaults. See the [Pagination guide](pagination.html) for fetching additional pages with the cursor.
+
+> **Power users**: For advanced search filters (author, language, domain, date range, sort order), use `AppBskyFeed.SearchPosts.query` directly with the full parameter record.
 
 ## Deleting a Post
 

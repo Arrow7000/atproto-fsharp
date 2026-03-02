@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml"><img src="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10">
-  <img src="https://img.shields.io/badge/tests-1%2C636-brightgreen" alt="Tests: 1,636">
+  <img src="https://img.shields.io/badge/tests-1%2C696-brightgreen" alt="Tests: 1,696">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
 </p>
 
@@ -38,6 +38,7 @@ taskResult {
 - **If it compiles, it's correct** — distinct types for every domain concept (`PostRef`, `LikeRef`, `FollowRef`, `BlockRef`...) mean the compiler catches your mistakes.
 - **The library handles protocol complexity** — thread roots, rich text facets, chat proxy headers — all resolved automatically.
 - **Results, not exceptions** — every public function returns `Result`. No `failwith`, no try/catch.
+- **Rich domain types** — `PostRef`, `Profile`, `FeedItem`, `ConvoSummary`, `Page<'T>`, and more. Plus convenience functions for search, bookmarks, muting, notifications, and moderation.
 - **Generated from the spec** — 324 Lexicon schemas compiled to F# types + 237 typed XRPC endpoint wrappers.
 
 ## Getting Started
@@ -91,7 +92,7 @@ let! reply = Bluesky.replyTo agent "Great post!" parentPostRef
 ```fsharp
 // Chat proxy headers are handled automatically
 let! convo = Chat.getConvoForMembers agent [ recipientDid ]
-let! msg = Chat.sendMessage agent convo.Convo.Id "Hello from F#!"
+let! msg = Chat.sendMessage agent convo.Id "Hello from F#!"
 ```
 
 ### Identity
@@ -106,7 +107,7 @@ let! identity = Identity.resolveIdentity agent "alice.bsky.social"
 ```fsharp
 // Lazy, on-demand pagination via IAsyncEnumerable
 let pages = Bluesky.paginateTimeline agent (Some 50L)
-// Each page: Result<GetTimeline.Output, XrpcError>
+// Each page: Result<Page<FeedItem>, XrpcError>
 ```
 
 ### Full XRPC access
@@ -115,9 +116,8 @@ For anything the convenience API doesn't cover, all 237 Bluesky endpoints are av
 
 ```fsharp
 // Query endpoints use .query, procedure endpoints use .call
-let! feed = AppBskyFeed.GetAuthorFeed.query agent
-    { Actor = "alice.bsky.social"; Cursor = None; Limit = Some 20L
-      Filter = None; IncludePins = None }
+let! feeds = AppBskyFeed.GetActorFeeds.query agent
+    { Actor = "alice.bsky.social"; Cursor = None; Limit = Some 10L }
 ```
 
 ## Architecture
@@ -152,7 +152,7 @@ dotnet build
 dotnet test
 ```
 
-1,636 tests across six projects:
+1,696 tests across six projects:
 
 | Project                        | Tests |
 | ------------------------------ | ----: |
@@ -161,7 +161,7 @@ dotnet test
 | `FSharp.ATProto.Lexicon.Tests` |   387 |
 | `FSharp.ATProto.CodeGen.Tests` |   179 |
 | `FSharp.ATProto.Core.Tests`    |    50 |
-| `FSharp.ATProto.Bluesky.Tests` |   150 |
+| `FSharp.ATProto.Bluesky.Tests` |   210 |
 
 ## AI Transparency
 
@@ -175,7 +175,7 @@ To ensure correctness the project validates against ground truth at every layer:
 - **Rich text** — [property-based tests](tests/FSharp.ATProto.Bluesky.Tests/RichTextTests.fs) verify byte-range correctness and facet ordering
 - **XRPC / Bluesky** — [tested](tests/FSharp.ATProto.Bluesky.Tests/) via mock HTTP handlers that verify request construction, multi-step orchestration (e.g. thread root resolution), error handling, and domain type mapping (note: the mocks don't validate against real Bluesky API responses — that contract is covered by the generated types matching the lexicon schemas above)
 
-All told, 1,636 tests across six projects, with zero reliance on manual testing or live API calls.
+All told, 1,696 tests across six projects, with zero reliance on manual testing or live API calls.
 
 ## License
 

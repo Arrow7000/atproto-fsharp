@@ -77,20 +77,20 @@ open FSharp.ATProto.Syntax
 
 let! timeline = Bluesky.getTimeline agent (Some 10L) None
 
-for item in timeline.Feed do
+for item in timeline.Items do
     let author = Handle.value item.Post.Author.Handle
     let text = item.Post.Text
     printfn "@%s: %s" author text
 ```
 
-The `PostView.Text` extension property gives you the post text directly -- no need to dig into raw JSON.
+Each `FeedItem` has a `.Post` field (a `TimelinePost`) with `.Text`, `.Author`, `.Uri`, `.Cid`, and engagement counts directly available. If you drop down to the raw XRPC layer, extension properties like `.Text` and `.Facets` are available on `PostView`.
 
 ## Like a Post
 
-Construct a `PostRef` from any `PostView`, then pass it to `Bluesky.like`:
+Construct a `PostRef` from any `FeedItem`'s `Post` field, then pass it to `Bluesky.like`:
 
 ```fsharp
-let firstPost = timeline.Feed.[0].Post
+let firstPost = timeline.Items.[0].Post
 let postRef = { PostRef.Uri = firstPost.Uri; Cid = firstPost.Cid }
 
 let! like = Bluesky.like agent postRef
@@ -151,14 +151,14 @@ let main _ =
 
             // Read timeline
             let! timeline = Bluesky.getTimeline agent (Some 5L) None
-            printfn "Timeline (%d posts):" timeline.Feed.Length
+            printfn "Timeline (%d posts):" timeline.Items.Length
 
-            for item in timeline.Feed do
+            for item in timeline.Items do
                 printfn "  @%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
 
             // Like the first post from the timeline
-            if timeline.Feed.Length > 0 then
-                let first = timeline.Feed.[0].Post
+            if timeline.Items.Length > 0 then
+                let first = timeline.Items.[0].Post
                 let firstRef = { PostRef.Uri = first.Uri; Cid = first.Cid }
                 let! like = Bluesky.like agent firstRef
                 printfn "Liked: %s" (AtUri.value like.Uri)

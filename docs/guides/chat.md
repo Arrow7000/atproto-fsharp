@@ -39,8 +39,7 @@ let did = Did.parse "did:plc:xyz123" |> Result.defaultWith failwith
 let! convoResult = Chat.getConvoForMembers agent [ did ]
 
 match convoResult with
-| Ok result ->
-    let convo = result.Convo
+| Ok convo ->
     printfn "Conversation: %s (members: %d)" convo.Id convo.Members.Length
 | Error e ->
     printfn "Failed: %A" e
@@ -58,13 +57,25 @@ For simple text messages, `Chat.sendMessage` takes the agent, conversation ID, a
 let! msgResult = Chat.sendMessage agent convo.Id "Hello from F#!"
 
 match msgResult with
-| Ok msg -> printfn "Sent: %s (id: %s)" msg.Text msg.Id
-| Error e -> printfn "Send failed: %A" e
+| Ok (ChatMessage.Message msg) ->
+    printfn "Sent: %s (id: %s)" msg.Text msg.Id
+| Ok (ChatMessage.Deleted _) ->
+    () // shouldn't happen for a fresh send
+| Error e ->
+    printfn "Send failed: %A" e
 ```
 
 ### Rich Text (with Links, Mentions, Hashtags)
 
-For messages with rich text facets, use `ChatBskyConvo.SendMessage.call` with a `MessageInput` that includes resolved facets:
+`Chat.sendMessage` automatically detects links, mentions, and hashtags in your message text -- just like `Bluesky.post`. No extra steps needed:
+
+```fsharp
+let! result = Chat.sendMessage agent convo.Id "Check out https://atproto.com for the AT Protocol spec!"
+```
+
+See the [Rich Text](rich-text.html) guide for more on how facet detection works.
+
+**Power Users:** If you need full control over facets or want to include an embed (e.g., sharing a post into a DM), use the raw XRPC wrapper:
 
 ```fsharp
 let text = "Check out https://atproto.com for the AT Protocol spec!"
@@ -79,8 +90,6 @@ let! result =
               Embed = None } }
 ```
 
-See the [Rich Text](rich-text.html) guide for more on facet detection and resolution.
-
 ## Reading Messages
 
 Retrieve messages from a conversation with optional pagination:
@@ -89,48 +98,36 @@ Retrieve messages from a conversation with optional pagination:
 let! msgsResult = Chat.getMessages agent convo.Id (Some 20L) None
 
 match msgsResult with
-| Ok ms ->
-    printfn "Messages (%d):" ms.Messages.Length
-    for m in ms.Messages do
+| Ok page ->
+    printfn "Messages (%d):" page.Items.Length
+    for m in page.Items do
         match m with
-        | ChatBskyConvo.GetMessages.OutputMessagesItem.MessageView msg ->
-            printfn "  [%s] %s" (Did.value msg.Sender.Did) msg.Text
-        | ChatBskyConvo.GetMessages.OutputMessagesItem.DeletedMessageView _ ->
-            printfn "  (deleted)"
-        | ChatBskyConvo.GetMessages.OutputMessagesItem.Unknown _ ->
-            ()
+        | ChatMessage.Message msg ->
+            printfn "  [%s] %s" (Did.value msg.Sender) msg.Text
+        | ChatMessage.Deleted del ->
+            printfn "  (deleted: %s)" del.Id
 | Error e ->
     printfn "Failed: %A" e
 ```
 
-Messages are returned as an `OutputMessagesItem` discriminated union with cases for `MessageView`, `DeletedMessageView`, and `Unknown` (for forward compatibility). Pattern match to handle each kind. The `MessageView` record gives you typed access to `Text`, `Sender.Did`, `SentAt`, optional `Facets`, and more.
+Messages are returned as a `Page<ChatMessage>`. Each `ChatMessage` is a discriminated union with `Message` and `Deleted` cases. The `Message` record gives you typed access to `Id`, `Text`, `Sender` (a `Did`), and `SentAt` (a `DateTimeOffset`).
 
 To fetch older messages, pass the cursor from the previous response:
 
 ```fsharp
-let! page2 = Chat.getMessages agent convo.Id (Some 20L) ms.Cursor
+let! page2 = Chat.getMessages agent convo.Id (Some 20L) page.Cursor
 ```
 
 ## Reactions
 
-Add a reaction (emoji) to a message using the generated XRPC wrapper:
+Add or remove a reaction (emoji) on a message:
 
 ```fsharp
-let! reactionResult =
-    ChatBskyConvo.AddReaction.call (AtpAgent.withChatProxy agent)
-        { ConvoId = convo.Id
-          MessageId = msg.Id
-          Value = "\u2764\uFE0F" }  // red heart
+// Add a reaction -- takes convoId, messageId, and emoji string
+let! _ = Chat.addReaction agent convo.Id msgId "\u2764\uFE0F"  // red heart
 
-match reactionResult with
-| Ok r ->
-    let count =
-        r.Message.Reactions
-        |> Option.map List.length
-        |> Option.defaultValue 0
-    printfn "Reactions on message: %d" count
-| Error e ->
-    printfn "Reaction failed: %A" e
+// Remove a reaction
+let! _ = Chat.removeReaction agent convo.Id msgId "\u2764\uFE0F"
 ```
 
 ## Managing Conversations
@@ -141,13 +138,39 @@ match reactionResult with
 let! convosResult = Chat.listConvos agent (Some 20L) None
 
 match convosResult with
-| Ok cs ->
-    for c in cs.Convos do
+| Ok page ->
+    for c in page.Items do
         let members =
-            c.Members |> List.map (fun m -> Handle.value m.Handle) |> String.concat ", "
+            c.Members |> List.map (fun m -> m.DisplayName) |> String.concat ", "
         printfn "%s: %s (unread: %d)" c.Id members c.UnreadCount
 | Error e ->
     printfn "Failed: %A" e
+```
+
+Each `ConvoSummary` gives you `Id`, `Members` (a `ProfileSummary list`), `LastMessageText`, `UnreadCount`, and `IsMuted`.
+
+### Get a Conversation by ID
+
+If you already have a conversation ID, fetch its details directly:
+
+```fsharp
+let! convoResult = Chat.getConvo agent convoId
+
+match convoResult with
+| Ok convo -> printfn "Conversation with %d members" convo.Members.Length
+| Error e -> printfn "Failed: %A" e
+```
+
+### Accept / Leave a Conversation
+
+Accept or leave a conversation (e.g., for moderation or cleanup):
+
+```fsharp
+// Accept a conversation request
+let! _ = Chat.acceptConvo agent convoId
+
+// Leave a conversation
+let! _ = Chat.leaveConvo agent convoId
 ```
 
 ### Mark as Read
@@ -175,7 +198,7 @@ let! _ = Chat.unmuteConvo agent convo.Id
 Deletes a message for yourself only (the other participant still sees it):
 
 ```fsharp
-let! _ = Chat.deleteMessage agent convo.Id msg.Id
+let! _ = Chat.deleteMessage agent convo.Id msgId
 ```
 
 ## A Note on Attachments

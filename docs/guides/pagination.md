@@ -30,7 +30,7 @@ while hasMore do
     if hasMore then
         match enumerator.Current with
         | Ok page ->
-            for item in page.Feed do
+            for item in page.Items do
                 printfn "@%s: %s"
                     (Handle.value item.Post.Author.Handle)
                     item.Post.Text
@@ -39,7 +39,7 @@ while hasMore do
             hasMore <- false
 ```
 
-`paginateTimeline` takes just two arguments -- an authenticated agent and an optional page size. The `PostView.Text` extension property gives you the post text directly, no JSON digging required.
+`paginateTimeline` takes just two arguments -- an authenticated agent and an optional page size. Each page contains a list of `FeedItem` values in `.Items`, and the `TimelinePost` within gives you `.Text` directly -- no JSON digging required.
 
 ## Pre-Built Paginators
 
@@ -48,7 +48,7 @@ The `Bluesky` module provides three pre-built paginators that handle all the cur
 ### Timeline
 
 ```fsharp
-Bluesky.paginateTimeline : AtpAgent -> int64 option -> IAsyncEnumerable<Result<GetTimeline.Output, XrpcError>>
+Bluesky.paginateTimeline : AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>
 ```
 
 ```fsharp
@@ -58,7 +58,7 @@ let pages = Bluesky.paginateTimeline agent (Some 25L)
 ### Followers
 
 ```fsharp
-Bluesky.paginateFollowers : AtpAgent -> string -> int64 option -> IAsyncEnumerable<Result<GetFollowers.Output, XrpcError>>
+Bluesky.paginateFollowers : AtpAgent -> string -> int64 option -> IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>
 ```
 
 ```fsharp
@@ -70,7 +70,7 @@ The `actor` parameter is a string that can be either a handle or a DID.
 ### Notifications
 
 ```fsharp
-Bluesky.paginateNotifications : AtpAgent -> int64 option -> IAsyncEnumerable<Result<ListNotifications.Output, XrpcError>>
+Bluesky.paginateNotifications : AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<Notification>, XrpcError>>
 ```
 
 ```fsharp
@@ -96,7 +96,7 @@ while hasMore do
     if hasMore then
         match enumerator.Current with
         | Ok page ->
-            for item in page.Feed do
+            for item in page.Items do
                 printfn "@%s: %s"
                     (Handle.value item.Post.Author.Handle)
                     item.Post.Text
@@ -118,7 +118,7 @@ while pageCount < 3 do
         match enumerator.Current with
         | Ok page ->
             pageCount <- pageCount + 1
-            printfn "Page %d: %d items" pageCount page.Feed.Length
+            printfn "Page %d: %d items" pageCount page.Items.Length
         | Error _ ->
             pageCount <- 3  // stop on error
     else
@@ -180,12 +180,13 @@ You never need to manage cursors yourself -- the paginator handles it all. Pages
 
 ## Single-Page Queries
 
-If you only need one page of results, skip pagination entirely and call the endpoint directly:
+If you only need one page of results, use the convenience functions in the `Bluesky` module instead of the full paginator:
 
 ```fsharp
-let! result =
-    AppBskyFeed.GetTimeline.query agent
-        { Algorithm = None; Cursor = None; Limit = Some 50L }
+let! result = Bluesky.getTimeline agent (Some 50L) None
+// result : Result<Page<FeedItem>, XrpcError>
 ```
+
+These accept an optional page size and an optional cursor string, and return a single `Page<'T>`. There are matching single-page functions for followers (`Bluesky.getFollowers`) and notifications (`Bluesky.getNotifications`) as well.
 
 Pagination is most useful when you want to process a large or unbounded result set without loading everything into memory at once.

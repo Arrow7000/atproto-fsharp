@@ -120,11 +120,20 @@ let emojiBytes = RichText.byteLength "\U0001F600"  // 4
 
 ## Rich Text in Chat Messages
 
-The same facet system works for DMs. Use `RichText.parse` to compute facets, then pass them in the `MessageInput`:
+`Chat.sendMessage` auto-detects mentions, links, and hashtags -- just like `Bluesky.post`:
+
+```fsharp
+let! result =
+    Chat.sendMessage agent convoId "Check out https://example.com! cc @friend.bsky.social"
+```
+
+If you need to supply custom or pre-computed facets, drop down to the raw API:
 
 ```fsharp
 let text = "Check out https://example.com!"
 let! facets = RichText.parse agent text
+
+// Maybe filter or modify facets here...
 
 let! result =
     ChatBskyConvo.SendMessage.call (AtpAgent.withChatProxy agent)

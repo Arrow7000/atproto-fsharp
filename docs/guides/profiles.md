@@ -21,9 +21,7 @@ open FSharp.ATProto.Syntax
 
 ## Fetching a Profile
 
-### Convenience Method
-
-`Bluesky.getProfile` is an inline function that accepts a `Handle`, `Did`, or plain `string` thanks to SRTP (statically resolved type parameters). This means you can pass whatever identifier you have on hand without converting it first:
+`Bluesky.getProfile` is an inline function that accepts a `Handle`, `Did`, or plain `string` thanks to SRTP (statically resolved type parameters). This means you can pass whatever identifier you have on hand without converting it first. It returns a `Profile` domain type with non-optional fields and boolean relationship flags:
 
 ```fsharp
 task {
@@ -39,22 +37,16 @@ task {
     match result with
     | Ok profile ->
         let handle = Handle.value profile.Handle
-        let name = profile.DisplayName |> Option.defaultValue "(no display name)"
-        let bio = profile.Description |> Option.defaultValue ""
-        let followers = profile.FollowersCount |> Option.defaultValue 0L
-        let following = profile.FollowsCount |> Option.defaultValue 0L
-        let posts = profile.PostsCount |> Option.defaultValue 0L
-
-        printfn "%s (@%s)" name handle
-        printfn "%s" bio
-        printfn "%d followers, %d following, %d posts" followers following posts
+        printfn "%s (@%s)" profile.DisplayName handle
+        printfn "%s" profile.Description
+        printfn "%d followers, %d following, %d posts" profile.FollowersCount profile.FollowsCount profile.PostsCount
     | Error err -> printfn "Failed: %A" err
 }
 ```
 
-### Low-Level XRPC Wrapper
+### Power Users: Raw XRPC Wrapper
 
-If you prefer explicit control, use the generated `AppBskyActor.GetProfile.query` directly. The `Actor` field is a plain `string` that accepts either a handle or DID:
+If you need access to every field on `ProfileViewDetailed` (labels, pinned post, verification, etc.), use the generated wrapper directly:
 
 ```fsharp
 task {
@@ -67,23 +59,21 @@ task {
 }
 ```
 
-Both approaches return the same `AppBskyActor.GetProfile.Output` (which is a `ProfileViewDetailed`).
+The convenience method returns a `Profile` domain type with flattened, non-optional fields. The raw wrapper returns `AppBskyActor.GetProfile.Output` (a `ProfileViewDetailed`) with all protocol-level detail.
 
 ## Fetching Multiple Profiles
 
-Use `AppBskyActor.GetProfiles.query` to fetch up to 25 profiles in a single request:
+`Bluesky.getProfiles` fetches up to 25 profiles in a single request and returns a `Profile list`:
 
 ```fsharp
 task {
     let! result =
-        AppBskyActor.GetProfiles.query agent { Actors = [ "my-handle.bsky.social"; "other-user.bsky.social" ] }
+        Bluesky.getProfiles agent [ "my-handle.bsky.social"; "other-user.bsky.social" ]
 
     match result with
-    | Ok output ->
-        for profile in output.Profiles do
-            let did = Did.value profile.Did
-            let name = profile.DisplayName |> Option.defaultValue "(none)"
-            printfn "%s -- %s" name did
+    | Ok profiles ->
+        for profile in profiles do
+            printfn "%s -- %s" profile.DisplayName (Did.value profile.Did)
     | Error err -> printfn "Failed: %A" err
 }
 ```
@@ -92,21 +82,32 @@ Any actors that cannot be found are silently omitted from the response. The retu
 
 ## Understanding Profile Types
 
-The Bluesky Lexicon defines three profile view types at different levels of detail. Which one you encounter depends on the API endpoint:
+The convenience layer uses two domain types that simplify the three underlying Lexicon profile views:
+
+| Domain type | Returned by | Key fields |
+|-------------|-------------|------------|
+| `Profile` | `getProfile`, `getProfiles` | Full stats (counts), banner, bio, boolean relationship flags |
+| `ProfileSummary` | `searchActors`, `getSuggestedFollows`, feed/notification contexts | Minimal: DID, handle, display name, avatar |
+
+`Profile` flattens the `ProfileViewDetailed` response: counts and description are non-optional (defaulting to `0` and `""` when absent), and viewer state is collapsed into boolean fields like `IsFollowing` and `IsMuted`.
+
+`ProfileSummary` is the lightweight type you encounter in lists -- search results, suggested follows, and feed items. If you need full stats for a summary, pass its `Did` or `Handle` to `Bluesky.getProfile`.
+
+### Power Users: Raw Profile Views
+
+Under the hood, the Bluesky Lexicon defines three profile view types:
 
 | Type | Returned by | Key fields |
 |------|-------------|------------|
-| `ProfileViewDetailed` | `GetProfile`, `GetProfiles` | Full stats (follower/following/post counts), banner image, bio, pinned post |
+| `ProfileViewDetailed` | `GetProfile`, `GetProfiles` | Full stats, banner image, bio, pinned post, labels, verification |
 | `ProfileView` | `SearchActors`, follower/following lists | Bio and indexed timestamp, but no counts or banner |
 | `ProfileViewBasic` | Post authors, like lists, notification actors | Minimal: DID, handle, display name, avatar |
 
-All three types share a common core of `Did`, `Handle`, `DisplayName`, `Avatar`, `Labels`, `Viewer`, and `Verification`. The detailed variant adds counts and the banner image; the basic variant omits the bio.
-
-You do not need to convert between these types. The generated XRPC wrappers return the correct type for each endpoint.
+You can access these directly through the generated XRPC wrappers when you need fields (labels, verification, pinned post) that the domain types do not expose.
 
 ## Viewer State
 
-When you are authenticated, profile responses include a `Viewer` field that describes your relationship with the account. This is an `AppBskyActor.Defs.ViewerState option`:
+The `Profile` domain type flattens viewer state into simple boolean fields. No more nested option matching:
 
 ```fsharp
 task {
@@ -114,69 +115,73 @@ task {
 
     match result with
     | Ok profile ->
-        match profile.Viewer with
-        | Some viewer ->
-            // Do I follow this user?
-            match viewer.Following with
-            | Some followUri -> printfn "You follow them (record: %s)" (AtUri.value followUri)
-            | None -> printfn "You do not follow them"
+        if profile.IsFollowing then printfn "You follow them"
+        if profile.IsFollowedBy then printfn "They follow you back"
+        if profile.IsBlocking then printfn "You are blocking them"
+        if profile.IsBlockedBy then printfn "They are blocking you"
+        if profile.IsMuted then printfn "You have muted them"
 
-            // Do they follow me?
-            match viewer.FollowedBy with
-            | Some _ -> printfn "They follow you back"
-            | None -> printfn "They do not follow you"
-
-            // Blocking
-            match viewer.Blocking with
-            | Some _ -> printfn "You are blocking them"
-            | None -> ()
-
-            if viewer.BlockedBy = Some true then
-                printfn "They are blocking you"
-
-            // Muting
-            if viewer.Muted = Some true then
-                printfn "You have muted them"
-        | None -> printfn "No viewer state (not authenticated?)"
+        // Mutual follow check
+        if profile.IsFollowing && profile.IsFollowedBy then
+            printfn "Mutual follow!"
     | Error err -> printfn "Failed: %A" err
 }
 ```
 
-The `Following` and `FollowedBy` fields contain AT-URIs pointing to the follow record. These URIs are useful for unfollowing (you need the record URI to delete it). See the [Social Actions Guide](social.html) for follow/unfollow operations.
+If you need the underlying AT-URIs for follow/block records (e.g., to delete them), use the raw `AppBskyActor.GetProfile.query` and inspect `Viewer.Following` / `Viewer.Blocking`. See the [Social Actions Guide](social.html) for follow/unfollow operations.
 
 ## Searching for Users
 
-Use `AppBskyActor.SearchActors.query` to search for accounts by name, handle, or bio text:
+`Bluesky.searchActors` searches for accounts by name, handle, or bio text. It returns a `Page<ProfileSummary>`:
 
 ```fsharp
 task {
-    let! result =
-        AppBskyActor.SearchActors.query
-            agent
-            { Q = Some "fsharp"
-              Term = None
-              Cursor = None
-              Limit = Some 10L }
+    let! result = Bluesky.searchActors agent "fsharp" (Some 10L) None
 
     match result with
-    | Ok output ->
-        printfn "Found %d users:" output.Actors.Length
+    | Ok page ->
+        printfn "Found %d users:" page.Items.Length
 
-        for actor in output.Actors do
+        for actor in page.Items do
             let handle = Handle.value actor.Handle
-            let name = actor.DisplayName |> Option.defaultValue "(none)"
-            printfn "  @%s -- %s" handle name
+            printfn "  @%s -- %s" handle actor.DisplayName
 
-        match output.Cursor with
+        match page.Cursor with
         | Some cursor -> printfn "More results available (cursor: %s)" cursor
         | None -> printfn "No more results"
     | Error err -> printfn "Search failed: %A" err
 }
 ```
 
-Search results return `ProfileView` (not `ProfileViewDetailed`), so they include bios but not follower counts. If you need full stats for a search result, pass its DID or handle to `Bluesky.getProfile`.
+The `limit` and `cursor` parameters are optional. Pass `None` for both to use server defaults. To paginate, pass the cursor from the previous page:
 
-For paginating through results, see the [Pagination Guide](pagination.html).
+```fsharp
+let! nextPage = Bluesky.searchActors agent "fsharp" (Some 10L) (Some previousCursor)
+```
+
+Search results return `ProfileSummary` (DID, handle, display name, avatar). If you need full stats for a search result, pass its DID or handle to `Bluesky.getProfile`.
+
+For more on pagination patterns, see the [Pagination Guide](pagination.html).
+
+## Suggested Follows
+
+`Bluesky.getSuggestedFollows` returns follow suggestions based on a given actor:
+
+```fsharp
+task {
+    let! result = Bluesky.getSuggestedFollows agent "my-handle.bsky.social"
+
+    match result with
+    | Ok suggestions ->
+        printfn "Suggested follows:"
+
+        for suggestion in suggestions do
+            printfn "  @%s -- %s" (Handle.value suggestion.Handle) suggestion.DisplayName
+    | Error err -> printfn "Failed: %A" err
+}
+```
+
+This returns a `ProfileSummary list` (not paginated).
 
 ## Working with Typed Identifiers
 

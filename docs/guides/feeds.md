@@ -3,13 +3,13 @@ title: Feeds
 category: Guides
 categoryindex: 1
 index: 4
-description: Read timelines, author feeds, and custom feeds with FSharp.ATProto
-keywords: feeds, timeline, author feed, custom feed, pagination, bluesky
+description: Read timelines, author feeds, liked posts, bookmarks, and custom feeds with FSharp.ATProto
+keywords: feeds, timeline, author feed, liked posts, bookmarks, custom feed, pagination, bluesky
 ---
 
 # Feeds
 
-Bluesky exposes three kinds of feeds: your **home timeline** (posts from people you follow, plus algorithmic suggestions), **author feeds** (posts by a specific user), and **custom feeds** (algorithmic feeds created by third parties). All three return the same `FeedViewPost` type and support cursor-based pagination.
+Bluesky exposes several kinds of feeds: your **home timeline** (posts from people you follow, plus algorithmic suggestions), **author feeds** (posts by a specific user), **liked posts**, **bookmarks**, and **custom feeds** (algorithmic feeds created by third parties). The convenience methods return domain types (`FeedItem`, `TimelinePost`) and support cursor-based pagination through `Page<'T>`.
 
 All examples assume you have an authenticated `AtpAgent` and these namespaces open:
 
@@ -30,8 +30,8 @@ task {
     let! result = Bluesky.getTimeline agent (Some 25L) None
 
     match result with
-    | Ok output ->
-        for item in output.Feed do
+    | Ok page ->
+        for item in page.Items do
             let author = Handle.value item.Post.Author.Handle
             printfn "@%s: %s" author item.Post.Text
     | Error err -> printfn "Failed: %A" err
@@ -40,9 +40,11 @@ task {
 
 Pass `None` for the limit to use the server default. Pass `None` for the cursor to start from the most recent posts.
 
-### Low-Level XRPC Wrapper
+The return type is `Page<FeedItem>`. Each `FeedItem` contains a `Post : TimelinePost` and an optional `Reason : FeedReason` (see [Understanding Feed Items](#Understanding-Feed-Items) below).
 
-For full control over parameters, use the generated `AppBskyFeed.GetTimeline.query` directly:
+### Power Users: Raw XRPC Wrapper
+
+For full control over parameters (e.g., the `Algorithm` field), use the generated `AppBskyFeed.GetTimeline.query` directly:
 
 ```fsharp
 task {
@@ -61,11 +63,31 @@ task {
 }
 ```
 
-The `Algorithm` parameter is optional and currently unused by most servers. Pass `None` to get the default timeline.
+The raw wrapper returns `AppBskyFeed.GetTimeline.Output` with a `Feed : FeedViewPost list` instead of the domain types.
 
 ## Author Feed
 
-`AppBskyFeed.GetAuthorFeed.query` returns posts by a specific user. The `Actor` field accepts a handle or DID string:
+### Convenience Method
+
+`Bluesky.getAuthorFeed` returns posts by a specific user. Pass the actor's handle or DID as a string:
+
+```fsharp
+task {
+    let! result = Bluesky.getAuthorFeed agent "my-handle.bsky.social" (Some 25L) None
+
+    match result with
+    | Ok page ->
+        printfn "Got %d posts" page.Items.Length
+
+        for item in page.Items do
+            printfn "%s (%d likes)" item.Post.Text item.Post.LikeCount
+    | Error err -> printfn "Failed: %A" err
+}
+```
+
+### Power Users: Raw XRPC Wrapper
+
+The raw `AppBskyFeed.GetAuthorFeed.query` gives access to filter and pin options:
 
 ```fsharp
 task {
@@ -80,18 +102,15 @@ task {
 
     match result with
     | Ok output ->
-        printfn "Got %d posts" output.Feed.Length
-
         for item in output.Feed do
-            let likes = item.Post.LikeCount |> Option.defaultValue 0L
-            printfn "%s (%d likes)" item.Post.Text likes
+            printfn "%s" item.Post.Text
     | Error err -> printfn "Failed: %A" err
 }
 ```
 
 ### Filter Options
 
-The `Filter` parameter is a `ParamsFilter` DU that controls which posts are included:
+The `Filter` parameter on the raw wrapper is a `ParamsFilter` DU that controls which posts are included:
 
 | Value | Description |
 |-------|-------------|
@@ -102,6 +121,24 @@ The `Filter` parameter is a `ParamsFilter` DU that controls which posts are incl
 | `PostsWithVideo` | Only posts with video |
 
 Pass `None` to use the default (`PostsWithReplies`).
+
+## Liked Posts
+
+`Bluesky.getActorLikes` returns posts that a specific user has liked:
+
+```fsharp
+task {
+    let! result = Bluesky.getActorLikes agent "my-handle.bsky.social" (Some 25L) None
+
+    match result with
+    | Ok page ->
+        for item in page.Items do
+            printfn "Liked: %s by @%s" item.Post.Text (Handle.value item.Post.Author.Handle)
+    | Error err -> printfn "Failed: %A" err
+}
+```
+
+The return type is the same `Page<FeedItem>` as the timeline and author feed.
 
 ## Custom Feeds
 
@@ -159,68 +196,105 @@ task {
 
 The `IsOnline` and `IsValid` fields indicate whether the feed generator is currently reachable and returning well-formed responses.
 
-## Understanding Feed Items
+## Bookmarks
 
-Each item in a feed is a `FeedViewPost`. It wraps a `PostView` (the actual post) with additional context about why it appeared in the feed.
+Bluesky lets you bookmark posts for later. The convenience methods handle the protocol details for you.
 
-### Accessing Post Content
+### Adding and Removing Bookmarks
 
-Use the `PostView.Text` extension property to get the post text directly:
+`Bluesky.addBookmark` takes a `PostRef` (the URI + CID pair you get back from creating or referencing a post):
 
 ```fsharp
-for item in output.Feed do
+task {
+    // Bookmark a post
+    let! result = Bluesky.addBookmark agent postRef
+
+    match result with
+    | Ok () -> printfn "Bookmarked!"
+    | Error err -> printfn "Failed: %A" err
+}
+```
+
+To remove a bookmark, pass the post's AT-URI:
+
+```fsharp
+task {
+    let! result = Bluesky.removeBookmark agent postRef.Uri
+
+    match result with
+    | Ok () -> printfn "Bookmark removed"
+    | Error err -> printfn "Failed: %A" err
+}
+```
+
+### Reading Your Bookmarks
+
+`Bluesky.getBookmarks` returns a `Page<TimelinePost>` (bookmarks have no repost/pin reason, so they use `TimelinePost` directly instead of `FeedItem`):
+
+```fsharp
+task {
+    let! result = Bluesky.getBookmarks agent (Some 25L) None
+
+    match result with
+    | Ok page ->
+        for post in page.Items do
+            printfn "@%s: %s" (Handle.value post.Author.Handle) post.Text
+
+            if post.IsBookmarked then
+                printfn "  (still bookmarked)"
+    | Error err -> printfn "Failed: %A" err
+}
+```
+
+## Understanding Feed Items
+
+The convenience methods return `Page<FeedItem>` for feeds (timeline, author feed, liked posts) and `Page<TimelinePost>` for bookmarks. These are domain types that simplify the raw protocol types.
+
+### FeedItem
+
+A `FeedItem` pairs a post with an optional reason for why it appeared in the feed:
+
+```fsharp
+type FeedItem =
+    { Post : TimelinePost
+      Reason : FeedReason option }
+```
+
+### TimelinePost
+
+`TimelinePost` is a flattened, ergonomic view of a post. Engagement counts are plain `int64` values (not `Option`), and viewer state is exposed as simple booleans:
+
+```fsharp
+for item in page.Items do
     let post = item.Post
     let author = Handle.value post.Author.Handle
     printfn "@%s: %s" author post.Text
+    printfn "  %d likes, %d replies, %d reposts, %d quotes"
+        post.LikeCount post.ReplyCount post.RepostCount post.QuoteCount
+
+    if post.IsLiked then printfn "  (you liked this)"
+    if post.IsReposted then printfn "  (you reposted this)"
+    if post.IsBookmarked then printfn "  (bookmarked)"
 ```
 
-The `.Facets` extension gives you the rich text facets (mentions, links, hashtags) as a typed list, and `.AsPost` gives you the fully deserialized `Post` record if you need all fields.
+The `Facets` field gives you the rich text facets (mentions, links, hashtags) as a typed list.
 
 ### Reposts and Pins
 
-The `Reason` field tells you why a post appeared in the feed. Match on the `FeedViewPostReasonUnion` to distinguish reposts and pins from organic posts:
+The `Reason` field tells you why a post appeared in the feed. Match on the `FeedReason` DU to distinguish reposts and pins from organic posts:
 
 ```fsharp
-for item in output.Feed do
+for item in page.Items do
     match item.Reason with
-    | Some (AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonRepost repost) ->
-        let reposter = Handle.value repost.By.Handle
-        let author = Handle.value item.Post.Author.Handle
-        printfn "Reposted by @%s (originally by @%s): %s" reposter author item.Post.Text
-    | Some (AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin _) -> printfn "[Pinned] %s" item.Post.Text
-    | Some (AppBskyFeed.Defs.FeedViewPostReasonUnion.Unknown _) -> printfn "%s" item.Post.Text // future reason types
+    | Some (FeedReason.Repost (by = reposter)) ->
+        printfn "Reposted by @%s (originally by @%s): %s"
+            (Handle.value reposter.Handle)
+            (Handle.value item.Post.Author.Handle)
+            item.Post.Text
+    | Some FeedReason.Pin ->
+        printfn "[Pinned] %s" item.Post.Text
     | None ->
-        let author = Handle.value item.Post.Author.Handle
-        printfn "@%s: %s" author item.Post.Text
-```
-
-### Replies
-
-The `Reply` field is present when the post is a reply. It contains references to the parent and root posts:
-
-```fsharp
-match item.Reply with
-| Some reply ->
-    match reply.Parent with
-    | AppBskyFeed.Defs.ReplyRefParentUnion.PostView parent ->
-        printfn "  (replying to @%s)" (Handle.value parent.Author.Handle)
-    | AppBskyFeed.Defs.ReplyRefParentUnion.NotFoundPost _ -> printfn "  (replying to a deleted post)"
-    | AppBskyFeed.Defs.ReplyRefParentUnion.BlockedPost _ -> printfn "  (replying to a blocked post)"
-    | AppBskyFeed.Defs.ReplyRefParentUnion.Unknown _ -> ()
-| None -> ()
-```
-
-### Engagement Counts
-
-`PostView` includes optional engagement counts:
-
-```fsharp
-let post = item.Post
-let likes = post.LikeCount |> Option.defaultValue 0L
-let replies = post.ReplyCount |> Option.defaultValue 0L
-let reposts = post.RepostCount |> Option.defaultValue 0L
-let quotes = post.QuoteCount |> Option.defaultValue 0L
-printfn "  %d likes, %d replies, %d reposts, %d quotes" likes replies reposts quotes
+        printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
 ```
 
 ## Discovering Feeds
@@ -251,7 +325,7 @@ The `Uri` field of each `GeneratorView` is the AT-URI you pass to `AppBskyFeed.G
 
 ### Pre-Built Paginator
 
-The easiest way to page through your timeline is `Bluesky.paginateTimeline`. It returns an `IAsyncEnumerable` that fetches pages lazily as you iterate:
+The easiest way to page through your timeline is `Bluesky.paginateTimeline`. It returns an `IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>` that fetches pages lazily as you iterate:
 
 ```fsharp
 task {
@@ -267,7 +341,7 @@ task {
         if keepGoing then
             match enumerator.Current with
             | Ok page ->
-                for item in page.Feed do
+                for item in page.Items do
                     printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
             | Error err ->
                 printfn "Error: %A" err
@@ -277,19 +351,21 @@ task {
 
 Pagination stops automatically when the server returns no cursor (i.e., you have reached the end of available content).
 
-### Custom Pagination with Xrpc.paginate
+### Power Users: Custom Pagination with Xrpc.paginate
 
-For endpoints without a pre-built paginator (author feeds, custom feeds, search results, etc.), use `Xrpc.paginate` directly. It takes five arguments: the endpoint type ID, initial params, a function to extract the cursor from a response, a function to inject a cursor into params, and the agent:
+For endpoints without a pre-built paginator (custom feeds, search results, etc.), use `Xrpc.paginate` directly. It takes five arguments: the endpoint type ID, initial params, a function to extract the cursor from a response, a function to inject a cursor into params, and the agent:
 
 ```fsharp
 task {
+    let feedUri =
+        AtUri.parse "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot"
+        |> Result.defaultWith failwith
+
     let pages =
-        Xrpc.paginate<AppBskyFeed.GetAuthorFeed.Params, AppBskyFeed.GetAuthorFeed.Output>
-            AppBskyFeed.GetAuthorFeed.TypeId
-            { Actor = "my-handle.bsky.social"
+        Xrpc.paginate<AppBskyFeed.GetFeed.Params, AppBskyFeed.GetFeed.Output>
+            AppBskyFeed.GetFeed.TypeId
+            { Feed = feedUri
               Cursor = None
-              Filter = Some AppBskyFeed.GetAuthorFeed.PostsNoReplies
-              IncludePins = Some true
               Limit = Some 50L }
             (fun output -> output.Cursor)
             (fun cursor p -> { p with Cursor = cursor })
