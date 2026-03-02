@@ -367,6 +367,9 @@ let main _ =
                 let convo = convoResult.Convo
                 printfn "Convo: %s (members: %d)" convo.Id convo.Members.Length
 
+                // Chat.sendMessage should auto-detect and create rich text facets (links, mentions, etc.) just like the Bsky app does.
+                // The user shouldn't need to drop down to the raw ChatBskyConvo.SendMessage API to send a message with a link in it.
+                // This whole "Rich text DM via raw XRPC" section below (lines 406-429) should be unnecessary.
                 let! msg = Chat.sendMessage agent convo.Id "Hello from the F# ATProto bot!"
                 printfn "Sent: \"%s\" (id: %s)" msg.Text msg.Id
 
@@ -396,6 +399,7 @@ let main _ =
                 let! _ = Chat.markAllRead agent
                 printfn "Marked all read"
 
+                // why does this return a type called "Output" (ChatBskyConvo.MuteConvo.Output)? it should return something more descriptive.
                 let! muteResult = Chat.muteConvo agent convo.Id
                 printfn "Muted: %b" muteResult.Convo.Muted
 
