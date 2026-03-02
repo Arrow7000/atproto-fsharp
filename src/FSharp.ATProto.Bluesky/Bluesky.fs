@@ -62,6 +62,16 @@ type BlockRef =
     }
 
 /// <summary>
+/// A reference to a list block record, returned by <c>Bluesky.blockModList</c>.
+/// Pass to <c>Bluesky.unblockModList</c> to undo.
+/// </summary>
+type ListBlockRef =
+    {
+        /// <summary>The AT-URI of the list block record.</summary>
+        Uri : AtUri
+    }
+
+/// <summary>
 /// Supported image MIME types for blob upload.
 /// Use the named cases for common image types, or <c>Custom</c> for other MIME types.
 /// </summary>
@@ -138,6 +148,7 @@ type UndoWitness =
     static member UndoUri (UndoWitness, r : RepostRef) = r.Uri
     static member UndoUri (UndoWitness, r : FollowRef) = r.Uri
     static member UndoUri (UndoWitness, r : BlockRef) = r.Uri
+    static member UndoUri (UndoWitness, r : ListBlockRef) = r.Uri
 
 /// <summary>
 /// Witness type enabling SRTP-based overloading for actor parameters.
@@ -570,6 +581,87 @@ module Bluesky =
         }
 
     /// <summary>
+    /// Construct an agent from saved session data without making any network calls.
+    /// Use this to restore a session from persisted tokens.
+    /// </summary>
+    /// <param name="baseUrl">The PDS base URL (e.g. <c>"https://bsky.social"</c>).</param>
+    /// <param name="session">A previously obtained <see cref="AtpSession"/>.</param>
+    /// <returns>An authenticated <see cref="AtpAgent"/> with the given session.</returns>
+    let resumeSession (baseUrl : string) (session : AtpSession) : AtpAgent =
+        let agent = AtpAgent.create baseUrl
+        agent.Session <- Some session
+        agent
+
+    /// <summary>
+    /// Construct an agent from saved session data with a custom <see cref="System.Net.Http.HttpClient"/>.
+    /// Use this to restore a session from persisted tokens with custom HTTP configuration.
+    /// </summary>
+    /// <param name="client">The HTTP client to use for all requests.</param>
+    /// <param name="baseUrl">The PDS base URL (e.g. <c>"https://bsky.social"</c>).</param>
+    /// <param name="session">A previously obtained <see cref="AtpSession"/>.</param>
+    /// <returns>An authenticated <see cref="AtpAgent"/> with the given session.</returns>
+    let resumeSessionWithClient (client : HttpClient) (baseUrl : string) (session : AtpSession) : AtpAgent =
+        let agent = AtpAgent.createWithClient client baseUrl
+        agent.Session <- Some session
+        agent
+
+    /// <summary>
+    /// Terminate the current session by deleting it on the server, then clear it locally.
+    /// Uses the refresh JWT for authorization (per the AT Protocol spec).
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let logout (agent : AtpAgent) : Task<Result<unit, XrpcError>> =
+        task {
+            match agent.Session with
+            | None ->
+                return
+                    Error
+                        { StatusCode = 401
+                          Error = Some "NoSession"
+                          Message = Some "No session to delete" }
+            | Some session ->
+                let url = $"{agent.BaseUrl}xrpc/com.atproto.server.deleteSession"
+                let request = new HttpRequestMessage (HttpMethod.Post, url)
+                // deleteSession uses the refresh JWT, not the access JWT
+                request.Headers.Authorization <- AuthenticationHeaderValue ("Bearer", session.RefreshJwt)
+
+                let! response = agent.HttpClient.SendAsync (request)
+
+                if response.IsSuccessStatusCode then
+                    agent.Session <- None
+                    return Ok ()
+                else
+                    let! body = response.Content.ReadAsStringAsync ()
+
+                    try
+                        let doc = JsonDocument.Parse (body)
+                        let root = doc.RootElement
+
+                        let error =
+                            match root.TryGetProperty ("error") with
+                            | true, v -> Some (v.GetString ())
+                            | false, _ -> None
+
+                        let message =
+                            match root.TryGetProperty ("message") with
+                            | true, v -> Some (v.GetString ())
+                            | false, _ -> None
+
+                        return
+                            Error
+                                { StatusCode = int response.StatusCode
+                                  Error = error
+                                  Message = message }
+                    with _ ->
+                        return
+                            Error
+                                { StatusCode = int response.StatusCode
+                                  Error = None
+                                  Message = Some body }
+        }
+
+    /// <summary>
     /// Create a post with pre-resolved facets. Use this when you have already detected
     /// and resolved rich text facets, or when you want full control over facet content.
     /// </summary>
@@ -925,6 +1017,32 @@ module Bluesky =
     let unblock (agent : AtpAgent) (blockRef : BlockRef) : Task<Result<unit, XrpcError>> =
         deleteRecord agent blockRef.Uri
 
+    /// <summary>
+    /// Block an entire moderation list. Creates a <c>app.bsky.graph.listblock</c> record.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="listUri">The AT-URI of the moderation list to block.</param>
+    /// <returns>A <see cref="ListBlockRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>ListBlockRef</c> to <see cref="unblockModList"/> to undo.</returns>
+    let blockModList (agent : AtpAgent) (listUri : AtUri) : Task<Result<ListBlockRef, XrpcError>> =
+        task {
+            let record =
+                {| ``$type`` = AppBskyGraph.Listblock.TypeId
+                   createdAt = nowTimestamp ()
+                   subject = AtUri.value listUri |}
+
+            let! result = createRecord agent "app.bsky.graph.listblock" record
+            return result |> Result.map (fun o -> { ListBlockRef.Uri = o.Uri })
+        }
+
+    /// <summary>
+    /// Unblock a previously blocked moderation list by deleting the list block record.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="listBlockRef">The <see cref="ListBlockRef"/> returned by <see cref="blockModList"/>.</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let unblockModList (agent : AtpAgent) (listBlockRef : ListBlockRef) : Task<Result<unit, XrpcError>> =
+        deleteRecord agent listBlockRef.Uri
+
     // ── Typed undo functions (returning UndoResult) ────────────────────
 
     /// <summary>
@@ -1228,6 +1346,24 @@ module Bluesky =
     /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
     let unmuteUser (agent : AtpAgent) (actor : string) : Task<Result<unit, XrpcError>> =
         AppBskyGraph.UnmuteActor.call agent { Actor = actor }
+
+    /// <summary>
+    /// Mute an entire moderation list. All accounts on the list are muted.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="listUri">The AT-URI of the moderation list to mute.</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let muteModList (agent : AtpAgent) (listUri : AtUri) : Task<Result<unit, XrpcError>> =
+        AppBskyGraph.MuteActorList.call agent { List = listUri }
+
+    /// <summary>
+    /// Unmute a previously muted moderation list.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="listUri">The AT-URI of the moderation list to unmute.</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let unmuteModList (agent : AtpAgent) (listUri : AtUri) : Task<Result<unit, XrpcError>> =
+        AppBskyGraph.UnmuteActorList.call agent { List = listUri }
 
     /// <summary>
     /// Mute a thread. Posts in the muted thread are hidden from your notifications.
@@ -1561,6 +1697,29 @@ module Bluesky =
         }
 
     /// <summary>
+    /// Lightweight actor search for autocomplete/typeahead. Returns a flat list (no pagination).
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="query">The search query string (prefix).</param>
+    /// <param name="limit">Maximum number of actors to return (optional).</param>
+    /// <returns>A list of <see cref="ProfileSummary"/> on success, or an <see cref="XrpcError"/>.</returns>
+    let searchActorsTypeahead
+        (agent : AtpAgent)
+        (query : string)
+        (limit : int64 option)
+        : Task<Result<ProfileSummary list, XrpcError>> =
+        task {
+            let! result =
+                AppBskyActor.SearchActorsTypeahead.query
+                    agent
+                    { Limit = limit
+                      Q = Some query
+                      Term = None }
+
+            return result |> Result.map (fun output -> output.Actors |> List.map ProfileSummary.ofBasic)
+        }
+
+    /// <summary>
     /// Get a specific user's feed (posts by that actor).
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
@@ -1747,6 +1906,32 @@ module Bluesky =
         }
 
     /// <summary>
+    /// Get general account suggestions for the authenticated user.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="limit">Maximum number of suggestions to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let getSuggestions
+        (agent : AtpAgent)
+        (limit : int64 option)
+        (cursor : string option)
+        : Task<Result<Page<ProfileSummary>, XrpcError>> =
+        task {
+            let! result =
+                AppBskyActor.GetSuggestions.query
+                    agent
+                    { Cursor = cursor
+                      Limit = limit }
+
+            return
+                result
+                |> Result.map (fun output ->
+                    { Items = output.Actors |> List.map ProfileSummary.ofView
+                      Cursor = output.Cursor })
+        }
+
+    /// <summary>
     /// Get the count of unread notifications for the authenticated user.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
@@ -1813,6 +1998,97 @@ module Bluesky =
                             | _ -> None)
                       Cursor = output.Cursor })
         }
+
+    // ── Profile upsert ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Read-modify-write the authenticated user's profile with CAS (compare-and-swap) retry.
+    /// Reads the current profile, applies your update function, and writes the result back.
+    /// Automatically retries (up to 3 times) if another write conflicts.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="updateFn">
+    /// A function that receives the current profile (or <c>None</c> if the user has no profile record)
+    /// and returns the updated profile to write.
+    /// </param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    /// <example>
+    /// <code>
+    /// let! result = Bluesky.upsertProfile agent (fun currentProfile ->
+    ///     let current = currentProfile |> Option.defaultValue { DisplayName = None; Description = None; Avatar = None; Banner = None; CreatedAt = None; JoinedViaStarterPack = None; Labels = None; Pinnedpost = None }
+    ///     { current with DisplayName = Some "New Name" })
+    /// </code>
+    /// </example>
+    let upsertProfile
+        (agent : AtpAgent)
+        (updateFn : AppBskyActor.Profile.Profile option -> AppBskyActor.Profile.Profile)
+        : Task<Result<unit, XrpcError>> =
+        let maxRetries = 3
+
+        let rec attempt (retryCount : int) =
+            task {
+                match sessionDid agent with
+                | Error e -> return Error e
+                | Ok did ->
+                    let collection = Nsid.parse "app.bsky.actor.profile" |> Result.defaultWith failwith
+                    let rkey = RecordKey.parse "self" |> Result.defaultWith failwith
+
+                    // Step 1: Read the current profile record
+                    let! getResult =
+                        ComAtprotoRepo.GetRecord.query
+                            agent
+                            { Repo = Did.value did
+                              Collection = collection
+                              Rkey = rkey
+                              Cid = None }
+
+                    let currentProfile, currentCid =
+                        match getResult with
+                        | Ok output ->
+                            let profile =
+                                try
+                                    Some (JsonSerializer.Deserialize<AppBskyActor.Profile.Profile> (output.Value, Json.options))
+                                with _ ->
+                                    None
+
+                            (profile, output.Cid)
+                        | Error e when e.Error = Some "RecordNotFound" -> (None, None)
+                        | Error e -> (None, None) // Treat other errors as "no record" for first-time profile creation
+
+                    // Step 2: Apply the update function
+                    let updatedProfile = updateFn currentProfile
+
+                    // Step 3: Serialize and inject $type
+                    let jsonStr = JsonSerializer.Serialize (updatedProfile, Json.options)
+                    let mutable doc = JsonDocument.Parse (jsonStr)
+                    let dict = System.Collections.Generic.Dictionary<string, JsonElement> ()
+                    dict.["$type"] <- JsonSerializer.SerializeToElement ("app.bsky.actor.profile", Json.options)
+
+                    for prop in doc.RootElement.EnumerateObject () do
+                        dict.[prop.Name] <- prop.Value.Clone ()
+
+                    let recordElement = JsonSerializer.SerializeToElement (dict, Json.options)
+
+                    // Step 4: PutRecord with CAS
+                    let! putResult =
+                        ComAtprotoRepo.PutRecord.call
+                            agent
+                            { Repo = Did.value did
+                              Collection = collection
+                              Rkey = rkey
+                              Record = recordElement
+                              SwapRecord = currentCid
+                              SwapCommit = None
+                              Validate = None }
+
+                    match putResult with
+                    | Ok _ -> return Ok ()
+                    | Error e when e.Error = Some "InvalidSwap" && retryCount < maxRetries ->
+                        return! attempt (retryCount + 1)
+                    | Error e -> return Error e
+            }
+
+        attempt 0
 
     // ── Pre-built paginators ───────────────────────────────────────────
 

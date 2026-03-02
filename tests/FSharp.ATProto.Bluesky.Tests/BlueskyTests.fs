@@ -3027,3 +3027,619 @@ let getBookmarksTests =
               let url = captured.Value.RequestUri.ToString ()
               Expect.stringContains url "limit=10" "limit in query"
               Expect.stringContains url "cursor=prev-cursor" "cursor in query" ]
+
+// ── Quick-win convenience function tests ──────────────────────────
+
+[<Tests>]
+let searchActorsTypeaheadTests =
+    testList
+        "Bluesky.searchActorsTypeahead"
+        [ testCase "searchActorsTypeahead calls correct XRPC endpoint with q param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| actors =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User" |} |] |}
+
+              let result =
+                  Bluesky.searchActorsTypeahead agent "ali" None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "app.bsky.actor.searchActorsTypeahead"
+                  "correct endpoint"
+
+              Expect.stringContains (req.RequestUri.ToString ()) "q=ali" "q param"
+
+          testCase "searchActorsTypeahead returns flat list of ProfileSummary"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| actors =
+                          [| {| did = "did:plc:alice"
+                                handle = "alice.bsky.social"
+                                displayName = "Alice" |}
+                             {| did = "did:plc:bob"
+                                handle = "bob.bsky.social"
+                                displayName = "Bob" |} |] |}
+
+              let result =
+                  Bluesky.searchActorsTypeahead agent "a" None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let profiles = Expect.wantOk result "should succeed"
+              Expect.equal profiles.Length 2 "two profiles"
+              Expect.equal (Did.value profiles.[0].Did) "did:plc:alice" "first DID"
+              Expect.equal (Did.value profiles.[1].Did) "did:plc:bob" "second DID"
+
+          testCase "searchActorsTypeahead passes limit param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent (fun req -> captured <- Some req) {| actors = ([||] : obj array) |}
+
+              let result =
+                  Bluesky.searchActorsTypeahead agent "test" (Some 5L)
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let url = captured.Value.RequestUri.ToString ()
+              Expect.stringContains url "limit=5" "limit in query" ]
+
+[<Tests>]
+let getSuggestionsTests =
+    testList
+        "Bluesky.getSuggestions"
+        [ testCase "getSuggestions calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| actors =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User" |} |]
+                         cursor = "page2" |}
+
+              let result =
+                  Bluesky.getSuggestions agent None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "app.bsky.actor.getSuggestions"
+                  "correct endpoint"
+
+          testCase "getSuggestions returns Page with cursor and items"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| actors =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User" |} |]
+                         cursor = "page2" |}
+
+              let result =
+                  Bluesky.getSuggestions agent None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "page2") "cursor"
+              Expect.equal page.Items.Length 1 "one suggestion"
+
+          testCase "getSuggestions passes limit and cursor params"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| actors = ([||] : obj array)
+                         cursor = null |}
+
+              let result =
+                  Bluesky.getSuggestions agent (Some 10L) (Some "prev")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let url = captured.Value.RequestUri.ToString ()
+              Expect.stringContains url "limit=10" "limit in query"
+              Expect.stringContains url "cursor=prev" "cursor in query" ]
+
+[<Tests>]
+let muteModListTests =
+    testList
+        "Bluesky.muteModList"
+        [ testCase "muteModList calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let listUri = parseAtUri "at://did:plc:testuser/app.bsky.graph.list/mod1"
+
+              let result =
+                  Bluesky.muteModList agent listUri |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "app.bsky.graph.muteActorList"
+                  "correct endpoint"
+
+          testCase "muteModList sends list URI in request body"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let listUri = parseAtUri "at://did:plc:testuser/app.bsky.graph.list/mod1"
+
+              let _result =
+                  Bluesky.muteModList agent listUri |> Async.AwaitTask |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "mod1" "list URI in body" ]
+
+[<Tests>]
+let unmuteModListTests =
+    testList
+        "Bluesky.unmuteModList"
+        [ testCase "unmuteModList calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let listUri = parseAtUri "at://did:plc:testuser/app.bsky.graph.list/mod1"
+
+              let result =
+                  Bluesky.unmuteModList agent listUri |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "app.bsky.graph.unmuteActorList"
+                  "correct endpoint"
+
+          testCase "unmuteModList sends list URI in request body"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidProcedureAgent (fun req -> captured <- Some req)
+              let listUri = parseAtUri "at://did:plc:testuser/app.bsky.graph.list/mod2"
+
+              let _result =
+                  Bluesky.unmuteModList agent listUri |> Async.AwaitTask |> Async.RunSynchronously
+
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "mod2" "list URI in body" ]
+
+[<Tests>]
+let blockModListTests =
+    testList
+        "Bluesky.blockModList"
+        [ testCase "blockModList creates record with correct collection and subject"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+              let listUri = parseAtUri "at://did:plc:testuser/app.bsky.graph.list/mod1"
+
+              let result =
+                  Bluesky.blockModList agent listUri |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "app.bsky.graph.listblock" "listblock collection"
+              Expect.stringContains body "mod1" "list URI in record"
+
+          testCase "blockModList returns ListBlockRef with uri"
+          <| fun _ ->
+              let agent = createRecordAgent (fun _ -> ())
+              let listUri = parseAtUri "at://did:plc:testuser/app.bsky.graph.list/mod1"
+
+              let result =
+                  Bluesky.blockModList agent listUri |> Async.AwaitTask |> Async.RunSynchronously
+
+              let listBlockRef = Expect.wantOk result "should succeed"
+
+              Expect.equal
+                  (AtUri.value listBlockRef.Uri)
+                  "at://did:plc:testuser/app.bsky.feed.post/abc123"
+                  "returns uri"
+
+          testCase "blockModList returns NotLoggedIn error without session"
+          <| fun _ ->
+              let agent = createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
+              let listUri = parseAtUri "at://did:plc:testuser/app.bsky.graph.list/mod1"
+
+              let result =
+                  Bluesky.blockModList agent listUri |> Async.AwaitTask |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail without session"
+              Expect.equal err.StatusCode 401 "status code"
+              Expect.equal err.Error (Some "NotLoggedIn") "error code" ]
+
+[<Tests>]
+let unblockModListTests =
+    testList
+        "Bluesky.unblockModList"
+        [ testCase "unblockModList delegates to deleteRecord with ListBlockRef uri"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = deleteRecordAgent (fun req -> captured <- Some req)
+
+              let listBlockRef =
+                  { ListBlockRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.graph.listblock/lb1" }
+
+              let result =
+                  Bluesky.unblockModList agent listBlockRef
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "app.bsky.graph.listblock" "collection"
+              Expect.stringContains body "lb1" "rkey"
+
+          testCase "SRTP undo works with ListBlockRef"
+          <| fun _ ->
+              let agent = deleteRecordAgent (fun _ -> ())
+
+              let listBlockRef =
+                  { ListBlockRef.Uri = parseAtUri "at://did:plc:testuser/app.bsky.graph.listblock/srtp5" }
+
+              let result =
+                  Bluesky.undo agent listBlockRef |> Async.AwaitTask |> Async.RunSynchronously
+
+              let undoResult = Expect.wantOk result "should succeed"
+              Expect.equal undoResult Undone "should be Undone" ]
+
+[<Tests>]
+let resumeSessionTests =
+    testList
+        "Bluesky.resumeSession"
+        [ testCase "resumeSession creates agent with session set"
+          <| fun _ ->
+              let agent = Bluesky.resumeSession "https://bsky.social" testSession
+              Expect.isSome agent.Session "should have session"
+              let session = agent.Session.Value
+              Expect.equal session.AccessJwt "test-jwt" "access JWT"
+              Expect.equal session.RefreshJwt "test-refresh" "refresh JWT"
+              Expect.equal (Did.value session.Did) "did:plc:testuser" "session DID"
+
+          testCase "resumeSession sets correct base URL"
+          <| fun _ ->
+              let agent = Bluesky.resumeSession "https://my-pds.example.com" testSession
+              Expect.stringContains (agent.BaseUrl.ToString ()) "my-pds.example.com" "base URL"
+
+          testCase "resumeSessionWithClient uses provided HttpClient"
+          <| fun _ ->
+              let mutable captured = None
+
+              let client =
+                  new HttpClient (
+                      new MockHandler (fun req ->
+                          captured <- Some req
+                          jsonResponse HttpStatusCode.OK {| |})
+                  )
+
+              let agent = Bluesky.resumeSessionWithClient client "https://bsky.social" testSession
+              Expect.isSome agent.Session "should have session"
+
+              // Verify the agent uses the provided client by making a request
+              let _result =
+                  Bluesky.muteUser agent "test.bsky.social"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isSome captured "should have captured a request via provided client" ]
+
+[<Tests>]
+let logoutTests =
+    testList
+        "Bluesky.logout"
+        [ testCase "logout sends POST to deleteSession with refresh JWT"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createMockAgent (fun req ->
+                      captured <- Some req
+                      emptyResponse HttpStatusCode.OK)
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.logout agent |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+
+              Expect.stringContains
+                  (req.RequestUri.ToString ())
+                  "com.atproto.server.deleteSession"
+                  "correct endpoint"
+
+              // Verify it uses the refresh JWT, NOT the access JWT
+              Expect.equal req.Headers.Authorization.Scheme "Bearer" "auth scheme"
+              Expect.equal req.Headers.Authorization.Parameter "test-refresh" "uses refresh JWT"
+
+          testCase "logout clears session on success"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun _ -> emptyResponse HttpStatusCode.OK)
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.logout agent |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.isNone agent.Session "session should be cleared"
+
+          testCase "logout returns error without session"
+          <| fun _ ->
+              let agent = createMockAgent (fun _ -> emptyResponse HttpStatusCode.OK)
+              // No session set
+
+              let result =
+                  Bluesky.logout agent |> Async.AwaitTask |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail without session"
+              Expect.equal err.StatusCode 401 "status code"
+              Expect.equal err.Error (Some "NoSession") "error code"
+
+          testCase "logout returns error on server failure"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun _ ->
+                      jsonResponse
+                          HttpStatusCode.Unauthorized
+                          {| error = "ExpiredToken"
+                             message = "Token expired" |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.logout agent |> Async.AwaitTask |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail"
+              Expect.equal err.StatusCode 401 "status code"
+              Expect.equal err.Error (Some "ExpiredToken") "error code"
+
+          testCase "logout does not clear session on failure"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun _ ->
+                      jsonResponse
+                          HttpStatusCode.InternalServerError
+                          {| error = "ServerError"
+                             message = "internal error" |})
+
+              agent.Session <- Some testSession
+
+              let _result =
+                  Bluesky.logout agent |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isSome agent.Session "session should NOT be cleared on failure" ]
+
+[<Tests>]
+let upsertProfileTests =
+    testList
+        "Bluesky.upsertProfile"
+        [ testCase "upsertProfile reads current profile and writes updated profile"
+          <| fun _ ->
+              let mutable capturedPut = None
+              let mutable requestCount = 0
+
+              let agent =
+                  createMockAgent (fun req ->
+                      requestCount <- requestCount + 1
+                      let path = req.RequestUri.PathAndQuery
+
+                      if path.Contains ("com.atproto.repo.getRecord") then
+                          jsonResponse
+                              HttpStatusCode.OK
+                              {| uri = "at://did:plc:testuser/app.bsky.actor.profile/self"
+                                 cid = "bafyreicurrent"
+                                 value =
+                                  {| displayName = "OldName"
+                                     description = "Old bio" |} |}
+                      elif path.Contains ("com.atproto.repo.putRecord") then
+                          capturedPut <- Some req
+
+                          jsonResponse
+                              HttpStatusCode.OK
+                              {| uri = "at://did:plc:testuser/app.bsky.actor.profile/self"
+                                 cid = "bafyreinewcid" |}
+                      else
+                          jsonResponse HttpStatusCode.NotFound {| error = "NotFound" |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.upsertProfile
+                      agent
+                      (fun current ->
+                          let c =
+                              current
+                              |> Option.defaultValue
+                                  { DisplayName = None
+                                    Description = None
+                                    Avatar = None
+                                    Banner = None
+                                    CreatedAt = None
+                                    JoinedViaStarterPack = None
+                                    Labels = None
+                                    PinnedPost = None
+                                    Pronouns = None
+                                    Website = None }
+
+                          { c with DisplayName = Some "NewName" })
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.isSome capturedPut "should have made a putRecord call"
+              let body = capturedPut.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "NewName" "updated displayName in body"
+              Expect.stringContains body "app.bsky.actor.profile" "$type injected"
+              Expect.stringContains body "bafyreicurrent" "swapRecord CID for CAS"
+
+          testCase "upsertProfile handles record not found (new profile)"
+          <| fun _ ->
+              let mutable capturedPut = None
+
+              let agent =
+                  createMockAgent (fun req ->
+                      let path = req.RequestUri.PathAndQuery
+
+                      if path.Contains ("com.atproto.repo.getRecord") then
+                          jsonResponse
+                              HttpStatusCode.BadRequest
+                              {| error = "RecordNotFound"
+                                 message = "record not found" |}
+                      elif path.Contains ("com.atproto.repo.putRecord") then
+                          capturedPut <- Some req
+
+                          jsonResponse
+                              HttpStatusCode.OK
+                              {| uri = "at://did:plc:testuser/app.bsky.actor.profile/self"
+                                 cid = "bafyreinewcid" |}
+                      else
+                          jsonResponse HttpStatusCode.NotFound {| error = "NotFound" |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.upsertProfile
+                      agent
+                      (fun current ->
+                          Expect.isNone current "should receive None for new profile"
+
+                          { DisplayName = Some "Brand New"
+                            Description = Some "First bio"
+                            Avatar = None
+                            Banner = None
+                            CreatedAt = None
+                            JoinedViaStarterPack = None
+                            Labels = None
+                            PinnedPost = None
+                            Pronouns = None
+                            Website = None })
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.isSome capturedPut "should have made a putRecord call"
+              let body = capturedPut.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "Brand New" "displayName in body"
+
+          testCase "upsertProfile retries on InvalidSwap error"
+          <| fun _ ->
+              let mutable putCount = 0
+
+              let agent =
+                  createMockAgent (fun req ->
+                      let path = req.RequestUri.PathAndQuery
+
+                      if path.Contains ("com.atproto.repo.getRecord") then
+                          jsonResponse
+                              HttpStatusCode.OK
+                              {| uri = "at://did:plc:testuser/app.bsky.actor.profile/self"
+                                 cid = $"bafyreicid{putCount}"
+                                 value = {| displayName = "Name" |} |}
+                      elif path.Contains ("com.atproto.repo.putRecord") then
+                          putCount <- putCount + 1
+
+                          if putCount < 2 then
+                              jsonResponse
+                                  HttpStatusCode.BadRequest
+                                  {| error = "InvalidSwap"
+                                     message = "Record has been modified" |}
+                          else
+                              jsonResponse
+                                  HttpStatusCode.OK
+                                  {| uri = "at://did:plc:testuser/app.bsky.actor.profile/self"
+                                     cid = "bafyreinewcid" |}
+                      else
+                          jsonResponse HttpStatusCode.NotFound {| error = "NotFound" |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.upsertProfile
+                      agent
+                      (fun current ->
+                          let c =
+                              current
+                              |> Option.defaultValue
+                                  { DisplayName = None
+                                    Description = None
+                                    Avatar = None
+                                    Banner = None
+                                    CreatedAt = None
+                                    JoinedViaStarterPack = None
+                                    Labels = None
+                                    PinnedPost = None
+                                    Pronouns = None
+                                    Website = None }
+
+                          { c with DisplayName = Some "Retried" })
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed after retry"
+              Expect.equal putCount 2 "should have tried putRecord twice"
+
+          testCase "upsertProfile returns NotLoggedIn error without session"
+          <| fun _ ->
+              let agent = createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
+
+              let result =
+                  Bluesky.upsertProfile
+                      agent
+                      (fun _ ->
+                          { DisplayName = None
+                            Description = None
+                            Avatar = None
+                            Banner = None
+                            CreatedAt = None
+                            JoinedViaStarterPack = None
+                            Labels = None
+                            PinnedPost = None
+                            Pronouns = None
+                            Website = None })
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail without session"
+              Expect.equal err.StatusCode 401 "status code"
+              Expect.equal err.Error (Some "NotLoggedIn") "error code" ]
