@@ -407,6 +407,201 @@ let removeReactionTests =
               let proxyValues = req.Headers.GetValues ("atproto-proxy") |> Seq.toList
               Expect.contains proxyValues "did:web:api.bsky.chat#bsky_chat" "proxy header present" ]
 
+// ── ConvoSummary for SRTP tests ─────────────────────────────────────
+
+let private testConvoSummary =
+    { ConvoSummary.Id = "convo-123"
+      Members = []
+      LastMessageText = Some "hello"
+      UnreadCount = 0L
+      IsMuted = false }
+
+[<Tests>]
+let convoWitnessSrtpTests =
+    testList
+        "ConvoWitness SRTP (Chat functions accept ConvoSummary)"
+        [ testCase "sendMessage accepts ConvoSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createChatAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Chat.sendMessage agent testConvoSummary "hello"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed with ConvoSummary"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-123" "convoId extracted from ConvoSummary"
+
+          testCase "getMessages accepts ConvoSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| messages = [||]; cursor = null |}
+
+              let result =
+                  Chat.getMessages agent testConvoSummary None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed with ConvoSummary"
+              let uri = captured.Value.RequestUri.ToString ()
+              Expect.stringContains uri "convo-123" "convoId extracted from ConvoSummary"
+
+          testCase "deleteMessage accepts ConvoSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createChatAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Chat.deleteMessage agent testConvoSummary "msg-1"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed with ConvoSummary"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-123" "convoId extracted from ConvoSummary"
+
+          testCase "markRead accepts ConvoSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createConvoViewAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Chat.markRead agent testConvoSummary
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed with ConvoSummary"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-123" "convoId extracted from ConvoSummary"
+
+          testCase "muteConvo accepts ConvoSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createConvoViewAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Chat.muteConvo agent testConvoSummary
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed with ConvoSummary"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-123" "convoId extracted from ConvoSummary"
+
+          testCase "unmuteConvo accepts ConvoSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createConvoViewAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Chat.unmuteConvo agent testConvoSummary
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed with ConvoSummary"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-123" "convoId extracted from ConvoSummary"
+
+          testCase "acceptConvo accepts ConvoSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent (fun req -> captured <- Some req) {| rev = "rev1" |}
+
+              let result =
+                  Chat.acceptConvo agent testConvoSummary
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed with ConvoSummary"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-123" "convoId extracted from ConvoSummary"
+
+          testCase "leaveConvo accepts ConvoSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| convoId = "convo-123"; rev = "rev1" |}
+
+              let result =
+                  Chat.leaveConvo agent testConvoSummary
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed with ConvoSummary"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-123" "convoId extracted from ConvoSummary"
+
+          testCase "addReaction accepts ConvoSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| message =
+                          {| id = "msg-1"
+                             rev = "rev1"
+                             sender = {| did = "did:plc:testuser" |}
+                             text = "hello"
+                             sentAt = "2026-02-26T00:00:00.000Z" |} |}
+
+              let result =
+                  Chat.addReaction agent testConvoSummary "msg-1" "\U0001F44D"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed with ConvoSummary"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-123" "convoId extracted from ConvoSummary"
+
+          testCase "removeReaction accepts ConvoSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createVoidChatAgent
+                      (fun req -> captured <- Some req)
+                      {| message =
+                          {| id = "msg-1"
+                             rev = "rev1"
+                             sender = {| did = "did:plc:testuser" |}
+                             text = "hello"
+                             sentAt = "2026-02-26T00:00:00.000Z" |} |}
+
+              let result =
+                  Chat.removeReaction agent testConvoSummary "msg-1" "\U0001F44D"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed with ConvoSummary"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "convo-123" "convoId extracted from ConvoSummary"
+
+          testCase "getConvo accepts ConvoSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createConvoViewAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Chat.getConvo agent testConvoSummary
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed with ConvoSummary"
+              let uri = captured.Value.RequestUri.ToString ()
+              Expect.stringContains uri "convo-123" "convoId extracted from ConvoSummary" ]
+
 [<Tests>]
 let getConvoTests =
     testList
