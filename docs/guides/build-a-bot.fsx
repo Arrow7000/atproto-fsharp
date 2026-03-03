@@ -1,3 +1,4 @@
+(**
 ---
 title: Build a Bot
 category: Getting Started
@@ -6,7 +7,21 @@ index: 2
 description: "End-to-end tutorial: build a Bluesky bot that monitors a hashtag"
 keywords: fsharp, atproto, bluesky, bot, tutorial, hashtag
 ---
+*)
 
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+let agent = Unchecked.defaultof<AtpAgent>
+let firstPost = Unchecked.defaultof<TimelinePost>
+(***)
+
+(**
 # Build a Bot
 
 This tutorial walks through building a Bluesky bot from scratch. By the end, you will have a running F# program that monitors the `#fsharp` hashtag on Bluesky and automatically likes new posts it finds.
@@ -95,11 +110,28 @@ You might expect to see `taskResult {}` here, since most examples in this librar
 ### Searching
 
 `Bluesky.searchPosts` runs a full-text search and returns `Page<TimelinePost>`. The first argument after the agent is the query string -- hashtags work as you would expect. `Some 25L` requests up to 25 results per page, and `None` for the cursor means "start from the beginning." Each `TimelinePost` has an `IsLiked` field that reflects whether the authenticated user has already liked that post, so we skip posts we have already liked.
+*)
 
+taskResult {
+    let! page = Bluesky.searchPosts agent "#fsharp" (Some 25L) None
+    for post in page.Items do
+        if not post.IsLiked then
+            printfn "@%s: %s" (Handle.value post.Author.Handle) post.Text
+}
+
+(**
 ### Liking
 
-`Bluesky.like` accepts a `TimelinePost` directly and returns a `LikeRef` on success. The `LikeRef` contains the AT-URI of the like record itself -- useful if you later want to undo it with `Bluesky.unlike`.
+`Bluesky.like` accepts a `TimelinePost` directly and returns a `LikeRef` on success. The `LikeRef` contains the AT-URI of the like record itself -- useful if you later want to undo it with `Bluesky.unlikePost`.
+*)
 
+taskResult {
+    let! likeRef = Bluesky.like agent firstPost
+    printfn "Liked: %s" (AtUri.value likeRef.Uri)
+    ()
+}
+
+(**
 ### The Loop
 
 The bot re-searches every 60 seconds. Since we pass `None` as the cursor each time, we always get the most recent results. Posts we have already liked are skipped thanks to the `IsLiked` check, so running the same search repeatedly is safe. In a production bot, you would track the cursor or a timestamp to avoid re-fetching the same page, and you might persist state across restarts.
@@ -114,3 +146,4 @@ Here are some ideas for extending the bot:
 - **Search for users**: Use `Bluesky.searchActors` to find accounts by keyword. See the [Profiles guide](profiles.html).
 - **Send DMs**: Use `Chat.getConvoForMembers` and `Chat.sendMessage` to message users directly. See the [Chat guide](chat.html).
 - **Advanced search filters**: Drop down to `AppBskyFeed.SearchPosts.query` for author, language, domain, and date range filters. See the [Posts guide](posts.html).
+*)

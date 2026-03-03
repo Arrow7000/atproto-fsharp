@@ -1,3 +1,4 @@
+(**
 ---
 title: Error Handling
 category: Getting Started
@@ -6,7 +7,23 @@ index: 4
 description: XrpcError, taskResult CE, retry behaviour, and rate limits
 keywords: fsharp, atproto, bluesky, error-handling, taskresult, xrpc-error, rate-limit
 ---
+*)
 
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let post = Unchecked.defaultof<PostRef>
+(***)
+
+(**
 # Error Handling
 
 Every fallible operation in FSharp.ATProto returns `Task<Result<'T, XrpcError>>`. No exceptions are thrown for protocol-level failures. This guide covers the error type, the `taskResult` computation expression for chaining these operations, and the automatic retry behaviour built into the XRPC layer.
@@ -16,10 +33,7 @@ Every fallible operation in FSharp.ATProto returns `Task<Result<'T, XrpcError>>`
 ## The taskResult CE
 
 The `taskResult` computation expression is defined in `FSharp.ATProto.Core` and auto-opened into scope. It chains `Task<Result<'T, 'E>>` values with automatic error short-circuiting: if any `let!` binding produces an `Error`, the entire expression returns that error immediately without executing subsequent steps.
-
-```fsharp
-open FSharp.ATProto.Core
-open FSharp.ATProto.Bluesky
+*)
 
 let workflow =
     taskResult {
@@ -28,14 +42,14 @@ let workflow =
         let! like = Bluesky.like agent post
         return post
     }
-```
 
+(**
 If `Bluesky.login` fails, the post and like are never attempted. The error propagates out as the result of the whole expression.
 
 Without `taskResult`, the equivalent code requires manual matching at each step:
+*)
 
-```fsharp
-let workflow =
+let workflowManual =
     task {
         let! loginResult = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
         match loginResult with
@@ -50,8 +64,8 @@ let workflow =
                 | Error err -> return Error err
                 | Ok _ -> return Ok post
     }
-```
 
+(**
 We recommend `taskResult` for most use cases.
 
 ## XrpcError
@@ -89,11 +103,7 @@ All other errors are returned immediately with no retry.
 ## Handling Errors
 
 At the boundary of your program, match on the result to handle success and failure:
-
-```fsharp
-open FSharp.ATProto.Core
-open FSharp.ATProto.Bluesky
-open FSharp.ATProto.Syntax
+*)
 
 let run =
     task {
@@ -112,35 +122,41 @@ let run =
                 err.StatusCode
                 (err.Message |> Option.defaultValue "unknown")
     }
-```
 
+(**
 You can also pattern match on specific error codes to take different actions:
+*)
 
-```fsharp
+(*** hide ***)
+let result = Unchecked.defaultof<Result<PostRef, XrpcError>>
+(***)
+
 match result with
 | Ok post -> printfn "Posted: %s" (AtUri.value post.Uri)
 | Error { StatusCode = 401 } -> printfn "Not authenticated"
 | Error { StatusCode = 400; Message = Some msg } -> printfn "Bad request: %s" msg
 | Error err -> printfn "Unexpected error (%d)" err.StatusCode
-```
 
+(**
 ## When to Use task vs taskResult
 
 Use `taskResult` when you have a chain of fallible operations and want errors to short-circuit through the whole chain. This is the common case for workflows like "log in, fetch data, do something with it."
 
 Use `task {}` when you want to handle each error individually at the call site -- for example, if a failure at step 2 should trigger a different recovery path rather than aborting the whole workflow:
+*)
 
-```fsharp
-task {
-    let! agent = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
-    match agent with
-    | Error err -> printfn "Login failed: %A" err
-    | Ok agent ->
-        let! postResult = Bluesky.post agent "Hello!"
-        match postResult with
-        | Ok post -> printfn "Posted: %s" (AtUri.value post.Uri)
-        | Error _ -> printfn "Post failed, but continuing..."
-}
-```
+let taskExample =
+    task {
+        let! agent = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
+        match agent with
+        | Error err -> printfn "Login failed: %A" err
+        | Ok agent ->
+            let! postResult = Bluesky.post agent "Hello!"
+            match postResult with
+            | Ok post -> printfn "Posted: %s" (AtUri.value post.Uri)
+            | Error _ -> printfn "Post failed, but continuing..."
+    }
 
+(**
 For pagination-specific error handling, see the [Pagination guide](pagination.html).
+*)

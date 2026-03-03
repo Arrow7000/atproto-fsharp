@@ -1,3 +1,4 @@
+(**
 ---
 title: Quickstart
 category: Getting Started
@@ -6,7 +7,26 @@ index: 1
 description: Get up and running with FSharp.ATProto in 5 minutes
 keywords: quickstart, tutorial, getting started, fsharp, atproto, bluesky
 ---
+*)
 
+(*** hide ***)
+#nowarn "20"
+#r "../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let post = Unchecked.defaultof<PostRef>
+let timeline = Unchecked.defaultof<Page<FeedItem>>
+let firstPost = Unchecked.defaultof<TimelinePost>
+let likeRef = Unchecked.defaultof<LikeRef>
+(***)
+
+(**
 # Quickstart
 
 Get from zero to posting on Bluesky in under 5 minutes.
@@ -68,67 +88,84 @@ dotnet run
 ## Make Your First Post
 
 `Bluesky.post` automatically detects @mentions, links, and #hashtags in your text and creates the correct rich text facets:
+*)
 
-```fsharp
-let! post = Bluesky.post agent "Hello world from F#! #atproto"
-printfn "Posted! URI: %s" (AtUri.value post.Uri)
-```
+taskResult {
+    let! post = Bluesky.post agent "Hello world from F#! #atproto"
+    printfn "Posted! URI: %s" (AtUri.value post.Uri)
+    ()
+}
 
+(**
 Every `@handle.domain` in the text is resolved to a [DID](concepts.html) via the API. Links and hashtags are detected by pattern. You never need to compute byte offsets or construct facet objects yourself. The result is a `PostRef` containing the [AT-URI](concepts.html) and [CID](concepts.html) of the new post.
 
 ## Read Your Timeline
 
 `Bluesky.getTimeline` wraps the `app.bsky.feed.getTimeline` endpoint with a simpler signature:
+*)
 
-```fsharp
-let! timeline = Bluesky.getTimeline agent (Some 10L) None
+taskResult {
+    let! timeline = Bluesky.getTimeline agent (Some 10L) None
 
-for item in timeline.Items do
-    let author = Handle.value item.Post.Author.Handle
-    let text = item.Post.Text
-    printfn "@%s: %s" author text
-```
+    for item in timeline.Items do
+        let author = Handle.value item.Post.Author.Handle
+        let text = item.Post.Text
+        printfn "@%s: %s" author text
+}
 
+(**
 Each `FeedItem` has a `.Post` field (a `TimelinePost`) with `.Text`, `.Author`, `.Uri`, `.Cid`, and engagement counts directly available. If you drop down to the raw XRPC layer, extension properties like `.Text` and `.Facets` are available on `PostView`.
 
 ## Like a Post
 
 `Bluesky.like` accepts a `TimelinePost` (or a `PostRef`) directly:
+*)
 
-```fsharp
-let firstPost = timeline.Items.[0].Post
-let! likeRef = Bluesky.like agent firstPost
-printfn "Liked! %s" (AtUri.value likeRef.Uri)
-```
+taskResult {
+    let firstPost = timeline.Items.[0].Post
+    let! likeRef = Bluesky.like agent firstPost
+    printfn "Liked! %s" (AtUri.value likeRef.Uri)
+    ()
+}
 
+(**
 The result is a `LikeRef` you can hold on to. To undo the like later, pass it to `Bluesky.undoLike`:
+*)
 
-```fsharp
-let! _ = Bluesky.undoLike agent likeRef
-```
+taskResult {
+    let! _ = Bluesky.undoLike agent likeRef
+    ()
+}
 
+(**
 ## Reply to a Post
 
 `Bluesky.replyTo` fetches the parent post to resolve the thread root automatically. Pass the post you are replying to directly:
+*)
 
-```fsharp
-let! reply = Bluesky.replyTo agent "Great post!" firstPost
-printfn "Replied: %s" (AtUri.value reply.Uri)
-```
+taskResult {
+    let! reply = Bluesky.replyTo agent "Great post!" firstPost
+    printfn "Replied: %s" (AtUri.value reply.Uri)
+    ()
+}
 
+(**
 ## Post with Images
 
 `Bluesky.postWithImages` handles blob uploading and embed construction. Pass a list of `ImageUpload` records:
+*)
 
-```fsharp
-let imageBytes = System.IO.File.ReadAllBytes("photo.jpg")
+taskResult {
+    let imageBytes = System.IO.File.ReadAllBytes("photo.jpg")
 
-let! post =
-    Bluesky.postWithImages agent "Check out this photo!" [
-        { Data = imageBytes; MimeType = Jpeg; AltText = "A sunny landscape" }
-    ]
-```
+    let! post =
+        Bluesky.postWithImages agent "Check out this photo!" [
+            { Data = imageBytes; MimeType = Jpeg; AltText = "A sunny landscape" }
+        ]
+    ()
+}
 
+(**
 `MimeType` is an `ImageMime` discriminated union with cases `Jpeg`, `Png`, `Gif`, `Webp`, and `Custom of string`. Up to 4 images per post.
 
 ## Complete Example
@@ -205,3 +242,4 @@ let main _ =
 - [Error Handling](guides/error-handling.html) -- XrpcError, taskResult, retry behaviour
 - [Pagination Guide](guides/pagination.html) -- iterate through large result sets
 - [Raw XRPC](guides/raw-xrpc.html) -- drop to generated wrappers for advanced usage
+*)
