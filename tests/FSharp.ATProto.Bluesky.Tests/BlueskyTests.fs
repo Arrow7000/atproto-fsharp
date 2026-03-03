@@ -4092,3 +4092,77 @@ let actorWitnessSrtpTests =
               let url = captured.Value.RequestUri.ToString ()
               Expect.stringContains url "did%3Aplc%3Atest" "first DID in query"
               Expect.stringContains url "did%3Aplc%3Aother" "second DID in query" ]
+
+// ── PostUri SRTP tests ──────────────────────────────────────────────
+
+[<Tests>]
+let postUriSrtpTests =
+    testList
+        "PostUri SRTP (read functions accept TimelinePost/PostRef/AtUri)"
+        [ testCase "removeBookmark accepts TimelinePost"
+          <| fun _ ->
+              let agent = voidProcedureAgent (fun _ -> ())
+
+              let result =
+                  Bluesky.removeBookmark agent testTimelinePost
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+
+          testCase "removeBookmark accepts PostRef"
+          <| fun _ ->
+              let agent = voidProcedureAgent (fun _ -> ())
+              let postRef = { PostRef.Uri = testTimelinePost.Uri; Cid = testTimelinePost.Cid }
+
+              let result =
+                  Bluesky.removeBookmark agent postRef
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+
+          testCase "muteThread accepts TimelinePost"
+          <| fun _ ->
+              let agent = voidProcedureAgent (fun _ -> ())
+
+              let result =
+                  Bluesky.muteThread agent testTimelinePost
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+
+          testCase "unmuteThread accepts TimelinePost"
+          <| fun _ ->
+              let agent = voidProcedureAgent (fun _ -> ())
+
+              let result =
+                  Bluesky.unmuteThread agent testTimelinePost
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+
+          testCase "deleteRecord accepts TimelinePost"
+          <| fun _ ->
+              let agent = deleteRecordAgent (fun _ -> ())
+
+              let result =
+                  Bluesky.deleteRecord agent testTimelinePost
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+
+          testCase "deleteRecord accepts PostRef"
+          <| fun _ ->
+              let agent = deleteRecordAgent (fun _ -> ())
+              let postRef = { PostRef.Uri = testTimelinePost.Uri; Cid = testTimelinePost.Cid }
+
+              let result =
+                  Bluesky.deleteRecord agent postRef
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed" ]

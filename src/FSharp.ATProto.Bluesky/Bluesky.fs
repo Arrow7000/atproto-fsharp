@@ -498,6 +498,19 @@ type ActorDidWitness =
     static member ToDid (ActorDidWitness, p : Profile) = p.Did
 
 /// <summary>
+/// Witness type enabling SRTP-based overloading for post AT-URI parameters.
+/// Allows functions like <c>deleteRecord</c>, <c>muteThread</c>, <c>getLikes</c>, and <c>getPostThread</c>
+/// to accept an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/> directly.
+/// This type is an implementation detail and should not be used directly.
+/// </summary>
+[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type PostUriWitness =
+    | PostUriWitness
+    static member ToAtUri (PostUriWitness, u : AtUri) = u
+    static member ToAtUri (PostUriWitness, pr : PostRef) = pr.Uri
+    static member ToAtUri (PostUriWitness, tp : TimelinePost) = tp.Uri
+
+/// <summary>
 /// High-level convenience methods for common Bluesky operations:
 /// posting, replying, liking, reposting, following, blocking, uploading blobs, and deleting records.
 /// All methods require an authenticated <see cref="AtpAgent"/>.
@@ -512,6 +525,9 @@ module Bluesky =
 
     let inline internal toActorDid (x : ^a) : Did =
         ((^a or ActorDidWitness) : (static member ToDid : ActorDidWitness * ^a -> Did) (ActorDidWitness, x))
+
+    let inline internal toPostAtUri (x : ^a) : AtUri =
+        ((^a or PostUriWitness) : (static member ToAtUri : PostUriWitness * ^a -> AtUri) (PostUriWitness, x))
 
     let private nowTimestamp () = DateTimeOffset.UtcNow.ToString ("o")
 
@@ -1004,18 +1020,8 @@ module Bluesky =
             | Ok did -> return! blockImpl agent did
         }
 
-    /// <summary>
-    /// Delete a record by its AT-URI.
-    /// Can be used to unlike, un-repost, unfollow, unblock, or delete a post.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="atUri">The AT-URI of the record to delete.</param>
-    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
-    /// <remarks>
-    /// The AT-URI is parsed to extract the repo DID, collection, and record key.
-    /// This is a general-purpose delete; pass the AT-URI returned when the record was created.
-    /// </remarks>
-    let deleteRecord (agent : AtpAgent) (atUri : AtUri) : Task<Result<unit, XrpcError>> =
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let deleteRecordImpl (agent : AtpAgent) (atUri : AtUri) : Task<Result<unit, XrpcError>> =
         let repo = AtUri.authority atUri
 
         match AtUri.collection atUri, AtUri.rkey atUri with
@@ -1040,12 +1046,27 @@ module Bluesky =
                 }
 
     /// <summary>
+    /// Delete a record by its AT-URI. Accepts an <see cref="AtUri"/>, <see cref="PostRef"/>,
+    /// or <see cref="TimelinePost"/>.
+    /// Can be used to unlike, un-repost, unfollow, unblock, or delete a post.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="target">The AT-URI of the record to delete (an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>).</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
+    /// <remarks>
+    /// The AT-URI is parsed to extract the repo DID, collection, and record key.
+    /// This is a general-purpose delete; pass the AT-URI returned when the record was created.
+    /// </remarks>
+    let inline deleteRecord (agent : AtpAgent) (target : ^a) : Task<Result<unit, XrpcError>> =
+        deleteRecordImpl agent (toPostAtUri target)
+
+    /// <summary>
     /// Unlike a post by deleting the like record.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
     /// <param name="likeRef">The <see cref="LikeRef"/> returned by <see cref="like"/>.</param>
     /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
-    let unlike (agent : AtpAgent) (likeRef : LikeRef) : Task<Result<unit, XrpcError>> = deleteRecord agent likeRef.Uri
+    let unlike (agent : AtpAgent) (likeRef : LikeRef) : Task<Result<unit, XrpcError>> = deleteRecordImpl agent likeRef.Uri
 
     /// <summary>
     /// Undo a repost by deleting the repost record.
@@ -1054,7 +1075,7 @@ module Bluesky =
     /// <param name="repostRef">The <see cref="RepostRef"/> returned by <see cref="repost"/>.</param>
     /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
     let unrepost (agent : AtpAgent) (repostRef : RepostRef) : Task<Result<unit, XrpcError>> =
-        deleteRecord agent repostRef.Uri
+        deleteRecordImpl agent repostRef.Uri
 
     /// <summary>
     /// Unfollow a user by deleting the follow record.
@@ -1063,7 +1084,7 @@ module Bluesky =
     /// <param name="followRef">The <see cref="FollowRef"/> returned by <see cref="follow"/>.</param>
     /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
     let unfollow (agent : AtpAgent) (followRef : FollowRef) : Task<Result<unit, XrpcError>> =
-        deleteRecord agent followRef.Uri
+        deleteRecordImpl agent followRef.Uri
 
     /// <summary>
     /// Unblock a user by deleting the block record.
@@ -1072,7 +1093,7 @@ module Bluesky =
     /// <param name="blockRef">The <see cref="BlockRef"/> returned by <see cref="block"/>.</param>
     /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
     let unblock (agent : AtpAgent) (blockRef : BlockRef) : Task<Result<unit, XrpcError>> =
-        deleteRecord agent blockRef.Uri
+        deleteRecordImpl agent blockRef.Uri
 
     /// <summary>
     /// Block an entire moderation list. Creates a <c>app.bsky.graph.listblock</c> record.
@@ -1098,7 +1119,7 @@ module Bluesky =
     /// <param name="listBlockRef">The <see cref="ListBlockRef"/> returned by <see cref="blockModList"/>.</param>
     /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/>.</returns>
     let unblockModList (agent : AtpAgent) (listBlockRef : ListBlockRef) : Task<Result<unit, XrpcError>> =
-        deleteRecord agent listBlockRef.Uri
+        deleteRecordImpl agent listBlockRef.Uri
 
     // ── Typed undo functions (returning UndoResult) ────────────────────
 
@@ -1115,7 +1136,7 @@ module Bluesky =
     /// </returns>
     let undoLike (agent : AtpAgent) (likeRef : LikeRef) : Task<Result<UndoResult, XrpcError>> =
         task {
-            let! result = deleteRecord agent likeRef.Uri
+            let! result = deleteRecordImpl agent likeRef.Uri
             return result |> Result.map (fun () -> Undone)
         }
 
@@ -1132,7 +1153,7 @@ module Bluesky =
     /// </returns>
     let undoRepost (agent : AtpAgent) (repostRef : RepostRef) : Task<Result<UndoResult, XrpcError>> =
         task {
-            let! result = deleteRecord agent repostRef.Uri
+            let! result = deleteRecordImpl agent repostRef.Uri
             return result |> Result.map (fun () -> Undone)
         }
 
@@ -1149,7 +1170,7 @@ module Bluesky =
     /// </returns>
     let undoFollow (agent : AtpAgent) (followRef : FollowRef) : Task<Result<UndoResult, XrpcError>> =
         task {
-            let! result = deleteRecord agent followRef.Uri
+            let! result = deleteRecordImpl agent followRef.Uri
             return result |> Result.map (fun () -> Undone)
         }
 
@@ -1166,7 +1187,7 @@ module Bluesky =
     /// </returns>
     let undoBlock (agent : AtpAgent) (blockRef : BlockRef) : Task<Result<UndoResult, XrpcError>> =
         task {
-            let! result = deleteRecord agent blockRef.Uri
+            let! result = deleteRecordImpl agent blockRef.Uri
             return result |> Result.map (fun () -> Undone)
         }
 
@@ -1194,7 +1215,7 @@ module Bluesky =
             ((^a or UndoWitness) : (static member UndoUri : UndoWitness * ^a -> AtUri) (UndoWitness, ref))
 
         task {
-            let! result = deleteRecord agent uri
+            let! result = deleteRecordImpl agent uri
             return result |> Result.map (fun () -> Undone)
         }
 
@@ -1213,7 +1234,7 @@ module Bluesky =
                 | post :: _ ->
                     match post.Viewer |> Option.bind (fun v -> v.Like) with
                     | Some likeUri ->
-                        let! result = deleteRecord agent likeUri
+                        let! result = deleteRecordImpl agent likeUri
                         return result |> Result.map (fun () -> Undone)
                     | None -> return Ok WasNotPresent
         }
@@ -1246,7 +1267,7 @@ module Bluesky =
                 | post :: _ ->
                     match post.Viewer |> Option.bind (fun v -> v.Repost) with
                     | Some repostUri ->
-                        let! result = deleteRecord agent repostUri
+                        let! result = deleteRecordImpl agent repostUri
                         return result |> Result.map (fun () -> Undone)
                     | None -> return Ok WasNotPresent
         }
@@ -1473,23 +1494,33 @@ module Bluesky =
     let unmuteModList (agent : AtpAgent) (listUri : AtUri) : Task<Result<unit, XrpcError>> =
         AppBskyGraph.UnmuteActorList.call agent { List = listUri }
 
-    /// <summary>
-    /// Mute a thread. Posts in the muted thread are hidden from your notifications.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="root">The AT-URI of the thread root post.</param>
-    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
-    let muteThread (agent : AtpAgent) (root : AtUri) : Task<Result<unit, XrpcError>> =
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let muteThreadImpl (agent : AtpAgent) (root : AtUri) : Task<Result<unit, XrpcError>> =
         AppBskyGraph.MuteThread.call agent { Root = root }
 
     /// <summary>
-    /// Unmute a previously muted thread.
+    /// Mute a thread. Posts in the muted thread are hidden from your notifications.
+    /// Accepts an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="root">The AT-URI of the thread root post.</param>
+    /// <param name="root">The thread root post (an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>).</param>
     /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
-    let unmuteThread (agent : AtpAgent) (root : AtUri) : Task<Result<unit, XrpcError>> =
+    let inline muteThread (agent : AtpAgent) (root : ^a) : Task<Result<unit, XrpcError>> =
+        muteThreadImpl agent (toPostAtUri root)
+
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let unmuteThreadImpl (agent : AtpAgent) (root : AtUri) : Task<Result<unit, XrpcError>> =
         AppBskyGraph.UnmuteThread.call agent { Root = root }
+
+    /// <summary>
+    /// Unmute a previously muted thread.
+    /// Accepts an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="root">The thread root post (an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>).</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let inline unmuteThread (agent : AtpAgent) (root : ^a) : Task<Result<unit, XrpcError>> =
+        unmuteThreadImpl agent (toPostAtUri root)
 
     /// <summary>
     /// Report content to moderation. Use <see cref="ReportSubject.Account"/> to report an account
@@ -1539,14 +1570,19 @@ module Bluesky =
     let inline addBookmark (agent : AtpAgent) (target : ^a) : Task<Result<unit, XrpcError>> =
         addBookmarkImpl agent (asPostRef target)
 
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let removeBookmarkImpl (agent : AtpAgent) (uri : AtUri) : Task<Result<unit, XrpcError>> =
+        AppBskyBookmark.DeleteBookmark.call agent { Uri = uri }
+
     /// <summary>
     /// Remove a post from your bookmarks.
+    /// Accepts an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="uri">The AT-URI of the bookmarked post to remove.</param>
+    /// <param name="target">The bookmarked post to remove (an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>).</param>
     /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
-    let removeBookmark (agent : AtpAgent) (uri : AtUri) : Task<Result<unit, XrpcError>> =
-        AppBskyBookmark.DeleteBookmark.call agent { Uri = uri }
+    let inline removeBookmark (agent : AtpAgent) (target : ^a) : Task<Result<unit, XrpcError>> =
+        removeBookmarkImpl agent (toPostAtUri target)
 
     /// <summary>
     /// Update the authenticated user's handle.
@@ -1603,15 +1639,8 @@ module Bluesky =
                       Cursor = output.Cursor })
         }
 
-    /// <summary>
-    /// Get a post thread by its AT-URI, returning a <see cref="ThreadNode"/> tree.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="uri">The AT-URI of the post (e.g., <c>at://did:plc:.../app.bsky.feed.post/...</c>).</param>
-    /// <param name="depth">How many levels of replies to include (optional, pass <c>None</c> for server default).</param>
-    /// <param name="parentHeight">How many levels of parent context to include (optional, pass <c>None</c> for server default).</param>
-    /// <returns>A <see cref="ThreadNode"/> tree on success, or an <see cref="XrpcError"/>.</returns>
-    let getPostThread
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let getPostThreadImpl
         (agent : AtpAgent)
         (uri : AtUri)
         (depth : int64 option)
@@ -1629,22 +1658,26 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Get a post thread, returning just the <see cref="ThreadPost"/> if available.
-    /// Returns <c>Some threadPost</c> for normal threads, <c>None</c> for not-found or blocked posts.
+    /// Get a post thread, returning a <see cref="ThreadNode"/> tree.
+    /// Accepts an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="uri">The AT-URI of the post.</param>
-    /// <param name="depth">How many levels of replies to include (optional).</param>
-    /// <param name="parentHeight">How many levels of parent context to include (optional).</param>
-    /// <returns><c>Some ThreadPost</c> if the post is accessible, <c>None</c> if not found or blocked, or an <see cref="XrpcError"/>.</returns>
-    let getPostThreadView
+    /// <param name="target">The post (an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>).</param>
+    /// <param name="depth">How many levels of replies to include (optional, pass <c>None</c> for server default).</param>
+    /// <param name="parentHeight">How many levels of parent context to include (optional, pass <c>None</c> for server default).</param>
+    /// <returns>A <see cref="ThreadNode"/> tree on success, or an <see cref="XrpcError"/>.</returns>
+    let inline getPostThread (agent : AtpAgent) (target : ^a) (depth : int64 option) (parentHeight : int64 option) : Task<Result<ThreadNode, XrpcError>> =
+        getPostThreadImpl agent (toPostAtUri target) depth parentHeight
+
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let getPostThreadViewImpl
         (agent : AtpAgent)
         (uri : AtUri)
         (depth : int64 option)
         (parentHeight : int64 option)
         : Task<Result<ThreadPost option, XrpcError>> =
         task {
-            let! result = getPostThread agent uri depth parentHeight
+            let! result = getPostThreadImpl agent uri depth parentHeight
 
             return
                 result
@@ -1653,6 +1686,19 @@ module Bluesky =
                     | ThreadNode.Post tp -> Some tp
                     | _ -> None)
         }
+
+    /// <summary>
+    /// Get a post thread, returning just the <see cref="ThreadPost"/> if available.
+    /// Returns <c>Some threadPost</c> for normal threads, <c>None</c> for not-found or blocked posts.
+    /// Accepts an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="target">The post (an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>).</param>
+    /// <param name="depth">How many levels of replies to include (optional).</param>
+    /// <param name="parentHeight">How many levels of parent context to include (optional).</param>
+    /// <returns><c>Some ThreadPost</c> if the post is accessible, <c>None</c> if not found or blocked, or an <see cref="XrpcError"/>.</returns>
+    let inline getPostThreadView (agent : AtpAgent) (target : ^a) (depth : int64 option) (parentHeight : int64 option) : Task<Result<ThreadPost option, XrpcError>> =
+        getPostThreadViewImpl agent (toPostAtUri target) depth parentHeight
 
     /// <summary>
     /// List notifications for the authenticated user.
@@ -1912,15 +1958,8 @@ module Bluesky =
     let inline getActorLikes (agent : AtpAgent) (actor : ^a) (limit : int64 option) (cursor : string option) : Task<Result<Page<FeedItem>, XrpcError>> =
         getActorLikesImpl agent (toActorString actor) limit cursor
 
-    /// <summary>
-    /// Get the accounts that have liked a specific post.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="uri">The AT-URI of the post.</param>
-    /// <param name="limit">Maximum number of likes to return (optional).</param>
-    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
-    /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
-    let getLikes
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let getLikesImpl
         (agent : AtpAgent)
         (uri : AtUri)
         (limit : int64 option)
@@ -1943,14 +1982,19 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Get the accounts that have reposted a specific post.
+    /// Get the accounts that have liked a specific post.
+    /// Accepts an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="uri">The AT-URI of the post.</param>
-    /// <param name="limit">Maximum number of reposts to return (optional).</param>
+    /// <param name="target">The post (an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>).</param>
+    /// <param name="limit">Maximum number of likes to return (optional).</param>
     /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
     /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
-    let getRepostedBy
+    let inline getLikes (agent : AtpAgent) (target : ^a) (limit : int64 option) (cursor : string option) : Task<Result<Page<ProfileSummary>, XrpcError>> =
+        getLikesImpl agent (toPostAtUri target) limit cursor
+
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let getRepostedByImpl
         (agent : AtpAgent)
         (uri : AtUri)
         (limit : int64 option)
@@ -1973,14 +2017,19 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Get posts that quote a specific post.
+    /// Get the accounts that have reposted a specific post.
+    /// Accepts an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="uri">The AT-URI of the quoted post.</param>
-    /// <param name="limit">Maximum number of quotes to return (optional).</param>
+    /// <param name="target">The post (an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>).</param>
+    /// <param name="limit">Maximum number of reposts to return (optional).</param>
     /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
-    /// <returns>A page of <see cref="TimelinePost"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
-    let getQuotes
+    /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let inline getRepostedBy (agent : AtpAgent) (target : ^a) (limit : int64 option) (cursor : string option) : Task<Result<Page<ProfileSummary>, XrpcError>> =
+        getRepostedByImpl agent (toPostAtUri target) limit cursor
+
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let getQuotesImpl
         (agent : AtpAgent)
         (uri : AtUri)
         (limit : int64 option)
@@ -2001,6 +2050,18 @@ module Bluesky =
                     { Items = output.Posts |> List.map TimelinePost.ofPostView
                       Cursor = output.Cursor })
         }
+
+    /// <summary>
+    /// Get posts that quote a specific post.
+    /// Accepts an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="target">The post (an <see cref="AtUri"/>, <see cref="PostRef"/>, or <see cref="TimelinePost"/>).</param>
+    /// <param name="limit">Maximum number of quotes to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="TimelinePost"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let inline getQuotes (agent : AtpAgent) (target : ^a) (limit : int64 option) (cursor : string option) : Task<Result<Page<TimelinePost>, XrpcError>> =
+        getQuotesImpl agent (toPostAtUri target) limit cursor
 
     /// <summary>
     /// Get multiple posts by their AT-URIs in a single request.
