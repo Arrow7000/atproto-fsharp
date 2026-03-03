@@ -1,7 +1,7 @@
 ---
 title: Raw XRPC
-category: Guides
-categoryindex: 1
+category: Advanced Guides
+categoryindex: 3
 index: 16
 description: Using generated XRPC wrappers for advanced AT Protocol operations
 keywords: fsharp, atproto, bluesky, xrpc, generated, lexicon, advanced

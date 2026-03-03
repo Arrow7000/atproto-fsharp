@@ -1,7 +1,7 @@
 ---
 title: Rich Text
-category: Guides
-categoryindex: 1
+category: Advanced Guides
+categoryindex: 3
 index: 12
 description: Understand and control rich text facet detection in FSharp.ATProto
 keywords: rich text, facets, mentions, links, hashtags, utf-8

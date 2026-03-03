@@ -1,7 +1,7 @@
 ---
 title: Identity Resolution
-category: Guides
-categoryindex: 1
+category: Advanced Guides
+categoryindex: 3
 index: 13
 description: Resolve AT Protocol handles and DIDs with bidirectional verification
 keywords: identity, did, handle, resolution, verification

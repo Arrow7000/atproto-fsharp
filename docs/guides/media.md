@@ -1,8 +1,8 @@
 ---
 title: Media
-category: Guides
-categoryindex: 1
-index: 8
+category: Advanced Guides
+categoryindex: 3
+index: 11
 description: Upload images and attach media to Bluesky posts with FSharp.ATProto
 keywords: images, media, upload, blob, alt text, bluesky, fsharp, atproto
 ---

@@ -1,8 +1,8 @@
 ---
 title: Profiles
-category: Guides
-categoryindex: 1
-index: 7
+category: Type Reference
+categoryindex: 2
+index: 6
 description: Fetch, search, and update Bluesky user profiles with FSharp.ATProto
 keywords: profiles, user, actor, avatar, bluesky, search, followers
 ---

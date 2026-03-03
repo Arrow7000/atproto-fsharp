@@ -1,8 +1,8 @@
 ---
 title: Error Handling
-category: Guides
+category: Getting Started
 categoryindex: 1
-index: 14
+index: 4
 description: XrpcError, taskResult CE, retry behaviour, and rate limits
 keywords: fsharp, atproto, bluesky, error-handling, taskresult, xrpc-error, rate-limit
 ---
@@ -10,6 +10,8 @@ keywords: fsharp, atproto, bluesky, error-handling, taskresult, xrpc-error, rate
 # Error Handling
 
 Every fallible operation in FSharp.ATProto returns `Task<Result<'T, XrpcError>>`. No exceptions are thrown for protocol-level failures. This guide covers the error type, the `taskResult` computation expression for chaining these operations, and the automatic retry behaviour built into the XRPC layer.
+
+> Code samples throughout the docs use `taskResult {}`, the computation expression explained on this page.
 
 ## The taskResult CE
 

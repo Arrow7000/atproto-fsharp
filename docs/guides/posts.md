@@ -1,8 +1,8 @@
 ---
 title: Posts
-category: Guides
-categoryindex: 1
-index: 4
+category: Type Reference
+categoryindex: 2
+index: 5
 description: Create, read, quote, reply to, search, and delete Bluesky posts with FSharp.ATProto
 keywords: posts, create, reply, delete, thread, quote, search, bluesky
 ---

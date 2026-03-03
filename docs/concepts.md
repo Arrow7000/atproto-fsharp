@@ -1,6 +1,6 @@
 ---
 title: Concepts
-category: Guides
+category: Getting Started
 categoryindex: 1
 index: 3
 description: AT Protocol concepts explained for newcomers

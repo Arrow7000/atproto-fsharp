@@ -1,7 +1,7 @@
 ---
 title: Chat / DMs
-category: Guides
-categoryindex: 1
+category: Type Reference
+categoryindex: 2
 index: 9
 description: Send and receive Bluesky direct messages with FSharp.ATProto
 keywords: chat, dm, direct messages, bluesky, conversations, fsharp, atproto

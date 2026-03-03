@@ -1,7 +1,7 @@
 ---
 title: Pagination
-category: Guides
-categoryindex: 1
+category: Advanced Guides
+categoryindex: 3
 index: 15
 description: Iterate through cursor-based AT Protocol API results with IAsyncEnumerable
 keywords: pagination, cursor, async, enumerable, timeline, feed, taskResult

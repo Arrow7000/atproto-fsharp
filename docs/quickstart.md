@@ -1,6 +1,6 @@
 ---
 title: Quickstart
-category: Guides
+category: Getting Started
 categoryindex: 1
 index: 1
 description: Get up and running with FSharp.ATProto in 5 minutes
@@ -10,6 +10,8 @@ keywords: quickstart, tutorial, getting started, fsharp, atproto, bluesky
 # Quickstart
 
 Get from zero to posting on Bluesky in under 5 minutes.
+
+> Code samples use `taskResult {}`, a computation expression that chains async operations returning `Result`. See [Error Handling](guides/error-handling.html) for details.
 
 ## Prerequisites
 

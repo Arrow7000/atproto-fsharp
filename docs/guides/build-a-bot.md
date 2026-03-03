@@ -1,6 +1,6 @@
 ---
 title: Build a Bot
-category: Guides
+category: Getting Started
 categoryindex: 1
 index: 2
 description: "End-to-end tutorial: build a Bluesky bot that monitors a hashtag"
@@ -10,6 +10,8 @@ keywords: fsharp, atproto, bluesky, bot, tutorial, hashtag
 # Build a Bot
 
 This tutorial walks through building a Bluesky bot from scratch. By the end, you will have a running F# program that monitors the `#fsharp` hashtag on Bluesky and automatically likes new posts it finds.
+
+> Code samples use `taskResult {}`, a computation expression that chains async operations returning `Result`. See [Error Handling](error-handling.html) for details. The bot example below uses `task {}` deliberately -- see [Why task instead of taskResult](#Why-task-instead-of-taskResult) for the reasoning.
 
 ## Prerequisites
 

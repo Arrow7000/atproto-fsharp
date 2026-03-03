@@ -1,8 +1,8 @@
 ---
 title: Moderation
-category: Guides
-categoryindex: 1
-index: 11
+category: Advanced Guides
+categoryindex: 3
+index: 14
 description: Mute users and threads, block mod lists, and report content
 keywords: fsharp, atproto, bluesky, moderation, mute, block, report
 ---

@@ -1,7 +1,7 @@
 ---
 title: Notifications
-category: Guides
-categoryindex: 1
+category: Type Reference
+categoryindex: 2
 index: 10
 description: Fetch, count, and mark notifications as read
 keywords: fsharp, atproto, bluesky, notifications, unread

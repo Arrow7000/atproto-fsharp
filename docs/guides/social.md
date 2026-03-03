@@ -1,8 +1,8 @@
 ---
 title: Social Actions
-category: Guides
-categoryindex: 1
-index: 5
+category: Type Reference
+categoryindex: 2
+index: 7
 description: Like, repost, follow, block, and undo social actions on Bluesky
 keywords: like, repost, follow, block, undo, social, bluesky
 ---

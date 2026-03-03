@@ -1,8 +1,8 @@
 ---
 title: Feeds
-category: Guides
-categoryindex: 1
-index: 6
+category: Type Reference
+categoryindex: 2
+index: 8
 description: Read timelines, author feeds, liked posts, bookmarks, and custom feeds with FSharp.ATProto
 keywords: feeds, timeline, author feed, liked posts, bookmarks, custom feed, pagination, bluesky
 ---

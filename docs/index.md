@@ -1,6 +1,6 @@
 ---
 title: FSharp.ATProto
-category: Guides
+category: Getting Started
 categoryindex: 1
 index: 0
 description: Idiomatic F# library for the AT Protocol and Bluesky
@@ -26,24 +26,27 @@ taskResult {
 
 Add a project reference to `FSharp.ATProto.Bluesky` -- it pulls in all dependencies transitively. Then head to the [Quickstart](quickstart.html) to go from zero to first post in five minutes.
 
-## Guides
+## Getting Started
+- [Quickstart](quickstart.html) — authenticate and make your first post
+- [Build a Bot](guides/build-a-bot.html) — full bot example with notifications and replies
+- [Concepts](concepts.html) — domain types, SRTP, and design philosophy
+- [Error Handling](guides/error-handling.html) — taskResult CE and error patterns
 
-- [Quickstart](quickstart.html) -- zero to first post in 5 minutes
-- [Build a Bot](guides/build-a-bot.html) -- end-to-end bot tutorial
-- [Concepts](concepts.html) -- AT Protocol terms explained
-- [Posts](guides/posts.html) -- create, reply, quote, and delete posts
-- [Social Actions](guides/social.html) -- like, repost, follow, block, undo
-- [Feeds](guides/feeds.html) -- timelines, author feeds, bookmarks
-- [Profiles](guides/profiles.html) -- fetch and search user profiles
-- [Media](guides/media.html) -- upload and attach images
-- [Chat / DMs](guides/chat.html) -- conversations and direct messages
-- [Notifications](guides/notifications.html) -- read and manage notifications
-- [Moderation](guides/moderation.html) -- mute, block lists, report content
-- [Rich Text](guides/rich-text.html) -- mentions, links, hashtags, and byte offsets
-- [Identity](guides/identity.html) -- resolve and verify handles and DIDs
-- [Error Handling](guides/error-handling.html) -- taskResult CE and XrpcError
-- [Pagination](guides/pagination.html) -- cursors and IAsyncEnumerable
-- [Raw XRPC](guides/raw-xrpc.html) -- drop to the generated XRPC layer
+## Type Reference
+- [Posts](guides/posts.html) — creating, reading, and engaging with posts
+- [Profiles](guides/profiles.html) — reading and searching user profiles
+- [Social Actions](guides/social.html) — following, blocking, and undo operations
+- [Feeds](guides/feeds.html) — timelines, author feeds, and pagination
+- [Chat](guides/chat.html) — direct messaging conversations
+- [Notifications](guides/notifications.html) — reading and managing notifications
+
+## Advanced Guides
+- [Media](guides/media.html) — uploading images and blobs
+- [Rich Text](guides/rich-text.html) — mentions, links, and hashtags
+- [Identity](guides/identity.html) — DID resolution and handle verification
+- [Moderation](guides/moderation.html) — muting, reporting, and moderation lists
+- [Pagination](guides/pagination.html) — IAsyncEnumerable-based paginators
+- [Raw XRPC](guides/raw-xrpc.html) — direct XRPC calls for uncovered endpoints
 
 ## Architecture
 
