@@ -1,3 +1,4 @@
+(**
 ---
 title: Posts
 category: Type Reference
@@ -92,8 +93,23 @@ A post within a thread, with parent and reply context.
 | `Bluesky.quotePost` | `agent` `text:string` `quoted:PostRef\|TimelinePost` | `Result<PostRef, XrpcError>` | Create a quote post |
 | `Bluesky.replyTo` | `agent` `text:string` `parent:PostRef\|TimelinePost` | `Result<PostRef, XrpcError>` | Reply to a post (auto-resolves thread root) |
 | `Bluesky.replyWithKnownRoot` | `agent` `text:string` `parent:PostRef` `root:PostRef` | `Result<PostRef, XrpcError>` | Reply with explicit parent and root |
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20" // non-unit top-level expressions
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let postRef = Unchecked.defaultof<PostRef>
+let post = Unchecked.defaultof<TimelinePost>
+
+(***)
+
 taskResult {
     // Simple post with auto-detected mentions, links, hashtags
     let! postRef = Bluesky.post agent "Hello from F#! #atproto"
@@ -108,9 +124,10 @@ taskResult {
     let imageBytes = System.IO.File.ReadAllBytes "photo.jpg"
     let! imagePost = Bluesky.postWithImages agent "Check this out!"
                         [ { Data = imageBytes; MimeType = Jpeg; AltText = "A photo" } ]
+    ()
 }
-```
 
+(**
 ### Reading Posts
 
 | Function | Accepts | Returns | Description |
@@ -120,8 +137,8 @@ taskResult {
 | `Bluesky.getPostThreadView` | `agent` `target:TimelinePost\|PostRef\|AtUri` `depth:int64 option` `parentHeight:int64 option` | `Result<ThreadPost option, XrpcError>` | Get thread as `Some ThreadPost` or `None` |
 | `Bluesky.searchPosts` | `agent` `query:string` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | Full-text post search |
 | `Bluesky.getQuotes` | `agent` `target:TimelinePost\|PostRef\|AtUri` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | Get posts that quote a given post |
+*)
 
-```fsharp
 taskResult {
     let! posts = Bluesky.getPosts agent [ postRef.Uri ]
     let! results = Bluesky.searchPosts agent "F# atproto" (Some 10L) None
@@ -139,8 +156,8 @@ taskResult {
     | Some tp -> printfn "Post: %s with %d replies" tp.Post.Text tp.Replies.Length
     | None -> printfn "Post not accessible"
 }
-```
 
+(**
 ### Engagement
 
 | Function | Accepts | Returns | Description |
@@ -153,8 +170,8 @@ taskResult {
 | `Bluesky.undoRepost` | `agent` `repostRef:RepostRef` | `Result<UndoResult, XrpcError>` | Undo a repost by its ref |
 
 `unlike` and `unrepost` are also available as simpler alternatives that return `unit` instead of `UndoResult`. The generic `Bluesky.undo` accepts any ref type (`LikeRef`, `RepostRef`, `FollowRef`, `BlockRef`).
+*)
 
-```fsharp
 taskResult {
     let! likeRef = Bluesky.like agent post
     let! _ = Bluesky.undoLike agent likeRef
@@ -165,8 +182,8 @@ taskResult {
     | Undone -> printfn "Unliked"
     | WasNotPresent -> printfn "Was not liked"
 }
-```
 
+(**
 ### Bookmarks
 
 | Function | Accepts | Returns | Description |
@@ -174,26 +191,27 @@ taskResult {
 | `Bluesky.addBookmark` | `agent` `target:PostRef\|TimelinePost` | `Result<unit, XrpcError>` | Bookmark a post |
 | `Bluesky.removeBookmark` | `agent` `target:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Remove a bookmark |
 | `Bluesky.getBookmarks` | `agent` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | List bookmarked posts |
+*)
 
-```fsharp
 taskResult {
     do! Bluesky.addBookmark agent post
     let! page = Bluesky.getBookmarks agent (Some 25L) None
+    ()
 }
-```
 
+(**
 ### Deleting
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
 | `Bluesky.deleteRecord` | `agent` `target:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Delete any record by AT-URI |
+*)
 
-```fsharp
 taskResult {
     do! Bluesky.deleteRecord agent postRef
 }
-```
 
+(**
 ## SRTP Polymorphism
 
 Many post functions accept multiple types via SRTP (statically resolved type parameters):
@@ -202,8 +220,8 @@ Many post functions accept multiple types via SRTP (statically resolved type par
 - `deleteRecord`, `removeBookmark`, `getPostThread`, `getPostThreadView`, `getLikes`, `getRepostedBy`, `getQuotes`, `muteThread`, `unmuteThread` accept `TimelinePost`, `PostRef`, or `AtUri`
 
 Pass entities directly -- no need to extract `.Uri` or construct a `PostRef`:
+*)
 
-```fsharp
 taskResult {
     let! page = Bluesky.getTimeline agent (Some 10L) None
     let post = page.Items.Head.Post
@@ -211,5 +229,5 @@ taskResult {
     // Pass the TimelinePost directly
     let! likeRef = Bluesky.like agent post
     let! thread = Bluesky.getPostThreadView agent post (Some 6L) None
+    ()
 }
-```

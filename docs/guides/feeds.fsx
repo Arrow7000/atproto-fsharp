@@ -1,3 +1,4 @@
+(**
 ---
 title: Feeds
 category: Type Reference
@@ -74,8 +75,25 @@ A paginated result containing a list of items and an optional cursor for the nex
 | `Bluesky.getBookmarks` | `agent`, `limit: int64 option`, `cursor: string option` | `Result<Page<TimelinePost>, XrpcError>` | Fetch the authenticated user's bookmarked posts |
 
 **SRTP:** `getAuthorFeed` and `getActorLikes` accept `ProfileSummary`, `Profile`, `Handle`, or `Did` for the `actor` parameter.
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let someProfile = Unchecked.defaultof<Profile>
+let timelinePost = Unchecked.defaultof<TimelinePost>
+let feedUri = Unchecked.defaultof<AtUri>
+let page = Unchecked.defaultof<Page<FeedItem>>
+
+(***)
+
 taskResult {
     let! page = Bluesky.getTimeline agent (Some 25L) None
 
@@ -83,18 +101,16 @@ taskResult {
         let author = Handle.value item.Post.Author.Handle
         printfn "@%s: %s" author item.Post.Text
 }
-```
 
-```fsharp
-// Pass a ProfileSummary directly -- no need to extract a handle string
 taskResult {
+    // Pass a ProfileSummary directly -- no need to extract a handle string
     let! page = Bluesky.getAuthorFeed agent someProfile (Some 25L) None
 
     for item in page.Items do
         printfn "%s (%d likes)" item.Post.Text item.Post.LikeCount
 }
-```
 
+(**
 ### Bookmarks
 
 | Function | Accepts | Returns | Description |
@@ -103,15 +119,15 @@ taskResult {
 | `Bluesky.removeBookmark` | `agent`, `target` | `Result<unit, XrpcError>` | Remove a post from your bookmarks |
 
 **SRTP:** `addBookmark` accepts `PostRef` or `TimelinePost`. `removeBookmark` accepts `AtUri`, `PostRef`, or `TimelinePost`.
+*)
 
-```fsharp
 taskResult {
     let! _ = Bluesky.addBookmark agent timelinePost
     let! _ = Bluesky.removeBookmark agent timelinePost
     return ()
 }
-```
 
+(**
 ### Pagination
 
 | Function | Accepts | Returns | Description |
@@ -123,36 +139,38 @@ taskResult {
 **SRTP:** `paginateFollowers` accepts `ProfileSummary`, `Profile`, `Handle`, or `Did` for the `actor` parameter.
 
 Paginators return an `IAsyncEnumerable` that fetches pages lazily and stops when the server returns no cursor. Iterate with `await foreach`:
+*)
 
-```fsharp
-let pages = Bluesky.paginateTimeline agent (Some 50L)
+task {
+    let pages = Bluesky.paginateTimeline agent (Some 50L)
 
-// Consume from F# using TaskSeq or manual IAsyncEnumerator
-let enumerator = pages.GetAsyncEnumerator()
+    // Consume from F# using TaskSeq or manual IAsyncEnumerator
+    let enumerator = pages.GetAsyncEnumerator()
 
-let rec loop () = task {
-    let! hasNext = enumerator.MoveNextAsync()
-    if hasNext then
-        match enumerator.Current with
-        | Ok page ->
-            for item in page.Items do
-                printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
-        | Error err ->
-            printfn "Error: %A" err
-        do! loop ()
+    let rec loop () = task {
+        let! hasNext = enumerator.MoveNextAsync()
+        if hasNext then
+            match enumerator.Current with
+            | Ok page ->
+                for item in page.Items do
+                    printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
+            | Error err ->
+                printfn "Error: %A" err
+            do! loop ()
+    }
+
+    do! loop ()
+    do! enumerator.DisposeAsync()
 }
 
-do! loop ()
-do! enumerator.DisposeAsync()
-```
-
+(**
 For endpoints without a pre-built paginator, use `Xrpc.paginate` directly. See the [Pagination guide](pagination.html) for full details.
 
 ## Matching Feed Reasons
 
 Match on `FeedReason` to distinguish reposts and pins from organic posts:
+*)
 
-```fsharp
 for item in page.Items do
     match item.Reason with
     | Some (FeedReason.Repost (by = reposter)) ->
@@ -162,13 +180,13 @@ for item in page.Items do
         printfn "[Pinned] %s" item.Post.Text
     | None ->
         printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
-```
 
+(**
 ## Custom Feeds
 
 Custom feeds (algorithmic feeds by third parties) are identified by an AT-URI. Use the raw XRPC wrapper to read them:
+*)
 
-```fsharp
 taskResult {
     let! output =
         AppBskyFeed.GetFeed.query
@@ -178,13 +196,13 @@ taskResult {
     for item in output.Feed do
         printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
 }
-```
 
+(**
 ## Power Users: Raw XRPC
 
 The raw `AppBskyFeed.GetAuthorFeed.query` gives access to filter and pin options:
+*)
 
-```fsharp
 taskResult {
     let! output =
         AppBskyFeed.GetAuthorFeed.query
@@ -198,8 +216,8 @@ taskResult {
     for item in output.Feed do
         printfn "%s" item.Post.Text
 }
-```
 
+(**
 | Filter Value | Description |
 |--------------|-------------|
 | `PostsWithReplies` | All posts including replies (default) |
@@ -207,3 +225,4 @@ taskResult {
 | `PostsWithMedia` | Only posts with images or video |
 | `PostsAndAuthorThreads` | Posts and the author's own reply threads |
 | `PostsWithVideo` | Only posts with video |
+*)

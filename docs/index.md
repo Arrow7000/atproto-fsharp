@@ -60,7 +60,7 @@ The library is organized in layers, each building on the one below:
 | `FSharp.ATProto.Core` | XRPC client, session auth, rate limiting, pagination |
 | `FSharp.ATProto.Bluesky` | Generated types, rich text, identity, convenience methods |
 
-1,723 tests across the stack.
+1,761 tests across the stack.
 
 ## License
 

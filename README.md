@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml"><img src="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10">
-  <img src="https://img.shields.io/badge/tests-1%2C723-brightgreen" alt="Tests: 1,761">
+  <img src="https://img.shields.io/badge/tests-1%2C761-brightgreen" alt="Tests: 1,761">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
 </p>
 

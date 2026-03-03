@@ -1,3 +1,4 @@
+(**
 ---
 title: Social Actions
 category: Type Reference
@@ -74,8 +75,25 @@ Only `unlikePost` and `unrepostPost` can return `WasNotPresent` (they check view
 | `Bluesky.followByHandle` | `agent` `identifier:string` | `Result<FollowRef, XrpcError>` | Follow by handle or DID string (resolves automatically) |
 | `Bluesky.unfollow` | `agent` `followRef:FollowRef` | `Result<unit, XrpcError>` | Unfollow by ref |
 | `Bluesky.undoFollow` | `agent` `followRef:FollowRef` | `Result<UndoResult, XrpcError>` | Unfollow by ref, returning `UndoResult` |
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let profile = Unchecked.defaultof<Profile>
+let post = Unchecked.defaultof<TimelinePost>
+let modListUri = Unchecked.defaultof<AtUri>
+let aliceHandle = Unchecked.defaultof<Handle>
+
+(***)
+
 taskResult {
     // Follow using a profile's DID
     let! followRef = Bluesky.follow agent profile
@@ -86,8 +104,8 @@ taskResult {
     // Undo
     do! Bluesky.unfollow agent followRef
 }
-```
 
+(**
 ### Blocking
 
 | Function | Accepts | Returns | Description |
@@ -98,8 +116,8 @@ taskResult {
 | `Bluesky.undoBlock` | `agent` `blockRef:BlockRef` | `Result<UndoResult, XrpcError>` | Unblock by ref, returning `UndoResult` |
 | `Bluesky.blockModList` | `agent` `listUri:AtUri` | `Result<ListBlockRef, XrpcError>` | Block an entire moderation list |
 | `Bluesky.unblockModList` | `agent` `listBlockRef:ListBlockRef` | `Result<unit, XrpcError>` | Unblock a moderation list |
+*)
 
-```fsharp
 taskResult {
     let! blockRef = Bluesky.block agent profile
     let! blockRef2 = Bluesky.blockByHandle agent "spammer.example.com"
@@ -108,8 +126,8 @@ taskResult {
     let! listBlockRef = Bluesky.blockModList agent modListUri
     do! Bluesky.unblockModList agent listBlockRef
 }
-```
 
+(**
 ### Muting
 
 | Function | Accepts | Returns | Description |
@@ -122,23 +140,23 @@ taskResult {
 | `Bluesky.unmuteModList` | `agent` `listUri:AtUri` | `Result<unit, XrpcError>` | Unmute a moderation list |
 | `Bluesky.muteThread` | `agent` `root:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Mute a thread |
 | `Bluesky.unmuteThread` | `agent` `root:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Unmute a thread |
+*)
 
-```fsharp
 taskResult {
     do! Bluesky.muteUser agent profile
     do! Bluesky.muteUserByHandle agent "noisy.bsky.social"
     do! Bluesky.muteThread agent post
     do! Bluesky.muteModList agent modListUri
 }
-```
 
+(**
 ### Generic Undo
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
 | `Bluesky.undo` | `agent` `ref:LikeRef\|RepostRef\|FollowRef\|BlockRef\|ListBlockRef` | `Result<UndoResult, XrpcError>` | Delete any ref type via SRTP |
+*)
 
-```fsharp
 taskResult {
     let! likeRef = Bluesky.like agent post
     let! followRef = Bluesky.follow agent profile
@@ -148,8 +166,8 @@ taskResult {
     let! _ = Bluesky.undo agent followRef
     ()
 }
-```
 
+(**
 ## SRTP Polymorphism
 
 Social action functions accept multiple types via SRTP:
@@ -157,10 +175,10 @@ Social action functions accept multiple types via SRTP:
 - `follow`, `block`, `muteUser`, `unmuteUser` accept `Did`, `ProfileSummary`, or `Profile`
 - `muteThread`, `unmuteThread` accept `TimelinePost`, `PostRef`, or `AtUri`
 - `undo` accepts `LikeRef`, `RepostRef`, `FollowRef`, `BlockRef`, or `ListBlockRef`
+*)
 
-```fsharp
 taskResult {
-    let! profile = Bluesky.getProfile agent "alice.bsky.social"
+    let! profile = Bluesky.getProfile agent aliceHandle
 
     // Pass the Profile directly -- no need to extract .Did
     let! followRef = Bluesky.follow agent profile
@@ -170,4 +188,3 @@ taskResult {
     let! page = Bluesky.getTimeline agent (Some 1L) None
     do! Bluesky.muteThread agent page.Items.Head.Post
 }
-```

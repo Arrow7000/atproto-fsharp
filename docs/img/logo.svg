@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="270 25 260 150" fill="none">
+  <defs>
+    <linearGradient id="tl" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00B4FF"/>
+      <stop offset="100%" stop-color="#0085FF"/>
+    </linearGradient>
+    <linearGradient id="tr" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6C63FF"/>
+      <stop offset="100%" stop-color="#3D5AFE"/>
+    </linearGradient>
+    <linearGradient id="bl" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#00B0FF"/>
+    </linearGradient>
+    <linearGradient id="br" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#B388FF"/>
+      <stop offset="100%" stop-color="#7C4DFF"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(400, 105)">
+    <!-- Upper left wing -->
+    <polygon points="-8,-8 -45,-72 -105,-60 -110,-28 -80,8 -20,12" fill="url(#tl)" opacity="0.9"/>
+    <!-- Upper right wing -->
+    <polygon points="8,-8 50,-78 100,-52 108,-18 75,12 20,12" fill="url(#tr)" opacity="0.9"/>
+    <!-- Lower left wing -->
+    <polygon points="-8,8 -52,25 -48,58 -20,62 -8,35" fill="url(#bl)" opacity="0.8"/>
+    <!-- Lower right wing -->
+    <polygon points="8,8 48,28 50,60 24,64 8,35" fill="url(#br)" opacity="0.8"/>
+
+    <!-- Body -->
+    <rect x="-5" y="-12" width="10" height="48" rx="5" fill="#2255A4"/>
+    <!-- Head -->
+    <circle cx="0" cy="-20" r="9" fill="#1E4D8C"/>
+
+    <!-- Antennae -->
+    <line x1="-3" y1="-28" x2="-20" y2="-58" stroke="#1E4D8C" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="-20" cy="-58" r="4" fill="#00E5FF"/>
+    <line x1="3" y1="-28" x2="22" y2="-56" stroke="#1E4D8C" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="22" cy="-56" r="4" fill="#B388FF"/>
+  </g>
+</svg>

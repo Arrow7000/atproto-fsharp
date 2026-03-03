@@ -1,3 +1,4 @@
+(**
 ---
 title: Chat / DMs
 category: Type Reference
@@ -58,15 +59,31 @@ A paginated result containing a list of items and an optional cursor for the nex
 | `Chat.getConvo` | `agent`, `convoId` | `Result<ConvoSummary, XrpcError>` | Get a conversation by ID |
 | `Chat.acceptConvo` | `agent`, `convoId` | `Result<unit, XrpcError>` | Accept a conversation request |
 | `Chat.leaveConvo` | `agent`, `convoId` | `Result<unit, XrpcError>` | Leave a conversation |
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let convo = Unchecked.defaultof<ConvoSummary>
+let msgId = ""
+let aliceHandle = Unchecked.defaultof<Handle>
+
+(***)
+
 taskResult {
-    let! profile = Bluesky.getProfile agent "alice.bsky.social"
+    let! profile = Bluesky.getProfile agent aliceHandle
     let! convo = Chat.getConvoForMembers agent [ profile.Did ]
     printfn "Conversation: %s (members: %d)" convo.Id convo.Members.Length
 }
-```
 
+(**
 ### Messages
 
 | Function | Accepts | Returns | Description |
@@ -76,8 +93,8 @@ taskResult {
 | `Chat.deleteMessage` | `agent`, `convoId`, `messageId: string` | `Result<unit, XrpcError>` | Delete a message (for you only) |
 
 `sendMessage` automatically detects links, mentions, and hashtags -- just like `Bluesky.post`. No extra steps needed.
+*)
 
-```fsharp
 taskResult {
     let! msg = Chat.sendMessage agent convo "Check out https://atproto.com!"
 
@@ -85,9 +102,9 @@ taskResult {
     | ChatMessage.Message m -> printfn "Sent: %s (id: %s)" m.Text m.Id
     | ChatMessage.Deleted _ -> ()
 }
-```
 
-```fsharp
+(** *)
+
 taskResult {
     let! page = Chat.getMessages agent convo (Some 20L) None
 
@@ -98,58 +115,58 @@ taskResult {
         | ChatMessage.Deleted del ->
             printfn "(deleted: %s)" del.Id
 }
-```
 
+(**
 ### Read State
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
 | `Chat.markRead` | `agent`, `convoId` | `Result<unit, XrpcError>` | Mark a conversation as read |
 | `Chat.markAllRead` | `agent` | `Result<int64, XrpcError>` | Mark all conversations as read; returns count updated |
+*)
 
-```fsharp
 taskResult {
     let! _ = Chat.markRead agent convo
     let! updatedCount = Chat.markAllRead agent
     printfn "Marked %d conversations as read" updatedCount
 }
-```
 
+(**
 ### Muting
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
 | `Chat.muteConvo` | `agent`, `convoId` | `Result<unit, XrpcError>` | Mute a conversation (no notifications) |
 | `Chat.unmuteConvo` | `agent`, `convoId` | `Result<unit, XrpcError>` | Unmute a conversation |
+*)
 
-```fsharp
 taskResult {
     let! _ = Chat.muteConvo agent convo
     let! _ = Chat.unmuteConvo agent convo
     return ()
 }
-```
 
+(**
 ### Reactions
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
 | `Chat.addReaction` | `agent`, `convoId`, `messageId: string`, `emoji: string` | `Result<unit, XrpcError>` | Add an emoji reaction to a message |
 | `Chat.removeReaction` | `agent`, `convoId`, `messageId: string`, `emoji: string` | `Result<unit, XrpcError>` | Remove an emoji reaction from a message |
+*)
 
-```fsharp
 taskResult {
-    let! _ = Chat.addReaction agent convo msgId "\u2764\uFE0F"
-    let! _ = Chat.removeReaction agent convo msgId "\u2764\uFE0F"
+    let! _ = Chat.addReaction agent convo msgId "❤️"
+    let! _ = Chat.removeReaction agent convo msgId "❤️"
     return ()
 }
-```
 
+(**
 ## Power Users: Raw XRPC
 
 For full control over facets or to include an embed (e.g., sharing a post into a DM), drop to the raw XRPC wrapper. You must apply the chat proxy header manually when using raw wrappers:
+*)
 
-```fsharp
 task {
     let text = "Check out https://atproto.com!"
     let! facets = RichText.parse agent text
@@ -166,4 +183,3 @@ task {
     | Ok msg -> printfn "Sent with custom facets"
     | Error err -> printfn "Failed: %A" err
 }
-```

@@ -1,3 +1,4 @@
+(**
 ---
 title: Notifications
 category: Type Reference
@@ -50,15 +51,29 @@ Discriminated union for notification types. Uses `[<RequireQualifiedAccess>]`, s
 |----------|---------|---------|-------------|
 | `Bluesky.getNotifications` | `agent`, `limit: int64 option`, `cursor: string option` | `Result<Page<Notification>, XrpcError>` | Fetch a page of notifications |
 | `Bluesky.getUnreadNotificationCount` | `agent` | `Result<int64, XrpcError>` | Get the number of unseen notifications |
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+
+(***)
+
 taskResult {
     let! count = Bluesky.getUnreadNotificationCount agent
     printfn "You have %d unread notifications" count
+    ()
 }
-```
 
-```fsharp
+(***)
+
 taskResult {
     let! page = Bluesky.getNotifications agent (Some 25L) None
 
@@ -72,8 +87,8 @@ taskResult {
         | NotificationKind.Quote -> printfn "%s quoted you" n.Author.DisplayName
         | _ -> printfn "Other notification from %s" n.Author.DisplayName
 }
-```
 
+(**
 ### Actions
 
 | Function | Accepts | Returns | Description |
@@ -81,13 +96,13 @@ taskResult {
 | `Bluesky.markNotificationsSeen` | `agent` | `Result<unit, XrpcError>` | Mark all notifications as seen up to the current time |
 
 The protocol treats "seen" as a high-water mark -- there is no way to mark individual notifications. All notifications up to the current timestamp are marked as seen.
+*)
 
-```fsharp
 taskResult {
     do! Bluesky.markNotificationsSeen agent
 }
-```
 
+(**
 ### Pagination
 
 | Function | Accepts | Returns | Description |
@@ -95,35 +110,37 @@ taskResult {
 | `Bluesky.paginateNotifications` | `agent`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<Notification>, XrpcError>>` | Lazily paginate all notifications |
 
 The paginator returns an `IAsyncEnumerable` that fetches pages on demand and stops when the server has no more results:
+*)
 
-```fsharp
-let pages = Bluesky.paginateNotifications agent (Some 50L)
+task {
+    let pages = Bluesky.paginateNotifications agent (Some 50L)
 
-let enumerator = pages.GetAsyncEnumerator()
+    let enumerator = pages.GetAsyncEnumerator()
 
-let rec loop () = task {
-    let! hasNext = enumerator.MoveNextAsync()
-    if hasNext then
-        match enumerator.Current with
-        | Ok page ->
-            for n in page.Items do
-                printfn "%s: %A" n.Author.DisplayName n.Kind
-        | Error err ->
-            printfn "Error: %A" err
-        do! loop ()
+    let rec loop () = task {
+        let! hasNext = enumerator.MoveNextAsync()
+        if hasNext then
+            match enumerator.Current with
+            | Ok page ->
+                for n in page.Items do
+                    printfn "%s: %A" n.Author.DisplayName n.Kind
+            | Error err ->
+                printfn "Error: %A" err
+            do! loop ()
+    }
+
+    do! loop ()
+    do! enumerator.DisposeAsync()
 }
 
-do! loop ()
-do! enumerator.DisposeAsync()
-```
-
+(**
 See the [Pagination guide](pagination.html) for more patterns on consuming `IAsyncEnumerable` from F#.
 
 ## Complete Workflow
 
 A typical notification check: read the unread count, fetch if there are any, process them, then mark as seen.
+*)
 
-```fsharp
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 
@@ -156,14 +173,12 @@ taskResult {
     else
         printfn "No new notifications"
 }
-```
 
+(**
 ## Power Users: Raw XRPC
 
 For fields the `Notification` domain type does not expose (such as `Labels` or the raw `Record` JSON), drop to the generated XRPC wrapper:
-
-```fsharp
-open FSharp.ATProto.Bluesky.Generated
+*)
 
 taskResult {
     let! output =
@@ -177,4 +192,3 @@ taskResult {
     for n in output.Notifications do
         printfn "%O (%A) - labels: %A" n.Uri n.Reason n.Labels
 }
-```
