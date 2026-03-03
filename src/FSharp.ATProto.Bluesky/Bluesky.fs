@@ -135,22 +135,6 @@ type UndoResult =
     | WasNotPresent
 
 /// <summary>
-/// Witness type enabling SRTP-based overloading for undo operations.
-/// Allows the generic <c>Bluesky.undo</c> function to accept any ref type
-/// (<see cref="LikeRef"/>, <see cref="RepostRef"/>, <see cref="FollowRef"/>, <see cref="BlockRef"/>).
-/// This type is an implementation detail and should not be used directly.
-/// </summary>
-[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
-type UndoWitness =
-    | UndoWitness
-
-    static member UndoUri (UndoWitness, r : LikeRef) = r.Uri
-    static member UndoUri (UndoWitness, r : RepostRef) = r.Uri
-    static member UndoUri (UndoWitness, r : FollowRef) = r.Uri
-    static member UndoUri (UndoWitness, r : BlockRef) = r.Uri
-    static member UndoUri (UndoWitness, r : ListBlockRef) = r.Uri
-
-/// <summary>
 /// Type alias for the thread union returned by <c>getPostThread</c>.
 /// Simplifies pattern matching when working with thread responses.
 /// </summary>
@@ -456,6 +440,24 @@ module ThreadNode =
 type ReportSubject =
     | Account of Did
     | Record of PostRef
+
+// ── SRTP witness types (implementation detail) ───────────────────
+
+/// <summary>
+/// Witness type enabling SRTP-based overloading for undo operations.
+/// Allows the generic <c>Bluesky.undo</c> function to accept any ref type
+/// (<see cref="LikeRef"/>, <see cref="RepostRef"/>, <see cref="FollowRef"/>, <see cref="BlockRef"/>).
+/// This type is an implementation detail and should not be used directly.
+/// </summary>
+[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type UndoWitness =
+    | UndoWitness
+
+    static member UndoUri (UndoWitness, r : LikeRef) = r.Uri
+    static member UndoUri (UndoWitness, r : RepostRef) = r.Uri
+    static member UndoUri (UndoWitness, r : FollowRef) = r.Uri
+    static member UndoUri (UndoWitness, r : BlockRef) = r.Uri
+    static member UndoUri (UndoWitness, r : ListBlockRef) = r.Uri
 
 /// <summary>
 /// Witness type enabling SRTP-based overloading for post reference parameters.
