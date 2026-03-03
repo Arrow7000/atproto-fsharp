@@ -3750,3 +3750,113 @@ let muteUserTypedDidTests =
               Expect.isOk result "should succeed"
               let body = captured.Value.Content.ReadAsStringAsync().Result
               Expect.stringContains body "did:plc:resolved-mute" "resolved DID used as actor" ]
+
+// ── ActorDid SRTP tests ─────────────────────────────────────────────
+
+let private testProfileSummary : ProfileSummary =
+    { ProfileSummary.Did = parseDid "did:plc:testactor"
+      Handle = Handle.parse "test.bsky.social" |> Result.defaultWith failwith
+      DisplayName = "Test"
+      Avatar = None }
+
+let private testProfile : Profile =
+    { Profile.Did = parseDid "did:plc:testactor"
+      Handle = Handle.parse "test.bsky.social" |> Result.defaultWith failwith
+      DisplayName = "Test"
+      Description = ""
+      Avatar = None
+      Banner = None
+      PostsCount = 0L
+      FollowersCount = 0L
+      FollowsCount = 0L
+      IsFollowing = false
+      IsFollowedBy = false
+      IsBlocking = false
+      IsBlockedBy = false
+      IsMuted = false }
+
+[<Tests>]
+let actorDidSrtpTests =
+    testList
+        "ActorDid SRTP (follow/block/mute accept entities)"
+        [ testCase "follow accepts ProfileSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.follow agent testProfileSummary
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "did:plc:testactor" "should use DID from ProfileSummary"
+
+          testCase "follow accepts Profile directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.follow agent testProfile
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "did:plc:testactor" "should use DID from Profile"
+
+          testCase "follow still accepts Did directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.follow agent (parseDid "did:plc:testactor")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+
+          testCase "block accepts ProfileSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.block agent testProfileSummary
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "did:plc:testactor" "should use DID from ProfileSummary"
+
+          testCase "muteUser accepts ProfileSummary directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidCallAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.muteUser agent testProfileSummary
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "did:plc:testactor" "should use DID from ProfileSummary"
+
+          testCase "unmuteUser accepts Profile directly"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = voidCallAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.unmuteUser agent testProfile
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "did:plc:testactor" "should use DID from Profile" ]

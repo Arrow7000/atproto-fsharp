@@ -483,6 +483,19 @@ type PostRefWitness =
     static member ToPostRef (PostRefWitness, tp : TimelinePost) = { PostRef.Uri = tp.Uri; Cid = tp.Cid }
 
 /// <summary>
+/// Witness type enabling SRTP-based overloading for actor DID parameters.
+/// Allows functions like <c>follow</c>, <c>block</c>, <c>muteUser</c>, and <c>unmuteUser</c> to accept
+/// a <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/> directly.
+/// This type is an implementation detail and should not be used directly.
+/// </summary>
+[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type ActorDidWitness =
+    | ActorDidWitness
+    static member ToDid (ActorDidWitness, d : Did) = d
+    static member ToDid (ActorDidWitness, p : ProfileSummary) = p.Did
+    static member ToDid (ActorDidWitness, p : Profile) = p.Did
+
+/// <summary>
 /// High-level convenience methods for common Bluesky operations:
 /// posting, replying, liking, reposting, following, blocking, uploading blobs, and deleting records.
 /// All methods require an authenticated <see cref="AtpAgent"/>.
@@ -494,6 +507,9 @@ module Bluesky =
 
     let inline internal asPostRef (x : ^a) : PostRef =
         ((^a or PostRefWitness) : (static member ToPostRef : PostRefWitness * ^a -> PostRef) (PostRefWitness, x))
+
+    let inline internal toActorDid (x : ^a) : Did =
+        ((^a or ActorDidWitness) : (static member ToDid : ActorDidWitness * ^a -> Did) (ActorDidWitness, x))
 
     let private nowTimestamp () = DateTimeOffset.UtcNow.ToString ("o")
 
@@ -891,13 +907,8 @@ module Bluesky =
     let inline repost (agent : AtpAgent) (target : ^a) : Task<Result<RepostRef, XrpcError>> =
         repostImpl agent (asPostRef target)
 
-    /// <summary>
-    /// Follow a user by their DID.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="did">The DID of the user to follow.</param>
-    /// <returns>A <see cref="FollowRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>FollowRef</c> to <see cref="unfollow"/> to undo.</returns>
-    let follow (agent : AtpAgent) (did : Did) : Task<Result<FollowRef, XrpcError>> =
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let followImpl (agent : AtpAgent) (did : Did) : Task<Result<FollowRef, XrpcError>> =
         task {
             let record =
                 {| ``$type`` = AppBskyGraph.Follow.TypeId
@@ -909,12 +920,16 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Block a user by their DID.
+    /// Follow a user. Accepts a <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/> directly.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="did">The DID of the user to block.</param>
-    /// <returns>A <see cref="BlockRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>BlockRef</c> to <see cref="unblock"/> to undo.</returns>
-    let block (agent : AtpAgent) (did : Did) : Task<Result<BlockRef, XrpcError>> =
+    /// <param name="target">The user to follow — a <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/>.</param>
+    /// <returns>A <see cref="FollowRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>FollowRef</c> to <see cref="unfollow"/> to undo.</returns>
+    let inline follow (agent : AtpAgent) (target : ^a) : Task<Result<FollowRef, XrpcError>> =
+        followImpl agent (toActorDid target)
+
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let blockImpl (agent : AtpAgent) (did : Did) : Task<Result<BlockRef, XrpcError>> =
         task {
             let record =
                 {| ``$type`` = AppBskyGraph.Block.TypeId
@@ -924,6 +939,15 @@ module Bluesky =
             let! result = createRecord agent "app.bsky.graph.block" record
             return result |> Result.map (fun o -> { BlockRef.Uri = o.Uri })
         }
+
+    /// <summary>
+    /// Block a user. Accepts a <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/> directly.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="target">The user to block — a <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/>.</param>
+    /// <returns>A <see cref="BlockRef"/> on success, or an <see cref="XrpcError"/>. Pass the <c>BlockRef</c> to <see cref="unblock"/> to undo.</returns>
+    let inline block (agent : AtpAgent) (target : ^a) : Task<Result<BlockRef, XrpcError>> =
+        blockImpl agent (toActorDid target)
 
     /// <summary>
     /// Resolve a string identifier (DID or handle) to a <see cref="Did"/>.
@@ -958,7 +982,7 @@ module Bluesky =
         task {
             match! resolveIdentifier agent identifier with
             | Error e -> return Error e
-            | Ok did -> return! follow agent did
+            | Ok did -> return! followImpl agent did
         }
 
     /// <summary>
@@ -975,7 +999,7 @@ module Bluesky =
         task {
             match! resolveIdentifier agent identifier with
             | Error e -> return Error e
-            | Ok did -> return! block agent did
+            | Ok did -> return! blockImpl agent did
         }
 
     /// <summary>
@@ -1368,23 +1392,32 @@ module Bluesky =
 
     // ── Mute / report / bookmark / handle ───────────────────────────────
 
-    /// <summary>
-    /// Mute an account by DID. Muted accounts are hidden from your feeds but not blocked.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="did">The <see cref="Did"/> of the account to mute.</param>
-    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
-    let muteUser (agent : AtpAgent) (did : Did) : Task<Result<unit, XrpcError>> =
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let muteUserImpl (agent : AtpAgent) (did : Did) : Task<Result<unit, XrpcError>> =
         AppBskyGraph.MuteActor.call agent { Actor = Did.value did }
 
     /// <summary>
-    /// Unmute a previously muted account by DID.
+    /// Mute an account. Accepts a <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/> directly.
+    /// Muted accounts are hidden from your feeds but not blocked.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="did">The <see cref="Did"/> of the account to unmute.</param>
+    /// <param name="target">The user to mute — a <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/>.</param>
     /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
-    let unmuteUser (agent : AtpAgent) (did : Did) : Task<Result<unit, XrpcError>> =
+    let inline muteUser (agent : AtpAgent) (target : ^a) : Task<Result<unit, XrpcError>> =
+        muteUserImpl agent (toActorDid target)
+
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let unmuteUserImpl (agent : AtpAgent) (did : Did) : Task<Result<unit, XrpcError>> =
         AppBskyGraph.UnmuteActor.call agent { Actor = Did.value did }
+
+    /// <summary>
+    /// Unmute a previously muted account. Accepts a <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/> directly.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="target">The user to unmute — a <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/>.</param>
+    /// <returns><c>unit</c> on success, or an <see cref="XrpcError"/>.</returns>
+    let inline unmuteUser (agent : AtpAgent) (target : ^a) : Task<Result<unit, XrpcError>> =
+        unmuteUserImpl agent (toActorDid target)
 
     /// <summary>
     /// Mute an account by handle string. The handle is resolved to a DID, then the mute is created.
@@ -1400,7 +1433,7 @@ module Bluesky =
         task {
             match! resolveIdentifier agent identifier with
             | Error e -> return Error e
-            | Ok did -> return! muteUser agent did
+            | Ok did -> return! muteUserImpl agent did
         }
 
     /// <summary>
@@ -1417,7 +1450,7 @@ module Bluesky =
         task {
             match! resolveIdentifier agent identifier with
             | Error e -> return Error e
-            | Ok did -> return! unmuteUser agent did
+            | Ok did -> return! unmuteUserImpl agent did
         }
 
     /// <summary>
