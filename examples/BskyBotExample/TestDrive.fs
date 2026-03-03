@@ -144,7 +144,8 @@ let main _ =
         // ── 7. Look up @adler.dev ──
         step 7 "Looking up @adler.dev"
 
-        let! profileResult = Bluesky.getProfile agent "adler.dev"
+        let adlerHandle = Handle.parse "adler.dev" |> Result.defaultWith failwith
+        let! profileResult = Bluesky.getProfile agent adlerHandle
         let adlerProfile = profileResult |> unwrap "Got profile for @adler.dev"
 
         printfn "   Display name: %s" adlerProfile.DisplayName

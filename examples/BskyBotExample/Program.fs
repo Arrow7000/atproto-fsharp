@@ -77,7 +77,8 @@ let main _ =
                     ownProfile.FollowersCount
                     ownProfile.FollowsCount
 
-                let! otherProfile = Bluesky.getProfile agent "bsky.app"
+                let bskyHandle = Handle.parse "bsky.app" |> Result.defaultWith failwith
+                let! otherProfile = Bluesky.getProfile agent bskyHandle
                 printfn "Other profile: @%s" (Handle.value otherProfile.Handle)
 
                 printfn
@@ -249,13 +250,13 @@ let main _ =
                 // ─────────────────────────────────────────────────────
                 section "11. Followers / Follows"
 
-                let! followers = Bluesky.getFollowers agent (Handle.value session.Handle) (Some 5L) None
+                let! followers = Bluesky.getFollowers agent session.Handle (Some 5L) None
                 printfn "Followers: %d (showing first page)" followers.Items.Length
 
                 for f in followers.Items |> List.truncate 5 do
                     printfn "  @%s (%s)" (Handle.value f.Handle) (Did.value f.Did)
 
-                let! follows = Bluesky.getFollows agent (Handle.value session.Handle) (Some 5L) None
+                let! follows = Bluesky.getFollows agent session.Handle (Some 5L) None
                 printfn "Following: %d (showing first page)" follows.Items.Length
 
                 for f in follows.Items |> List.truncate 5 do
@@ -544,7 +545,7 @@ let main _ =
         printfn "Paginated followers:"
 
         let followerPages =
-            Bluesky.paginateFollowers agent (Handle.value session.Handle) (Some 10L)
+            Bluesky.paginateFollowers agent session.Handle (Some 10L)
 
         let followerEnum = followerPages.GetAsyncEnumerator ()
         let! hasFirst = followerEnum.MoveNextAsync ()
@@ -599,7 +600,8 @@ let main _ =
         // ─────────────────────────────────────────────────────────────
         section "19. Error Handling"
 
-        let! badProfile = Bluesky.getProfile agent "this-handle-does-not-exist.invalid"
+        let badHandle = Handle.parse "this-handle-does-not-exist.invalid" |> Result.defaultWith failwith
+        let! badProfile = Bluesky.getProfile agent badHandle
 
         match badProfile with
         | Ok _ -> printfn "Unexpectedly succeeded"
