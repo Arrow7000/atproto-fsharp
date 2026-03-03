@@ -9,216 +9,207 @@ keywords: posts, create, reply, delete, thread, quote, search, bluesky
 
 # Posts
 
-Posts are the primary content type on Bluesky. FSharp.ATProto gives you convenience methods for the most common operations and generated XRPC wrappers when you need full control.
+Create, read, quote, reply to, search, and delete Bluesky posts.
 
-All examples use `taskResult {}` for concise error handling. See the [Error Handling guide](error-handling.html) for details.
+## Domain Types
 
-```fsharp
-open FSharp.ATProto.Core
-open FSharp.ATProto.Bluesky
-open FSharp.ATProto.Syntax
-```
+### TimelinePost
 
-## Creating a Post
+A post with engagement counts and viewer state, returned by feed, search, and thread functions.
 
-`Bluesky.post` creates a post with automatic rich text detection. Mentions, links, and hashtags are detected, resolved, and attached as facets automatically:
+| Field | Type | Description |
+|-------|------|-------------|
+| `Uri` | `AtUri` | AT-URI identifying the post record |
+| `Cid` | `Cid` | Content hash of this exact version |
+| `Author` | `ProfileSummary` | Post author |
+| `Text` | `string` | Post text content |
+| `Facets` | `Facet list` | Rich text facets (mentions, links, hashtags) |
+| `LikeCount` | `int64` | Number of likes |
+| `RepostCount` | `int64` | Number of reposts |
+| `ReplyCount` | `int64` | Number of replies |
+| `QuoteCount` | `int64` | Number of quote posts |
+| `IndexedAt` | `DateTimeOffset` | When the post was indexed |
+| `IsLiked` | `bool` | Whether you have liked this post |
+| `IsReposted` | `bool` | Whether you have reposted this post |
+| `IsBookmarked` | `bool` | Whether you have bookmarked this post |
+
+### PostRef
+
+A reference to a specific version of a post record, returned when creating a post.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Uri` | `AtUri` | AT-URI of the post record |
+| `Cid` | `Cid` | Content hash of the post version |
+
+### FeedItem
+
+A single item from a feed or timeline, pairing a post with an optional reason.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Post` | `TimelinePost` | The post content |
+| `Reason` | `FeedReason option` | Why the post appeared (repost, pin, or `None` for organic) |
+
+### FeedReason
+
+Discriminated union indicating why a post appeared in a feed.
+
+| Case | Fields | Description |
+|------|--------|-------------|
+| `Repost` | `by: ProfileSummary` | Someone reposted this post |
+| `Pin` | -- | Post is pinned |
+
+### ThreadNode
+
+Discriminated union representing a node in a post thread tree.
+
+| Case | Fields | Description |
+|------|--------|-------------|
+| `Post` | `ThreadPost` | An accessible post with thread context |
+| `NotFound` | `AtUri` | The post was deleted or does not exist |
+| `Blocked` | `AtUri` | The post is blocked |
+
+### ThreadPost
+
+A post within a thread, with parent and reply context.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Post` | `TimelinePost` | The post itself |
+| `Parent` | `ThreadNode option` | Parent post in the thread |
+| `Replies` | `ThreadNode list` | Reply posts |
+
+## Functions
+
+### Creating Posts
+
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.post` | `agent` `text:string` | `Result<PostRef, XrpcError>` | Create a post with auto-detected rich text |
+| `Bluesky.postWithFacets` | `agent` `text:string` `facets:Facet list` | `Result<PostRef, XrpcError>` | Create a post with pre-resolved facets |
+| `Bluesky.postWithImages` | `agent` `text:string` `images:ImageUpload list` | `Result<PostRef, XrpcError>` | Create a post with attached images |
+| `Bluesky.quotePost` | `agent` `text:string` `quoted:PostRef\|TimelinePost` | `Result<PostRef, XrpcError>` | Create a quote post |
+| `Bluesky.replyTo` | `agent` `text:string` `parent:PostRef\|TimelinePost` | `Result<PostRef, XrpcError>` | Reply to a post (auto-resolves thread root) |
+| `Bluesky.replyWithKnownRoot` | `agent` `text:string` `parent:PostRef` `root:PostRef` | `Result<PostRef, XrpcError>` | Reply with explicit parent and root |
 
 ```fsharp
 taskResult {
+    // Simple post with auto-detected mentions, links, hashtags
     let! postRef = Bluesky.post agent "Hello from F#! #atproto"
-    printfn "Posted: %s" (AtUri.value postRef.Uri)
-    return postRef
+
+    // Quote another post
+    let! quoteRef = Bluesky.quotePost agent "Great take" postRef
+
+    // Reply (thread root resolved automatically)
+    let! replyRef = Bluesky.replyTo agent "I agree!" postRef
+
+    // Post with images
+    let imageBytes = System.IO.File.ReadAllBytes "photo.jpg"
+    let! imagePost = Bluesky.postWithImages agent "Check this out!"
+                        [ { Data = imageBytes; MimeType = Jpeg; AltText = "A photo" } ]
 }
 ```
 
-On success you get a `PostRef` containing the [AT-URI](../concepts.html) and CID of the new post. The `Uri` uniquely identifies the post. The `Cid` identifies the exact version. You need both to reply, like, or repost.
+### Reading Posts
 
-At the program boundary, handle the result:
-
-```fsharp
-match! Bluesky.post agent "Hello!" with
-| Ok postRef -> printfn "Posted: %s" (AtUri.value postRef.Uri)
-| Error err -> printfn "Failed: %A" err
-```
-
-Every example below returns `Task<Result<_, XrpcError>>` -- we show only the `taskResult` happy path for brevity.
-
-## Reading Posts
-
-`Bluesky.getPosts` fetches one or more posts by AT-URI and returns `TimelinePost` domain types:
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.getPosts` | `agent` `uris:AtUri list` | `Result<TimelinePost list, XrpcError>` | Fetch multiple posts by AT-URI |
+| `Bluesky.getPostThread` | `agent` `target:TimelinePost\|PostRef\|AtUri` `depth:int64 option` `parentHeight:int64 option` | `Result<ThreadNode, XrpcError>` | Get full thread tree for pattern matching |
+| `Bluesky.getPostThreadView` | `agent` `target:TimelinePost\|PostRef\|AtUri` `depth:int64 option` `parentHeight:int64 option` | `Result<ThreadPost option, XrpcError>` | Get thread as `Some ThreadPost` or `None` |
+| `Bluesky.searchPosts` | `agent` `query:string` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | Full-text post search |
+| `Bluesky.getQuotes` | `agent` `target:TimelinePost\|PostRef\|AtUri` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | Get posts that quote a given post |
 
 ```fsharp
 taskResult {
     let! posts = Bluesky.getPosts agent [ postRef.Uri ]
+    let! results = Bluesky.searchPosts agent "F# atproto" (Some 10L) None
 
-    for post in posts do
-        printfn "@%s: %s" post.Author.DisplayName post.Text
-        printfn "  Likes: %d  Replies: %d" post.LikeCount post.ReplyCount
-}
-```
+    // Thread with pattern matching
+    let! thread = Bluesky.getPostThread agent postRef (Some 6L) (Some 3L)
+    match thread with
+    | ThreadNode.Post tp -> printfn "Post: %s" tp.Post.Text
+    | ThreadNode.NotFound uri -> printfn "Not found: %s" (AtUri.value uri)
+    | ThreadNode.Blocked uri -> printfn "Blocked: %s" (AtUri.value uri)
 
-`TimelinePost` gives you direct access to `Uri`, `Cid`, `Author`, `Text`, `Facets`, `LikeCount`, `RepostCount`, `ReplyCount`, `QuoteCount`, `IndexedAt`, `IsLiked`, `IsReposted`, and `IsBookmarked`. No need to dig into record internals.
-
-> **Power users**: If you need the raw `AppBskyFeed.Defs.PostView` from the generated types, use `AppBskyFeed.GetPosts.query` directly. `PostView` provides `.Text`, `.Facets`, and `.AsPost` extension properties for convenient access at the raw layer.
-
-## Quote Posts
-
-`Bluesky.quotePost` creates a post that quotes another. The quoted post appears as an embedded card:
-
-```fsharp
-taskResult {
-    let! quoteRef = Bluesky.quotePost agent "This is a great take" originalPostRef
-    printfn "Quote posted: %s" (AtUri.value quoteRef.Uri)
-}
-```
-
-Like `Bluesky.post`, mentions, links, and hashtags in the text are auto-detected.
-
-### Reading Quotes
-
-`Bluesky.getQuotes` returns a paginated list of posts that quote a given post:
-
-```fsharp
-taskResult {
-    let! page = Bluesky.getQuotes agent postRef.Uri None None
-
-    for quote in page.Items do
-        printfn "@%s quoted: %s" quote.Author.DisplayName quote.Text
-
-    match page.Cursor with
-    | Some _ -> printfn "More quotes available"
-    | None -> printfn "No more quotes"
-}
-```
-
-The first `int64 option` is the page size limit, the second `string option` is the pagination cursor. Pass `None` for both to use server defaults. See the [Pagination guide](pagination.html) for fetching additional pages.
-
-## Replying to a Post
-
-`Bluesky.replyTo` creates a reply with automatic rich text detection and automatic thread root resolution. Pass the post you are replying to -- the library figures out the thread root:
-
-```fsharp
-taskResult {
-    let! replyRef = Bluesky.replyTo agent "Great post!" parentRef
-    printfn "Replied: %s" (AtUri.value replyRef.Uri)
-}
-```
-
-Under the hood, the library fetches the parent post to determine the thread root. If the parent is a top-level post, it becomes both parent and root. If the parent is itself a reply, the original thread root is extracted automatically.
-
-### Explicit Parent and Root
-
-If you already know both the parent and root `PostRef`s (for example, when building a thread yourself), use `Bluesky.replyWithKnownRoot` to skip the network fetch:
-
-```fsharp
-let! result = Bluesky.replyWithKnownRoot agent "I agree!" someoneElsesReply originalPost
-```
-
-The parameter order is: agent, text, parent, root.
-
-## Threads
-
-### The Simple Way
-
-`Bluesky.getPostThreadView` returns a `ThreadPost option` -- `Some` for a normal accessible thread, `None` for deleted or blocked posts:
-
-```fsharp
-taskResult {
-    let! threadOpt = Bluesky.getPostThreadView agent postRef.Uri (Some 6L) (Some 3L)
-
+    // Or the simplified view
+    let! threadOpt = Bluesky.getPostThreadView agent postRef (Some 6L) (Some 3L)
     match threadOpt with
-    | Some thread ->
-        printfn "Post: %s" thread.Post.Text
-
-        for reply in thread.Replies do
-            match reply with
-            | ThreadNode.Post r ->
-                printfn "  Reply by @%s: %s" r.Post.Author.DisplayName r.Post.Text
-            | ThreadNode.NotFound uri ->
-                printfn "  [deleted: %s]" (AtUri.value uri)
-            | ThreadNode.Blocked uri ->
-                printfn "  [blocked: %s]" (AtUri.value uri)
-    | None ->
-        printfn "Post is not available (deleted or blocked)"
+    | Some tp -> printfn "Post: %s with %d replies" tp.Post.Text tp.Replies.Length
+    | None -> printfn "Post not accessible"
 }
 ```
 
-The first `int64 option` is the reply depth. The second is the parent height (how many parent posts above the target). Pass `None` for either to use the server default.
+### Engagement
 
-### Full Pattern Matching
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.like` | `agent` `target:PostRef\|TimelinePost` | `Result<LikeRef, XrpcError>` | Like a post |
+| `Bluesky.repost` | `agent` `target:PostRef\|TimelinePost` | `Result<RepostRef, XrpcError>` | Repost a post |
+| `Bluesky.unlikePost` | `agent` `target:PostRef\|TimelinePost` | `Result<UndoResult, XrpcError>` | Unlike by post (looks up viewer state) |
+| `Bluesky.unrepostPost` | `agent` `target:PostRef\|TimelinePost` | `Result<UndoResult, XrpcError>` | Un-repost by post (looks up viewer state) |
+| `Bluesky.undoLike` | `agent` `likeRef:LikeRef` | `Result<UndoResult, XrpcError>` | Undo a like by its ref |
+| `Bluesky.undoRepost` | `agent` `repostRef:RepostRef` | `Result<UndoResult, XrpcError>` | Undo a repost by its ref |
 
-For cases where you need to distinguish between not-found and blocked at the top level, use `Bluesky.getPostThread` which returns a `ThreadNode`:
+`unlike` and `unrepost` are also available as simpler alternatives that return `unit` instead of `UndoResult`. The generic `Bluesky.undo` accepts any ref type (`LikeRef`, `RepostRef`, `FollowRef`, `BlockRef`).
 
 ```fsharp
 taskResult {
-    let! node = Bluesky.getPostThread agent postRef.Uri (Some 6L) (Some 3L)
+    let! likeRef = Bluesky.like agent post
+    let! _ = Bluesky.undoLike agent likeRef
 
-    match node with
-    | ThreadNode.Post thread ->
-        printfn "Post: %s" thread.Post.Text
-
-        // Walk the parent chain
-        let rec walkParents = function
-            | Some (ThreadNode.Post p) ->
-                printfn "  Parent: %s" p.Post.Text
-                walkParents p.Parent
-            | _ -> ()
-
-        walkParents thread.Parent
-
-    | ThreadNode.NotFound uri ->
-        printfn "Post not found: %s" (AtUri.value uri)
-    | ThreadNode.Blocked uri ->
-        printfn "Post is blocked: %s" (AtUri.value uri)
-}
-```
-
-> **Power users**: For access to the raw `AppBskyFeed.GetPostThread.OutputThreadUnion` (aliased as `ThreadResult`), call `AppBskyFeed.GetPostThread.query` directly.
-
-## Searching Posts
-
-`Bluesky.searchPosts` runs a full-text search and returns a paginated `Page<TimelinePost>`:
-
-```fsharp
-taskResult {
-    let! page = Bluesky.searchPosts agent "F# atproto" (Some 10L) None
-
-    for post in page.Items do
-        printfn "@%s: %s" post.Author.DisplayName post.Text
-}
-```
-
-> **Power users**: For advanced search filters (author, language, domain, date range, sort order), use `AppBskyFeed.SearchPosts.query` directly with the full parameter record.
-
-## Deleting a Post
-
-`Bluesky.deleteRecord` deletes any record by its AT-URI. Pass the URI from the `PostRef` you received when creating the post:
-
-```fsharp
-taskResult {
-    do! Bluesky.deleteRecord agent postRef.Uri
-    printfn "Deleted"
-}
-```
-
-The same function works for any record you have created -- likes, reposts, follows, and blocks.
-
-## Posting with Pre-Resolved Facets
-
-If you have already resolved rich text facets yourself (or want to construct them manually), use `Bluesky.postWithFacets` to skip auto-detection:
-
-```fsharp
-task {
-    let! facets = RichText.parse agent "Check @my-handle.bsky.social"
-    // Modify facets here if needed...
-    let! result = Bluesky.postWithFacets agent "Check @my-handle.bsky.social" facets
-
+    // Or without keeping the ref:
+    let! result = Bluesky.unlikePost agent post
     match result with
-    | Ok postRef -> printfn "Posted: %s" (AtUri.value postRef.Uri)
-    | Error err -> printfn "Failed: %A" err
+    | Undone -> printfn "Unliked"
+    | WasNotPresent -> printfn "Was not liked"
 }
 ```
 
-Note: `RichText.parse` returns a bare `Task` (it silently drops unresolvable mentions rather than failing), so this example uses `task {}` with a manual match on the `postWithFacets` result.
+### Bookmarks
 
-Pass an empty list for plain text with no facets. See the [Rich Text guide](rich-text.html) for details on the detection and resolution pipeline.
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.addBookmark` | `agent` `target:PostRef\|TimelinePost` | `Result<unit, XrpcError>` | Bookmark a post |
+| `Bluesky.removeBookmark` | `agent` `target:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Remove a bookmark |
+| `Bluesky.getBookmarks` | `agent` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | List bookmarked posts |
+
+```fsharp
+taskResult {
+    do! Bluesky.addBookmark agent post
+    let! page = Bluesky.getBookmarks agent (Some 25L) None
+}
+```
+
+### Deleting
+
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.deleteRecord` | `agent` `target:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Delete any record by AT-URI |
+
+```fsharp
+taskResult {
+    do! Bluesky.deleteRecord agent postRef
+}
+```
+
+## SRTP Polymorphism
+
+Many post functions accept multiple types via SRTP (statically resolved type parameters):
+
+- **`like`, `repost`, `replyTo`, `quotePost`, `addBookmark`** accept `TimelinePost` or `PostRef`
+- **`deleteRecord`, `removeBookmark`, `getPostThread`, `getPostThreadView`, `getLikes`, `getRepostedBy`, `getQuotes`, `muteThread`, `unmuteThread`** accept `TimelinePost`, `PostRef`, or `AtUri`
+
+Pass entities directly -- no need to extract `.Uri` or construct a `PostRef`:
+
+```fsharp
+taskResult {
+    let! page = Bluesky.getTimeline agent (Some 10L) None
+    let post = page.Items.Head.Post
+
+    // Pass the TimelinePost directly
+    let! likeRef = Bluesky.like agent post
+    let! thread = Bluesky.getPostThreadView agent post (Some 6L) None
+}
+```

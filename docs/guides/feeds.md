@@ -9,21 +9,71 @@ keywords: feeds, timeline, author feed, liked posts, bookmarks, custom feed, pag
 
 # Feeds
 
-All examples use `taskResult {}`. See the [Error Handling guide](error-handling.html) for details.
+Read timelines, author feeds, liked posts, and bookmarks through the `Bluesky` module.
 
-Bluesky exposes several kinds of feeds: your **home timeline**, **author feeds**, **liked posts**, **bookmarks**, and **custom feeds** (algorithmic feeds created by third parties). The convenience methods return domain types (`FeedItem`, `TimelinePost`) and support cursor-based pagination through `Page<'T>`.
+All examples use `taskResult {}` -- see the [Error Handling guide](error-handling.html) for details.
 
-All examples assume you have an authenticated `AtpAgent` and these namespaces open:
+## Domain Types
 
-```fsharp
-open FSharp.ATProto.Core
-open FSharp.ATProto.Bluesky
-open FSharp.ATProto.Syntax
-```
+### FeedItem
 
-## Reading Your Timeline
+A single item in a feed or timeline, pairing a post with the reason it appeared.
 
-`Bluesky.getTimeline` fetches your home timeline. Pass an optional page size and cursor:
+| Field | Type | Description |
+|-------|------|-------------|
+| `Post` | `TimelinePost` | The post content and metadata |
+| `Reason` | `FeedReason option` | Why this item appeared (repost, pin, or `None` for organic) |
+
+### FeedReason
+
+Discriminated union indicating why a post appeared in a feed.
+
+| Case | Payload | Description |
+|------|---------|-------------|
+| `Repost` | `by : ProfileSummary` | Someone reposted this post |
+| `Pin` | -- | The post is pinned to the author's profile |
+
+### TimelinePost
+
+A flattened, ergonomic view of a post. Engagement counts are plain `int64` (not `Option`), and viewer state is exposed as simple booleans.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Uri` | `AtUri` | The AT-URI of the post record |
+| `Cid` | `Cid` | The CID of the post record version |
+| `Author` | `ProfileSummary` | The post author |
+| `Text` | `string` | The post text content |
+| `Facets` | `Facet list` | Rich text facets (mentions, links, hashtags) |
+| `LikeCount` | `int64` | Number of likes |
+| `RepostCount` | `int64` | Number of reposts |
+| `ReplyCount` | `int64` | Number of replies |
+| `QuoteCount` | `int64` | Number of quote posts |
+| `IndexedAt` | `DateTimeOffset` | When the post was indexed |
+| `IsLiked` | `bool` | Whether the authenticated user liked this post |
+| `IsReposted` | `bool` | Whether the authenticated user reposted this post |
+| `IsBookmarked` | `bool` | Whether the authenticated user bookmarked this post |
+
+### Page&lt;'T&gt;
+
+A paginated result containing a list of items and an optional cursor for the next page.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Items` | `'T list` | The items in this page |
+| `Cursor` | `string option` | Cursor for the next page, or `None` if this is the last page |
+
+## Functions
+
+### Reading Feeds
+
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.getTimeline` | `agent`, `limit: int64 option`, `cursor: string option` | `Result<Page<FeedItem>, XrpcError>` | Fetch the authenticated user's home timeline |
+| `Bluesky.getAuthorFeed` | `agent`, `actor`, `limit: int64 option`, `cursor: string option` | `Result<Page<FeedItem>, XrpcError>` | Fetch posts by a specific user |
+| `Bluesky.getActorLikes` | `agent`, `actor`, `limit: int64 option`, `cursor: string option` | `Result<Page<FeedItem>, XrpcError>` | Fetch posts that a specific user has liked |
+| `Bluesky.getBookmarks` | `agent`, `limit: int64 option`, `cursor: string option` | `Result<Page<TimelinePost>, XrpcError>` | Fetch the authenticated user's bookmarked posts |
+
+**SRTP:** `getAuthorFeed` and `getActorLikes` accept `ProfileSummary`, `Profile`, `Handle`, or `Did` for the `actor` parameter.
 
 ```fsharp
 taskResult {
@@ -35,40 +85,102 @@ taskResult {
 }
 ```
 
-Pass `None` for the limit to use the server default. Pass `None` for the cursor to start from the most recent posts.
-
-The return type is `Page<FeedItem>`. Each `FeedItem` contains a `Post : TimelinePost` and an optional `Reason : FeedReason` (see [Understanding Feed Items](#Understanding-Feed-Items) below).
-
-### Power Users: Raw XRPC
-
-For full control over parameters (e.g., the `Algorithm` field), use the generated wrapper directly:
-
 ```fsharp
+// Pass a ProfileSummary directly -- no need to extract a handle string
 taskResult {
-    let! output =
-        AppBskyFeed.GetTimeline.query
-            agent
-            { Algorithm = None; Cursor = None; Limit = Some 25L }
-
-    for item in output.Feed do
-        printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
-}
-```
-
-## Author Feed
-
-`Bluesky.getAuthorFeed` returns posts by a specific user. Pass the actor's handle or DID as a string:
-
-```fsharp
-taskResult {
-    let! page = Bluesky.getAuthorFeed agent "someone.bsky.social" (Some 25L) None
+    let! page = Bluesky.getAuthorFeed agent someProfile (Some 25L) None
 
     for item in page.Items do
         printfn "%s (%d likes)" item.Post.Text item.Post.LikeCount
 }
 ```
 
-### Power Users: Raw XRPC
+### Bookmarks
+
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.addBookmark` | `agent`, `target` | `Result<unit, XrpcError>` | Add a post to your bookmarks |
+| `Bluesky.removeBookmark` | `agent`, `target` | `Result<unit, XrpcError>` | Remove a post from your bookmarks |
+
+**SRTP:** `addBookmark` accepts `PostRef` or `TimelinePost`. `removeBookmark` accepts `AtUri`, `PostRef`, or `TimelinePost`.
+
+```fsharp
+taskResult {
+    let! _ = Bluesky.addBookmark agent timelinePost
+    let! _ = Bluesky.removeBookmark agent timelinePost
+    return ()
+}
+```
+
+### Pagination
+
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.paginateTimeline` | `agent`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>` | Lazily paginate the home timeline |
+| `Bluesky.paginateFollowers` | `agent`, `actor`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>` | Lazily paginate an actor's followers |
+| `Bluesky.paginateNotifications` | `agent`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<Notification>, XrpcError>>` | Lazily paginate notifications |
+
+**SRTP:** `paginateFollowers` accepts `ProfileSummary`, `Profile`, `Handle`, or `Did` for the `actor` parameter.
+
+Paginators return an `IAsyncEnumerable` that fetches pages lazily and stops when the server returns no cursor. Iterate with `await foreach`:
+
+```fsharp
+let pages = Bluesky.paginateTimeline agent (Some 50L)
+
+// Consume from F# using TaskSeq or manual IAsyncEnumerator
+let enumerator = pages.GetAsyncEnumerator()
+
+let rec loop () = task {
+    let! hasNext = enumerator.MoveNextAsync()
+    if hasNext then
+        match enumerator.Current with
+        | Ok page ->
+            for item in page.Items do
+                printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
+        | Error err ->
+            printfn "Error: %A" err
+        do! loop ()
+}
+
+do! loop ()
+do! enumerator.DisposeAsync()
+```
+
+For endpoints without a pre-built paginator, use `Xrpc.paginate` directly. See the [Pagination guide](pagination.html) for full details.
+
+## Matching Feed Reasons
+
+Match on `FeedReason` to distinguish reposts and pins from organic posts:
+
+```fsharp
+for item in page.Items do
+    match item.Reason with
+    | Some (FeedReason.Repost (by = reposter)) ->
+        printfn "Reposted by @%s: %s"
+            (Handle.value reposter.Handle) item.Post.Text
+    | Some FeedReason.Pin ->
+        printfn "[Pinned] %s" item.Post.Text
+    | None ->
+        printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
+```
+
+## Custom Feeds
+
+Custom feeds (algorithmic feeds by third parties) are identified by an AT-URI. Use the raw XRPC wrapper to read them:
+
+```fsharp
+taskResult {
+    let! output =
+        AppBskyFeed.GetFeed.query
+            agent
+            { Feed = feedUri; Cursor = None; Limit = Some 25L }
+
+    for item in output.Feed do
+        printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
+}
+```
+
+## Power Users: Raw XRPC
 
 The raw `AppBskyFeed.GetAuthorFeed.query` gives access to filter and pin options:
 
@@ -88,193 +200,10 @@ taskResult {
 }
 ```
 
-### Filter Options
-
-The `Filter` parameter on the raw wrapper is a `ParamsFilter` DU:
-
-| Value | Description |
-|-------|-------------|
+| Filter Value | Description |
+|--------------|-------------|
 | `PostsWithReplies` | All posts including replies (default) |
 | `PostsNoReplies` | Original posts only, no replies |
 | `PostsWithMedia` | Only posts with images or video |
 | `PostsAndAuthorThreads` | Posts and the author's own reply threads |
 | `PostsWithVideo` | Only posts with video |
-
-## Liked Posts
-
-`Bluesky.getActorLikes` returns posts that a specific user has liked:
-
-```fsharp
-taskResult {
-    let! page = Bluesky.getActorLikes agent "someone.bsky.social" (Some 25L) None
-
-    for item in page.Items do
-        printfn "Liked: %s by @%s" item.Post.Text (Handle.value item.Post.Author.Handle)
-}
-```
-
-The return type is the same `Page<FeedItem>` as the timeline and author feed.
-
-## Custom Feeds
-
-Custom feeds are algorithmic feeds created by third parties. Each feed is identified by an [AT-URI](../concepts.html) of the form `at://did:plc:xxx/app.bsky.feed.generator/feed-name`.
-
-Use `AppBskyFeed.GetFeed.query` to read a custom feed:
-
-```fsharp
-// feedUri is an AtUri -- typically from a feed discovery result or known feed
-// e.g. AtUri.parse "at://did:plc:.../app.bsky.feed.generator/whats-hot"
-taskResult {
-    let! output =
-        AppBskyFeed.GetFeed.query
-            agent
-            { Feed = feedUri; Cursor = None; Limit = Some 25L }
-
-    for item in output.Feed do
-        printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
-}
-```
-
-## Feed Generator Metadata
-
-To get information about a feed generator before fetching its posts, use `AppBskyFeed.GetFeedGenerator.query`:
-
-```fsharp
-taskResult {
-    let! info = AppBskyFeed.GetFeedGenerator.query agent { Feed = feedUri }
-
-    let view = info.View
-    printfn "Feed: %s" view.DisplayName
-    printfn "By: %s" (Handle.value view.Creator.Handle)
-    printfn "Online: %b, Valid: %b" info.IsOnline info.IsValid
-
-    match view.Description with
-    | Some desc -> printfn "Description: %s" desc
-    | None -> ()
-
-    match view.LikeCount with
-    | Some n -> printfn "Likes: %d" n
-    | None -> ()
-}
-```
-
-The `IsOnline` and `IsValid` fields indicate whether the feed generator is currently reachable and returning well-formed responses.
-
-## Bookmarks
-
-### Adding and Removing Bookmarks
-
-`Bluesky.addBookmark` accepts a `TimelinePost` (or `PostRef`) directly:
-
-```fsharp
-taskResult {
-    let! _ = Bluesky.addBookmark agent postRef
-    printfn "Bookmarked!"
-}
-```
-
-To remove a bookmark, pass the post's [AT-URI](../concepts.html):
-
-```fsharp
-taskResult {
-    let! _ = Bluesky.removeBookmark agent postRef.Uri
-    printfn "Bookmark removed"
-}
-```
-
-### Reading Your Bookmarks
-
-`Bluesky.getBookmarks` returns a `Page<TimelinePost>` (bookmarks have no repost/pin reason, so they use `TimelinePost` directly instead of `FeedItem`):
-
-```fsharp
-taskResult {
-    let! page = Bluesky.getBookmarks agent (Some 25L) None
-
-    for post in page.Items do
-        printfn "@%s: %s" (Handle.value post.Author.Handle) post.Text
-}
-```
-
-## Understanding Feed Items
-
-### FeedItem
-
-A `FeedItem` pairs a post with an optional reason for why it appeared in the feed:
-
-```fsharp
-type FeedItem =
-    { Post : TimelinePost
-      Reason : FeedReason option }
-```
-
-### TimelinePost
-
-`TimelinePost` is a flattened, ergonomic view of a post. Engagement counts are plain `int64` values (not `Option`), and viewer state is exposed as simple booleans:
-
-```fsharp
-let post = item.Post
-printfn "@%s: %s" (Handle.value post.Author.Handle) post.Text
-printfn "  %d likes, %d replies, %d reposts, %d quotes"
-    post.LikeCount post.ReplyCount post.RepostCount post.QuoteCount
-
-if post.IsLiked then printfn "  (you liked this)"
-if post.IsReposted then printfn "  (you reposted this)"
-if post.IsBookmarked then printfn "  (bookmarked)"
-```
-
-The `Facets` field gives you the rich text facets (mentions, links, hashtags) as a typed list.
-
-### Reposts and Pins
-
-Match on the `FeedReason` DU to distinguish reposts and pins from organic posts:
-
-```fsharp
-for item in page.Items do
-    match item.Reason with
-    | Some (FeedReason.Repost (by = reposter)) ->
-        printfn "Reposted by @%s: %s"
-            (Handle.value reposter.Handle) item.Post.Text
-    | Some FeedReason.Pin ->
-        printfn "[Pinned] %s" item.Post.Text
-    | None ->
-        printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
-```
-
-## Discovering Feeds
-
-`AppBskyFeed.GetSuggestedFeeds.query` returns a list of popular or recommended feed generators:
-
-```fsharp
-taskResult {
-    let! output =
-        AppBskyFeed.GetSuggestedFeeds.query agent { Cursor = None; Limit = Some 10L }
-
-    for feed in output.Feeds do
-        let likes = feed.LikeCount |> Option.defaultValue 0L
-        printfn "%s by @%s (%d likes)" feed.DisplayName (Handle.value feed.Creator.Handle) likes
-}
-```
-
-The `Uri` field of each `GeneratorView` is the [AT-URI](../concepts.html) you pass to `AppBskyFeed.GetFeed.query` to read that feed's posts.
-
-## Pagination
-
-For your timeline, `Bluesky.paginateTimeline` returns an `IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>` that fetches pages lazily:
-
-```fsharp
-let pages = Bluesky.paginateTimeline agent (Some 50L)
-```
-
-For endpoints without a pre-built paginator (custom feeds, search results, etc.), use `Xrpc.paginate` to build your own:
-
-```fsharp
-let pages =
-    Xrpc.paginate<AppBskyFeed.GetFeed.Params, AppBskyFeed.GetFeed.Output>
-        AppBskyFeed.GetFeed.TypeId
-        { Feed = feedUri; Cursor = None; Limit = Some 50L }
-        (fun output -> output.Cursor)
-        (fun cursor p -> { p with Cursor = cursor })
-        agent
-```
-
-For full consumption patterns and examples, see the [Pagination guide](pagination.html).

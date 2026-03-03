@@ -9,36 +9,47 @@ keywords: fsharp, atproto, bluesky, notifications, unread
 
 # Notifications
 
-The `Bluesky` module provides three functions for working with notifications: checking the unread count, fetching a page of notifications, and marking them as seen. All return domain types rather than raw protocol responses.
+Fetch, count, and mark notifications as read through the `Bluesky` module.
+
+All examples use `taskResult {}` -- see the [Error Handling guide](error-handling.html) for details.
 
 ## Domain Types
 
-Notifications are represented by two types:
+### Notification
 
-```fsharp
-type NotificationKind =
-    | Like
-    | Repost
-    | Follow
-    | Mention
-    | Reply
-    | Quote
-    | StarterpackJoined
-    | Unknown of string
+A notification from the user's notification feed.
 
-type Notification =
-    { Kind : NotificationKind
-      Author : ProfileSummary
-      SubjectUri : AtUri option
-      IsRead : bool
-      IndexedAt : DateTimeOffset }
-```
+| Field | Type | Description |
+|-------|------|-------------|
+| `Kind` | `NotificationKind` | The type of notification |
+| `Author` | `ProfileSummary` | The user who triggered the notification |
+| `SubjectUri` | `AtUri option` | The post that was liked, replied to, etc. `None` for follows |
+| `IsRead` | `bool` | Whether the notification has been seen |
+| `IndexedAt` | `DateTimeOffset` | When the notification was indexed |
 
-`NotificationKind` uses `[<RequireQualifiedAccess>]`, so you always write `NotificationKind.Like`, not just `Like`. The `Unknown` case handles any new notification types Bluesky adds in the future. `SubjectUri` points to the post that was liked, replied to, etc. -- it is `None` for follow notifications since those have no subject post.
+### NotificationKind
 
-## Checking Unread Count
+Discriminated union for notification types. Uses `[<RequireQualifiedAccess>]`, so all cases must be qualified (e.g. `NotificationKind.Like`).
 
-`Bluesky.getUnreadNotificationCount` returns the number of notifications the user has not yet seen:
+| Case | Description |
+|------|-------------|
+| `NotificationKind.Like` | Someone liked your post |
+| `NotificationKind.Repost` | Someone reposted your post |
+| `NotificationKind.Follow` | Someone followed you |
+| `NotificationKind.Mention` | Someone mentioned you in a post |
+| `NotificationKind.Reply` | Someone replied to your post |
+| `NotificationKind.Quote` | Someone quoted your post |
+| `NotificationKind.StarterpackJoined` | Someone joined via your starter pack |
+| `NotificationKind.Unknown of string` | A notification type not yet recognized by the library |
+
+## Functions
+
+### Reading
+
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.getNotifications` | `agent`, `limit: int64 option`, `cursor: string option` | `Result<Page<Notification>, XrpcError>` | Fetch a page of notifications |
+| `Bluesky.getUnreadNotificationCount` | `agent` | `Result<int64, XrpcError>` | Get the number of unseen notifications |
 
 ```fsharp
 taskResult {
@@ -47,15 +58,10 @@ taskResult {
 }
 ```
 
-This is useful for badge counts or deciding whether to fetch the full list.
-
-## Fetching Notifications
-
-`Bluesky.getNotifications` returns a `Page<Notification>` with an optional cursor for pagination. Pass `None` for both parameters to use server defaults:
-
 ```fsharp
 taskResult {
     let! page = Bluesky.getNotifications agent (Some 25L) None
+
     for n in page.Items do
         match n.Kind with
         | NotificationKind.Like -> printfn "%s liked your post" n.Author.DisplayName
@@ -68,11 +74,13 @@ taskResult {
 }
 ```
 
-The `limit` parameter controls how many notifications to fetch per page (here, 25). The second parameter is the pagination cursor -- pass `None` to start from the most recent.
+### Actions
 
-## Marking Notifications as Seen
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.markNotificationsSeen` | `agent` | `Result<unit, XrpcError>` | Mark all notifications as seen up to the current time |
 
-After processing notifications, mark them as seen so the unread count resets:
+The protocol treats "seen" as a high-water mark -- there is no way to mark individual notifications. All notifications up to the current timestamp are marked as seen.
 
 ```fsharp
 taskResult {
@@ -80,9 +88,38 @@ taskResult {
 }
 ```
 
-This marks all notifications as seen up to the current timestamp. There is no way to mark individual notifications -- the protocol treats it as a high-water mark.
+### Pagination
 
-## A Complete Workflow
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.paginateNotifications` | `agent`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<Notification>, XrpcError>>` | Lazily paginate all notifications |
+
+The paginator returns an `IAsyncEnumerable` that fetches pages on demand and stops when the server has no more results:
+
+```fsharp
+let pages = Bluesky.paginateNotifications agent (Some 50L)
+
+let enumerator = pages.GetAsyncEnumerator()
+
+let rec loop () = task {
+    let! hasNext = enumerator.MoveNextAsync()
+    if hasNext then
+        match enumerator.Current with
+        | Ok page ->
+            for n in page.Items do
+                printfn "%s: %A" n.Author.DisplayName n.Kind
+        | Error err ->
+            printfn "Error: %A" err
+        do! loop ()
+}
+
+do! loop ()
+do! enumerator.DisposeAsync()
+```
+
+See the [Pagination guide](pagination.html) for more patterns on consuming `IAsyncEnumerable` from F#.
+
+## Complete Workflow
 
 A typical notification check: read the unread count, fetch if there are any, process them, then mark as seen.
 
@@ -121,19 +158,9 @@ taskResult {
 }
 ```
 
-## Paginating All Notifications
-
-For bots or tools that need to process the entire notification history, use `Bluesky.paginateNotifications`. It returns an `IAsyncEnumerable<Result<Page<Notification>, XrpcError>>` that fetches pages on demand and stops when the server has no more results:
-
-```fsharp
-let pages = Bluesky.paginateNotifications agent (Some 50L)
-```
-
-See the [Pagination guide](pagination.html) for patterns on consuming `IAsyncEnumerable` from F#.
-
 ## Power Users: Raw XRPC
 
-If you need access to fields the `Notification` domain type does not expose (such as `Labels` or the raw `Record` JSON), drop down to the generated XRPC wrapper:
+For fields the `Notification` domain type does not expose (such as `Labels` or the raw `Record` JSON), drop to the generated XRPC wrapper:
 
 ```fsharp
 open FSharp.ATProto.Bluesky.Generated
@@ -151,5 +178,3 @@ taskResult {
         printfn "%O (%A) - labels: %A" n.Uri n.Reason n.Labels
 }
 ```
-
-The raw `Notification` type includes `Labels`, `Record` (a `JsonElement`), `Cid`, and `Uri` fields that the convenience layer omits for simplicity.

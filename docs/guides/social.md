@@ -3,146 +3,171 @@ title: Social Actions
 category: Type Reference
 categoryindex: 2
 index: 7
-description: Like, repost, follow, block, and undo social actions on Bluesky
-keywords: like, repost, follow, block, undo, social, bluesky
+description: Follow, block, mute, and undo social actions on Bluesky
+keywords: follow, block, mute, undo, social, bluesky
 ---
 
 # Social Actions
 
-Social actions on Bluesky -- likes, reposts, follows, and blocks -- are records in your repository. Creating the record performs the action; deleting it undoes it. FSharp.ATProto wraps this with typed ref values (`LikeRef`, `RepostRef`, `FollowRef`, `BlockRef`) so the compiler keeps everything straight.
+Follow, block, and mute users on Bluesky, with typed refs and undo support.
 
-All examples use `taskResult {}`. See the [Error Handling guide](error-handling.html) for details.
+## Domain Types
+
+### FollowRef
+
+Returned by `Bluesky.follow` -- pass to `unfollow` or `undoFollow` to undo.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Uri` | `AtUri` | AT-URI of the follow record |
+
+### BlockRef
+
+Returned by `Bluesky.block` -- pass to `unblock` or `undoBlock` to undo.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Uri` | `AtUri` | AT-URI of the block record |
+
+### LikeRef
+
+Returned by `Bluesky.like` -- pass to `unlike` or `undoLike` to undo.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Uri` | `AtUri` | AT-URI of the like record |
+
+### RepostRef
+
+Returned by `Bluesky.repost` -- pass to `unrepost` or `undoRepost` to undo.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Uri` | `AtUri` | AT-URI of the repost record |
+
+### ListBlockRef
+
+Returned by `Bluesky.blockModList` -- pass to `unblockModList` to undo.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Uri` | `AtUri` | AT-URI of the list block record |
+
+### UndoResult
+
+Discriminated union returned by `undo*` functions indicating whether the action was reversed.
+
+| Case | Description |
+|------|-------------|
+| `Undone` | The record was deleted successfully |
+| `WasNotPresent` | There was nothing to undo (e.g. the post was not liked) |
+
+Only `unlikePost` and `unrepostPost` can return `WasNotPresent` (they check viewer state). The ref-based `undoLike`, `undoRepost`, `undoFollow`, and `undoBlock` always return `Undone` because `deleteRecord` is idempotent.
+
+## Functions
+
+### Following
+
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.follow` | `agent` `target:Did\|ProfileSummary\|Profile` | `Result<FollowRef, XrpcError>` | Follow a user |
+| `Bluesky.followByHandle` | `agent` `identifier:string` | `Result<FollowRef, XrpcError>` | Follow by handle or DID string (resolves automatically) |
+| `Bluesky.unfollow` | `agent` `followRef:FollowRef` | `Result<unit, XrpcError>` | Unfollow by ref |
+| `Bluesky.undoFollow` | `agent` `followRef:FollowRef` | `Result<UndoResult, XrpcError>` | Unfollow by ref, returning `UndoResult` |
 
 ```fsharp
-open FSharp.ATProto.Core
-open FSharp.ATProto.Bluesky
-open FSharp.ATProto.Syntax
+taskResult {
+    // Follow using a profile's DID
+    let! followRef = Bluesky.follow agent profile
+
+    // Or by handle string
+    let! followRef2 = Bluesky.followByHandle agent "alice.bsky.social"
+
+    // Undo
+    do! Bluesky.unfollow agent followRef
+}
 ```
 
-## Liking a Post
+### Blocking
 
-`Bluesky.like` accepts a `TimelinePost` (or `PostRef`) and returns a `LikeRef`. Hold onto the ref to unlike later:
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.block` | `agent` `target:Did\|ProfileSummary\|Profile` | `Result<BlockRef, XrpcError>` | Block a user |
+| `Bluesky.blockByHandle` | `agent` `identifier:string` | `Result<BlockRef, XrpcError>` | Block by handle or DID string (resolves automatically) |
+| `Bluesky.unblock` | `agent` `blockRef:BlockRef` | `Result<unit, XrpcError>` | Unblock by ref |
+| `Bluesky.undoBlock` | `agent` `blockRef:BlockRef` | `Result<UndoResult, XrpcError>` | Unblock by ref, returning `UndoResult` |
+| `Bluesky.blockModList` | `agent` `listUri:AtUri` | `Result<ListBlockRef, XrpcError>` | Block an entire moderation list |
+| `Bluesky.unblockModList` | `agent` `listBlockRef:ListBlockRef` | `Result<unit, XrpcError>` | Unblock a moderation list |
+
+```fsharp
+taskResult {
+    let! blockRef = Bluesky.block agent profile
+    let! blockRef2 = Bluesky.blockByHandle agent "spammer.example.com"
+
+    // Moderation list
+    let! listBlockRef = Bluesky.blockModList agent modListUri
+    do! Bluesky.unblockModList agent listBlockRef
+}
+```
+
+### Muting
+
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.muteUser` | `agent` `target:Did\|ProfileSummary\|Profile` | `Result<unit, XrpcError>` | Mute an account |
+| `Bluesky.muteUserByHandle` | `agent` `identifier:string` | `Result<unit, XrpcError>` | Mute by handle or DID string |
+| `Bluesky.unmuteUser` | `agent` `target:Did\|ProfileSummary\|Profile` | `Result<unit, XrpcError>` | Unmute an account |
+| `Bluesky.unmuteUserByHandle` | `agent` `identifier:string` | `Result<unit, XrpcError>` | Unmute by handle or DID string |
+| `Bluesky.muteModList` | `agent` `listUri:AtUri` | `Result<unit, XrpcError>` | Mute all accounts on a moderation list |
+| `Bluesky.unmuteModList` | `agent` `listUri:AtUri` | `Result<unit, XrpcError>` | Unmute a moderation list |
+| `Bluesky.muteThread` | `agent` `root:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Mute a thread |
+| `Bluesky.unmuteThread` | `agent` `root:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Unmute a thread |
+
+```fsharp
+taskResult {
+    do! Bluesky.muteUser agent profile
+    do! Bluesky.muteUserByHandle agent "noisy.bsky.social"
+    do! Bluesky.muteThread agent post
+    do! Bluesky.muteModList agent modListUri
+}
+```
+
+### Generic Undo
+
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.undo` | `agent` `ref:LikeRef\|RepostRef\|FollowRef\|BlockRef\|ListBlockRef` | `Result<UndoResult, XrpcError>` | Delete any ref type via SRTP |
 
 ```fsharp
 taskResult {
     let! likeRef = Bluesky.like agent post
-    printfn "Liked! Record: %s" (AtUri.value likeRef.Uri)
+    let! followRef = Bluesky.follow agent profile
+
+    // Generic undo works with any ref type
+    let! _ = Bluesky.undo agent likeRef
+    let! _ = Bluesky.undo agent followRef
+    ()
 }
 ```
 
-## Reposting
+## SRTP Polymorphism
 
-`Bluesky.repost` also accepts a `TimelinePost` (or `PostRef`) and returns a `RepostRef`:
+Social action functions accept multiple types via SRTP:
+
+- **`follow`, `block`, `muteUser`, `unmuteUser`** accept `Did`, `ProfileSummary`, or `Profile`
+- **`muteThread`, `unmuteThread`** accept `TimelinePost`, `PostRef`, or `AtUri`
+- **`undo`** accepts `LikeRef`, `RepostRef`, `FollowRef`, `BlockRef`, or `ListBlockRef`
 
 ```fsharp
 taskResult {
-    let! repostRef = Bluesky.repost agent post
-    printfn "Reposted! Record: %s" (AtUri.value repostRef.Uri)
+    let! profile = Bluesky.getProfile agent "alice.bsky.social"
+
+    // Pass the Profile directly -- no need to extract .Did
+    let! followRef = Bluesky.follow agent profile
+    do! Bluesky.muteUser agent profile
+
+    // Pass a TimelinePost directly to mute its thread
+    let! page = Bluesky.getTimeline agent (Some 1L) None
+    do! Bluesky.muteThread agent page.Items.Head.Post
 }
 ```
-
-## Following a User
-
-`Bluesky.follow` takes a typed [DID](../concepts.html). Use `profile.Did` from any profile view:
-
-```fsharp
-taskResult {
-    let! followRef = Bluesky.follow agent profile.Did
-    printfn "Followed! Record: %s" (AtUri.value followRef.Uri)
-}
-```
-
-When you only have a handle string, use `followByHandle` -- it resolves the identifier for you. It also accepts DID strings:
-
-```fsharp
-let! followRef = Bluesky.followByHandle agent "alice.bsky.social"
-```
-
-## Blocking a User
-
-`Bluesky.block` takes a typed DID, just like `follow`. Blocking prevents the other user from seeing your content and removes their content from your feeds:
-
-```fsharp
-taskResult {
-    let! blockRef = Bluesky.block agent profile.Did
-    printfn "Blocked! Record: %s" (AtUri.value blockRef.Uri)
-}
-```
-
-There is also `blockByHandle` and `blockModList` (which takes an [AT-URI](../concepts.html) of a moderation list):
-
-```fsharp
-let! blockRef = Bluesky.blockByHandle agent "spammer.example.com"
-let! listBlockRef = Bluesky.blockModList agent modListUri
-```
-
-## Undoing Actions
-
-FSharp.ATProto provides several layers for undoing social actions. The simplest: pass the ref you got back when creating the action:
-
-```fsharp
-taskResult {
-    do! Bluesky.unlike agent likeRef       // LikeRef -> unit
-    do! Bluesky.unrepost agent repostRef   // RepostRef -> unit
-    do! Bluesky.unfollow agent followRef   // FollowRef -> unit
-    do! Bluesky.unblock agent blockRef     // BlockRef -> unit
-}
-```
-
-Each function requires its matching ref type, so the compiler prevents mix-ups.
-
-For more control, the `undoLike` / `undoRepost` / `undoFollow` / `undoBlock` variants return an `UndoResult` DU (`Undone | WasNotPresent`). If you do not have the original ref but you do have the post, `unlikePost` and `unrepostPost` look up the viewer state and delete the record for you -- these are where `WasNotPresent` is genuinely meaningful. The generic `Bluesky.undo` (inline SRTP) accepts any ref type for polymorphic code. And at the lowest level, `Bluesky.deleteRecord` takes a raw `AtUri`.
-
-| Situation | Function |
-|---|---|
-| You have the ref from when you created the action | `unlike` / `unrepost` / `unfollow` / `unblock` |
-| You want to know if the undo did anything | `undoLike` / `undoRepost` / `undoFollow` / `undoBlock` |
-| You only have the post, not the original ref | `unlikePost` / `unrepostPost` |
-| Writing generic code over different action types | `undo` |
-| You have a raw AT-URI | `deleteRecord` |
-
-## Checking Viewer State
-
-The AT Protocol includes viewer state on posts and profiles that tells you your relationship with that content. This is useful for toggle behavior (like/unlike) or checking existing relationships before acting.
-
-### Posts
-
-With domain types, use `TimelinePost.IsLiked` / `IsReposted` directly. At the raw XRPC layer, `PostView.Viewer` contains `Like` and `Repost` fields (`AtUri option`). When `Some`, the value is the AT-URI of your record:
-
-```fsharp
-taskResult {
-    let postRef = { PostRef.Uri = post.Uri; Cid = post.Cid }
-
-    match post.Viewer |> Option.bind (fun v -> v.Like) with
-    | Some _ ->
-        let! _ = Bluesky.unlikePost agent postRef
-        ()
-    | None ->
-        let! _ = Bluesky.like agent postRef
-        ()
-}
-```
-
-### Profiles
-
-`ProfileViewDetailed.Viewer` has `Following`, `FollowedBy`, `Blocking`, `BlockedBy`, and `Muted` fields. The `Following` and `Blocking` fields are `AtUri option` pointing to your records:
-
-```fsharp
-match profile.Viewer with
-| Some viewer ->
-    match viewer.Following with
-    | Some _ -> printfn "You follow them"
-    | None -> printfn "You do not follow them"
-
-    match viewer.BlockedBy with
-    | Some true -> printfn "They are blocking you"
-    | _ -> ()
-| None -> ()
-```
-
-## Related Guides
-
-- [Notifications](notifications.html) -- unread count, fetching, and marking as seen
-- [Moderation](moderation.html) -- muting, reporting, and moderation lists
-- [Profiles](profiles.html) -- searching, listing followers/follows, suggested follows
-- [Posts](posts.html) -- creating, replying, quoting, searching, threads

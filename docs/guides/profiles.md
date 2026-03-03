@@ -9,127 +9,91 @@ keywords: profiles, user, actor, avatar, bluesky, search, followers
 
 # Profiles
 
-All examples use `taskResult {}`. See the [Error Handling guide](error-handling.html) for details.
+Fetch, search, and update Bluesky user profiles.
 
-Bluesky profiles contain display names, bios, avatars, follower counts, and relationship metadata. All examples assume an authenticated `AtpAgent` and these namespaces open:
+## Domain Types
 
-```fsharp
-open FSharp.ATProto.Core
-open FSharp.ATProto.Bluesky
-open FSharp.ATProto.Syntax
-```
+### Profile
 
-## Fetching a Profile
+A full user profile with engagement counts and relationship state, returned by `getProfile` and `getProfiles`.
 
-`Bluesky.getProfile` accepts a [Handle](../concepts.html), [DID](../concepts.html), or plain `string` via SRTP -- pass whatever identifier you have. It returns a `Profile` domain type with non-optional fields and boolean relationship flags:
+| Field | Type | Description |
+|-------|------|-------------|
+| `Did` | `Did` | Decentralized identifier |
+| `Handle` | `Handle` | User handle (e.g. `alice.bsky.social`) |
+| `DisplayName` | `string` | Display name (defaults to `""`) |
+| `Description` | `string` | Bio text (defaults to `""`) |
+| `Avatar` | `string option` | Avatar image URL |
+| `Banner` | `string option` | Banner image URL |
+| `PostsCount` | `int64` | Total number of posts |
+| `FollowersCount` | `int64` | Number of followers |
+| `FollowsCount` | `int64` | Number of accounts followed |
+| `IsFollowing` | `bool` | Whether you follow this user |
+| `IsFollowedBy` | `bool` | Whether this user follows you |
+| `IsBlocking` | `bool` | Whether you are blocking this user |
+| `IsBlockedBy` | `bool` | Whether this user is blocking you |
+| `IsMuted` | `bool` | Whether you have muted this user |
 
-```fsharp
-taskResult {
-    let! profile = Bluesky.getProfile agent "alice.bsky.social"
-    let handle = Handle.value profile.Handle
-    printfn "%s (@%s)" profile.DisplayName handle
-    printfn "%s" profile.Description
-    printfn "%d followers, %d following, %d posts" profile.FollowersCount profile.FollowsCount profile.PostsCount
-}
-```
+### ProfileSummary
 
-Typed identifiers work directly -- `Bluesky.getProfile agent someProfile.Handle` and `Bluesky.getProfile agent someProfile.Did` both compile.
+A lightweight profile used in feeds, notifications, search results, and follower lists.
 
-## Fetching Multiple Profiles
+| Field | Type | Description |
+|-------|------|-------------|
+| `Did` | `Did` | Decentralized identifier |
+| `Handle` | `Handle` | User handle |
+| `DisplayName` | `string` | Display name (defaults to `""`) |
+| `Avatar` | `string option` | Avatar image URL |
 
-`Bluesky.getProfiles` fetches up to 25 profiles in a single request:
+Pass a `ProfileSummary` to `getProfile` if you need the full `Profile` with counts and relationship flags.
 
-```fsharp
-taskResult {
-    let! profiles = Bluesky.getProfiles agent [ "alice.bsky.social"; "bob.bsky.social" ]
-    for profile in profiles do
-        printfn "%s -- %s" profile.DisplayName (Did.value profile.Did)
-}
-```
+## Functions
 
-Unknown actors are silently omitted -- the returned list may be shorter than the input.
+### Reading Profiles
 
-## Understanding Profile Types
-
-The convenience layer uses two domain types:
-
-| Domain type | Returned by | Key fields |
-|-------------|-------------|------------|
-| `Profile` | `getProfile`, `getProfiles` | Full stats (counts), banner, bio, boolean relationship flags |
-| `ProfileSummary` | `searchActors`, `getSuggestedFollows`, `getFollowers`, `getFollows` | Minimal: DID, handle, display name, avatar |
-
-`Profile` flattens `ProfileViewDetailed`: counts default to `0`, description to `""`, and viewer state is collapsed into boolean fields. `ProfileSummary` is the lightweight type used in lists -- pass its `Did` or `Handle` to `getProfile` if you need full stats.
-
-## Viewer State
-
-`Profile` flattens viewer state into simple booleans:
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.getProfile` | `agent` `actor:Handle\|Did\|ProfileSummary\|Profile` | `Result<Profile, XrpcError>` | Get a single full profile |
+| `Bluesky.getProfiles` | `agent` `actors:Did list` | `Result<Profile list, XrpcError>` | Get up to 25 profiles in one request |
+| `Bluesky.getFollowers` | `agent` `actor:Handle\|Did\|ProfileSummary\|Profile` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | List an actor's followers |
+| `Bluesky.getFollows` | `agent` `actor:Handle\|Did\|ProfileSummary\|Profile` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | List accounts an actor follows |
+| `Bluesky.getSuggestedFollows` | `agent` `actor:Handle\|Did\|ProfileSummary\|Profile` | `Result<ProfileSummary list, XrpcError>` | Suggested follows based on an actor |
+| `Bluesky.getSuggestions` | `agent` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | General account suggestions |
+| `Bluesky.searchActors` | `agent` `query:string` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Search users by name, handle, or bio |
+| `Bluesky.searchActorsTypeahead` | `agent` `query:string` `limit:int64 option` | `Result<ProfileSummary list, XrpcError>` | Lightweight typeahead search (no pagination) |
 
 ```fsharp
 taskResult {
     let! profile = Bluesky.getProfile agent "alice.bsky.social"
-    if profile.IsFollowing then printfn "You follow them"
-    if profile.IsFollowedBy then printfn "They follow you back"
-    if profile.IsBlocking then printfn "You are blocking them"
-    if profile.IsBlockedBy then printfn "They are blocking you"
-    if profile.IsMuted then printfn "You have muted them"
+    printfn "%s: %d followers" profile.DisplayName profile.FollowersCount
 
-    if profile.IsFollowing && profile.IsFollowedBy then
-        printfn "Mutual follow!"
+    let! followers = Bluesky.getFollowers agent profile (Some 50L) None
+    for f in followers.Items do
+        printfn "  @%s" (Handle.value f.Handle)
 }
 ```
 
-For the underlying AT-URIs for follow/block records, use `AppBskyActor.GetProfile.query` and inspect `Viewer.Following` / `Viewer.Blocking`. See [Social Actions](social.html) for follow/unfollow operations.
+### Engagement Info
 
-## Followers and Follows
-
-`Bluesky.getFollowers` and `Bluesky.getFollows` return paginated lists of `ProfileSummary`:
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.getLikes` | `agent` `target:TimelinePost\|PostRef\|AtUri` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Who liked a post |
+| `Bluesky.getRepostedBy` | `agent` `target:TimelinePost\|PostRef\|AtUri` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Who reposted a post |
 
 ```fsharp
 taskResult {
-    let! followers = Bluesky.getFollowers agent "alice.bsky.social" (Some 50L) None
-    for profile in followers.Items do
-        printfn "@%s" (Handle.value profile.Handle)
-
-    let! follows = Bluesky.getFollows agent "alice.bsky.social" (Some 50L) None
-    for profile in follows.Items do
-        printfn "@%s" (Handle.value profile.Handle)
+    let! likers = Bluesky.getLikes agent post (Some 50L) None
+    for p in likers.Items do
+        printfn "@%s liked this" (Handle.value p.Handle)
 }
 ```
 
-For continuous pagination, see the [Pagination guide](pagination.html).
+### Writing
 
-## Searching for Users
-
-`Bluesky.searchActors` searches by name, handle, or bio text:
-
-```fsharp
-taskResult {
-    let! page = Bluesky.searchActors agent "fsharp" (Some 10L) None
-    printfn "Found %d users:" page.Items.Length
-    for actor in page.Items do
-        printfn "  @%s -- %s" (Handle.value actor.Handle) actor.DisplayName
-}
-```
-
-Pass `None` for `limit` and `cursor` to use server defaults. Pass the cursor from a previous result to fetch the next page.
-
-## Suggested Follows
-
-`Bluesky.getSuggestedFollows` returns suggestions based on a given actor:
-
-```fsharp
-taskResult {
-    let! suggestions = Bluesky.getSuggestedFollows agent "alice.bsky.social"
-    for suggestion in suggestions do
-        printfn "  @%s -- %s" (Handle.value suggestion.Handle) suggestion.DisplayName
-}
-```
-
-This returns a `ProfileSummary list` (not paginated).
-
-## Updating Your Profile
-
-`Bluesky.upsertProfile` performs a read-modify-write with automatic retry on conflicts. Pass a function that receives the current profile (or `None`) and returns the updated profile:
+| Function | Accepts | Returns | Description |
+|----------|---------|---------|-------------|
+| `Bluesky.upsertProfile` | `agent` `updateFn:(Profile option -> Profile)` | `Result<unit, XrpcError>` | Read-modify-write profile with CAS retry |
+| `Bluesky.updateHandle` | `agent` `handle:Handle` | `Result<unit, XrpcError>` | Change the authenticated user's handle |
 
 ```fsharp
 taskResult {
@@ -144,35 +108,25 @@ taskResult {
 }
 ```
 
-## Who Liked / Who Reposted
+Note: `upsertProfile` operates on the raw `AppBskyActor.Profile.Profile` type (all `Option` fields), not the convenience `Profile` domain type.
 
-`Bluesky.getLikes` and `Bluesky.getRepostedBy` return the users who liked or reposted a given post:
+## SRTP Polymorphism
 
-```fsharp
-taskResult {
-    let! likers = Bluesky.getLikes agent post.Uri (Some 50L) None
-    for profile in likers.Items do
-        printfn "@%s liked this" (Handle.value profile.Handle)
-}
-```
+Read functions that take an actor accept multiple types via SRTP:
 
-`Bluesky.getRepostedBy` works the same way with the same signature.
-
-## Power Users: Raw XRPC Wrappers
-
-For fields the domain types do not expose (labels, verification, pinned post), use the generated wrappers:
+- **`getProfile`, `getFollowers`, `getFollows`, `getSuggestedFollows`, `getAuthorFeed`, `getActorLikes`** accept `Handle`, `Did`, `ProfileSummary`, or `Profile`
+- **`getProfiles`** takes a `Did list`
+- **`getLikes`, `getRepostedBy`** accept `TimelinePost`, `PostRef`, or `AtUri`
 
 ```fsharp
 taskResult {
-    let! profile = AppBskyActor.GetProfile.query agent { Actor = "alice.bsky.social" }
-    printfn "%s" (profile.DisplayName |> Option.defaultValue "(none)")
+    let! profile = Bluesky.getProfile agent "alice.bsky.social"
+
+    // Pass the Profile directly to get followers
+    let! followers = Bluesky.getFollowers agent profile (Some 50L) None
+
+    // Pass a ProfileSummary from the result
+    let first = followers.Items.Head
+    let! fullProfile = Bluesky.getProfile agent first
 }
 ```
-
-The Lexicon defines three profile view types:
-
-| Type | Returned by | Key fields |
-|------|-------------|------------|
-| `ProfileViewDetailed` | `GetProfile`, `GetProfiles` | Full stats, banner, bio, pinned post, labels, verification |
-| `ProfileView` | `SearchActors`, follower/following lists | Bio and indexed timestamp, no counts or banner |
-| `ProfileViewBasic` | Post authors, like lists, notification actors | Minimal: DID, handle, display name, avatar |
