@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml"><img src="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10">
-  <img src="https://img.shields.io/badge/tests-1%2C723-brightgreen" alt="Tests: 1,723">
+  <img src="https://img.shields.io/badge/tests-1%2C723-brightgreen" alt="Tests: 1,761">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
 </p>
 
@@ -75,7 +75,7 @@ Requires [.NET 10 SDK](https://dotnet.microsoft.com/download).
 dotnet build && dotnet test
 ```
 
-1,723 tests across six projects.
+1,761 tests across six projects.
 
 ## AI Transparency
 
@@ -89,7 +89,7 @@ To ensure correctness the project validates against ground truth at every layer:
 - **Rich text** -- [property-based tests](tests/FSharp.ATProto.Bluesky.Tests/RichTextTests.fs) verify byte-range correctness and facet ordering
 - **XRPC / Bluesky** -- [tested](tests/FSharp.ATProto.Bluesky.Tests/) via mock HTTP handlers that verify request construction, multi-step orchestration (e.g. thread root resolution), error handling, and domain type mapping (note: the mocks don't validate against real Bluesky API responses -- that contract is covered by the generated types matching the lexicon schemas above)
 
-All told, 1,723 tests across six projects, with zero reliance on manual testing or live API calls.
+All told, 1,761 tests across six projects, with zero reliance on manual testing or live API calls.
 
 ## License
 
