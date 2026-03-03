@@ -1484,9 +1484,10 @@ let getProfileTests =
           <| fun _ ->
               let mutable captured = None
               let agent = queryAgent (fun req -> captured <- Some req) profileJson
+              let handle = parseHandle' "my-handle.bsky.social"
 
               let result =
-                  Bluesky.getProfile agent "my-handle.bsky.social"
+                  Bluesky.getProfile agent handle
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -1496,13 +1497,14 @@ let getProfileTests =
               Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.actor.getProfile" "correct endpoint"
               Expect.stringContains (req.RequestUri.ToString ()) "my-handle.bsky.social" "actor in query string"
 
-          testCase "getProfile accepts DID string"
+          testCase "getProfile accepts Did"
           <| fun _ ->
               let mutable captured = None
               let agent = queryAgent (fun req -> captured <- Some req) profileJson
+              let did = parseDid' "did:plc:testuser"
 
               let result =
-                  Bluesky.getProfile agent "did:plc:testuser"
+                  Bluesky.getProfile agent did
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -1516,9 +1518,10 @@ let getProfileTests =
           testCase "getProfile deserializes response"
           <| fun _ ->
               let agent = queryAgent (fun _ -> ()) profileJson
+              let handle = parseHandle' "my-handle.bsky.social"
 
               let result =
-                  Bluesky.getProfile agent "my-handle.bsky.social"
+                  Bluesky.getProfile agent handle
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -1536,9 +1539,10 @@ let getProfileTests =
                              message = "Invalid actor" |})
 
               agent.Session <- Some testSession
+              let handle = parseHandle' "nonexistent.bsky.social"
 
               let result =
-                  Bluesky.getProfile agent "nonexistent"
+                  Bluesky.getProfile agent handle
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -1576,22 +1580,57 @@ let getProfileTests =
                   "did%3Aplc%3Atestuser"
                   "DID value in query string (URL-encoded)"
 
-          testCase "getProfile still accepts plain string"
+          testCase "getProfile accepts ProfileSummary"
           <| fun _ ->
               let mutable captured = None
               let agent = queryAgent (fun req -> captured <- Some req) profileJson
 
+              let summary : ProfileSummary =
+                  { Did = parseDid' "did:plc:testuser"
+                    Handle = parseHandle' "my-handle.bsky.social"
+                    DisplayName = "Alice"
+                    Avatar = None }
+
               let result =
-                  Bluesky.getProfile agent "other-user.bsky.social"
-                  |> Async.AwaitTask
-                  |> Async.RunSynchronously
+                  Bluesky.getProfile agent summary |> Async.AwaitTask |> Async.RunSynchronously
 
               Expect.isOk result "should succeed"
 
               Expect.stringContains
                   (captured.Value.RequestUri.ToString ())
-                  "other-user.bsky.social"
-                  "string value in query string" ]
+                  "did%3Aplc%3Atestuser"
+                  "DID from ProfileSummary in query string"
+
+          testCase "getProfile accepts Profile"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = queryAgent (fun req -> captured <- Some req) profileJson
+
+              let profile : Profile =
+                  { Did = parseDid' "did:plc:testuser"
+                    Handle = parseHandle' "my-handle.bsky.social"
+                    DisplayName = "Alice"
+                    Description = ""
+                    Avatar = None
+                    Banner = None
+                    PostsCount = 0L
+                    FollowersCount = 0L
+                    FollowsCount = 0L
+                    IsFollowing = false
+                    IsFollowedBy = false
+                    IsBlocking = false
+                    IsBlockedBy = false
+                    IsMuted = false }
+
+              let result =
+                  Bluesky.getProfile agent profile |> Async.AwaitTask |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+
+              Expect.stringContains
+                  (captured.Value.RequestUri.ToString ())
+                  "did%3Aplc%3Atestuser"
+                  "DID from Profile in query string" ]
 
 [<Tests>]
 let getTimelineTests =
@@ -1939,8 +1978,10 @@ let paginateFollowersTests =
 
               let agent = paginatingAgent page1 page2
 
+              let handle = parseHandle' "my-handle.bsky.social"
+
               let pages =
-                  Bluesky.paginateFollowers agent "my-handle.bsky.social" (Some 25L)
+                  Bluesky.paginateFollowers agent handle (Some 25L)
                   |> collectPages
 
               Expect.equal pages.Length 2 "exactly 2 pages"
@@ -1966,8 +2007,10 @@ let paginateFollowersTests =
 
               agent.Session <- Some testSession
 
+              let handle = parseHandle' "my-handle.bsky.social"
+
               let pages =
-                  Bluesky.paginateFollowers agent "my-handle.bsky.social" None |> collectPages
+                  Bluesky.paginateFollowers agent handle None |> collectPages
 
               Expect.equal pages.Length 1 "single page"
               Expect.stringContains (captured.[0].RequestUri.ToString ()) "my-handle.bsky.social" "actor in query" ]
@@ -2461,8 +2504,10 @@ let getAuthorFeedTests =
                                      indexedAt = "2024-01-15T12:00:00.000Z" |} |} |]
                          cursor = "page2" |}
 
+              let handle = parseHandle' "test.bsky.social"
+
               let result =
-                  Bluesky.getAuthorFeed agent "test.bsky.social" None None
+                  Bluesky.getAuthorFeed agent handle None None
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -2486,8 +2531,10 @@ let getAuthorFeedTests =
                                      indexedAt = "2024-01-15T12:00:00.000Z" |} |} |]
                          cursor = "page2" |}
 
+              let handle = parseHandle' "test.bsky.social"
+
               let result =
-                  Bluesky.getAuthorFeed agent "test.bsky.social" None None
+                  Bluesky.getAuthorFeed agent handle None None
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -2515,8 +2562,10 @@ let getActorLikesTests =
                                      indexedAt = "2024-01-15T12:00:00.000Z" |} |} |]
                          cursor = "page2" |}
 
+              let handle = parseHandle' "test.bsky.social"
+
               let result =
-                  Bluesky.getActorLikes agent "test.bsky.social" None None
+                  Bluesky.getActorLikes agent handle None None
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -2540,8 +2589,10 @@ let getActorLikesTests =
                                      indexedAt = "2024-01-15T12:00:00.000Z" |} |} |]
                          cursor = "page2" |}
 
+              let handle = parseHandle' "test.bsky.social"
+
               let result =
-                  Bluesky.getActorLikes agent "test.bsky.social" None None
+                  Bluesky.getActorLikes agent handle None None
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -2789,7 +2840,7 @@ let getProfilesTests =
                                 followsCount = 50L |} |] |}
 
               let result =
-                  Bluesky.getProfiles agent [ "test.bsky.social" ]
+                  Bluesky.getProfiles agent [ parseDid' "did:plc:test" ]
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -2813,7 +2864,7 @@ let getProfilesTests =
                                 followsCount = 50L |} |] |}
 
               let result =
-                  Bluesky.getProfiles agent [ "test.bsky.social" ]
+                  Bluesky.getProfiles agent [ parseDid' "did:plc:test" ]
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -2836,8 +2887,10 @@ let getSuggestedFollowsTests =
                                 handle = "test.bsky.social"
                                 displayName = "Test User" |} |] |}
 
+              let handle = parseHandle' "alice.bsky.social"
+
               let result =
-                  Bluesky.getSuggestedFollows agent "alice.bsky.social"
+                  Bluesky.getSuggestedFollows agent handle
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -2862,8 +2915,10 @@ let getSuggestedFollowsTests =
                                 handle = "test.bsky.social"
                                 displayName = "Test User" |} |] |}
 
+              let handle = parseHandle' "alice.bsky.social"
+
               let result =
-                  Bluesky.getSuggestedFollows agent "alice.bsky.social"
+                  Bluesky.getSuggestedFollows agent handle
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -3751,18 +3806,18 @@ let muteUserTypedDidTests =
               let body = captured.Value.Content.ReadAsStringAsync().Result
               Expect.stringContains body "did:plc:resolved-mute" "resolved DID used as actor" ]
 
-// ── ActorDid SRTP tests ─────────────────────────────────────────────
+// ── SRTP test fixtures ───────────────────────────────────────────────
 
 let private testProfileSummary : ProfileSummary =
-    { ProfileSummary.Did = parseDid "did:plc:testactor"
-      Handle = Handle.parse "test.bsky.social" |> Result.defaultWith failwith
-      DisplayName = "Test"
+    { Did = parseDid' "did:plc:testuser"
+      Handle = parseHandle' "test.bsky.social"
+      DisplayName = "Test User"
       Avatar = None }
 
 let private testProfile : Profile =
-    { Profile.Did = parseDid "did:plc:testactor"
-      Handle = Handle.parse "test.bsky.social" |> Result.defaultWith failwith
-      DisplayName = "Test"
+    { Did = parseDid' "did:plc:testuser"
+      Handle = parseHandle' "test.bsky.social"
+      DisplayName = "Test User"
       Description = ""
       Avatar = None
       Banner = None
@@ -3774,6 +3829,8 @@ let private testProfile : Profile =
       IsBlocking = false
       IsBlockedBy = false
       IsMuted = false }
+
+// ── ActorDid SRTP tests ─────────────────────────────────────────────
 
 [<Tests>]
 let actorDidSrtpTests =
@@ -3791,7 +3848,7 @@ let actorDidSrtpTests =
 
               Expect.isOk result "should succeed"
               let body = captured.Value.Content.ReadAsStringAsync().Result
-              Expect.stringContains body "did:plc:testactor" "should use DID from ProfileSummary"
+              Expect.stringContains body "did:plc:testuser" "should use DID from ProfileSummary"
 
           testCase "follow accepts Profile directly"
           <| fun _ ->
@@ -3805,7 +3862,7 @@ let actorDidSrtpTests =
 
               Expect.isOk result "should succeed"
               let body = captured.Value.Content.ReadAsStringAsync().Result
-              Expect.stringContains body "did:plc:testactor" "should use DID from Profile"
+              Expect.stringContains body "did:plc:testuser" "should use DID from Profile"
 
           testCase "follow still accepts Did directly"
           <| fun _ ->
@@ -3813,7 +3870,7 @@ let actorDidSrtpTests =
               let agent = createRecordAgent (fun req -> captured <- Some req)
 
               let result =
-                  Bluesky.follow agent (parseDid "did:plc:testactor")
+                  Bluesky.follow agent (parseDid' "did:plc:testuser")
                   |> Async.AwaitTask
                   |> Async.RunSynchronously
 
@@ -3831,7 +3888,7 @@ let actorDidSrtpTests =
 
               Expect.isOk result "should succeed"
               let body = captured.Value.Content.ReadAsStringAsync().Result
-              Expect.stringContains body "did:plc:testactor" "should use DID from ProfileSummary"
+              Expect.stringContains body "did:plc:testuser" "should use DID from ProfileSummary"
 
           testCase "muteUser accepts ProfileSummary directly"
           <| fun _ ->
@@ -3845,7 +3902,7 @@ let actorDidSrtpTests =
 
               Expect.isOk result "should succeed"
               let body = captured.Value.Content.ReadAsStringAsync().Result
-              Expect.stringContains body "did:plc:testactor" "should use DID from ProfileSummary"
+              Expect.stringContains body "did:plc:testuser" "should use DID from ProfileSummary"
 
           testCase "unmuteUser accepts Profile directly"
           <| fun _ ->
@@ -3859,4 +3916,179 @@ let actorDidSrtpTests =
 
               Expect.isOk result "should succeed"
               let body = captured.Value.Content.ReadAsStringAsync().Result
-              Expect.stringContains body "did:plc:testactor" "should use DID from Profile" ]
+              Expect.stringContains body "did:plc:testuser" "should use DID from Profile" ]
+
+// ── ActorWitness SRTP tests ──────────────────────────────────────────
+
+let private followersJson =
+    {| followers = ([||] : obj array)
+       subject =
+        {| did = "did:plc:testuser"
+           handle = "test.bsky.social" |}
+       cursor = "page2" |}
+
+let private authorFeedJson =
+    {| feed = ([||] : obj array)
+       cursor = "page2" |}
+
+let private suggestionsJson =
+    {| suggestions =
+        [| {| did = "did:plc:test"
+              handle = "test.bsky.social"
+              displayName = "Test User" |} |] |}
+
+[<Tests>]
+let actorWitnessSrtpTests =
+    testList
+        "ActorWitness SRTP (read functions accept entities)"
+        [ testCase "getFollowers accepts Handle"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = queryAgent (fun req -> captured <- Some req) followersJson
+              let handle = parseHandle' "alice.bsky.social"
+
+              let result =
+                  Bluesky.getFollowers agent handle None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains (captured.Value.RequestUri.ToString ()) "alice.bsky.social" "handle in query"
+
+          testCase "getFollowers accepts Did"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = queryAgent (fun req -> captured <- Some req) followersJson
+              let did = parseDid' "did:plc:alice"
+
+              let result =
+                  Bluesky.getFollowers agent did None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains (captured.Value.RequestUri.ToString ()) "did%3Aplc%3Aalice" "DID in query"
+
+          testCase "getFollowers accepts ProfileSummary"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = queryAgent (fun req -> captured <- Some req) followersJson
+
+              let result =
+                  Bluesky.getFollowers agent testProfileSummary None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains (captured.Value.RequestUri.ToString ()) "did%3Aplc%3Atestuser" "DID from ProfileSummary"
+
+          testCase "getFollowers accepts Profile"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = queryAgent (fun req -> captured <- Some req) followersJson
+
+              let result =
+                  Bluesky.getFollowers agent testProfile None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains (captured.Value.RequestUri.ToString ()) "did%3Aplc%3Atestuser" "DID from Profile"
+
+          testCase "getFollows accepts ProfileSummary"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = queryAgent (fun req -> captured <- Some req) {| follows = ([||] : obj array); subject = {| did = "did:plc:testuser"; handle = "test.bsky.social" |} |}
+
+              let result =
+                  Bluesky.getFollows agent testProfileSummary None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains (captured.Value.RequestUri.ToString ()) "did%3Aplc%3Atestuser" "DID from ProfileSummary"
+
+          testCase "getAuthorFeed accepts ProfileSummary"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = queryAgent (fun req -> captured <- Some req) authorFeedJson
+
+              let result =
+                  Bluesky.getAuthorFeed agent testProfileSummary None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains (captured.Value.RequestUri.ToString ()) "did%3Aplc%3Atestuser" "DID from ProfileSummary"
+
+          testCase "getActorLikes accepts Profile"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = queryAgent (fun req -> captured <- Some req) authorFeedJson
+
+              let result =
+                  Bluesky.getActorLikes agent testProfile None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains (captured.Value.RequestUri.ToString ()) "did%3Aplc%3Atestuser" "DID from Profile"
+
+          testCase "getSuggestedFollows accepts ProfileSummary"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = queryAgent (fun req -> captured <- Some req) suggestionsJson
+
+              let result =
+                  Bluesky.getSuggestedFollows agent testProfileSummary
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains (captured.Value.RequestUri.ToString ()) "did%3Aplc%3Atestuser" "DID from ProfileSummary"
+
+          testCase "paginateFollowers accepts Did"
+          <| fun _ ->
+              let mutable captured = System.Collections.Generic.List<HttpRequestMessage> ()
+
+              let agent =
+                  createMockAgent (fun req ->
+                      captured.Add (req)
+
+                      jsonResponse
+                          HttpStatusCode.OK
+                          {| followers = ([||] : obj array)
+                             subject =
+                              {| did = "did:plc:testuser"
+                                 handle = "test.bsky.social" |} |})
+
+              agent.Session <- Some testSession
+              let did = parseDid' "did:plc:testuser"
+
+              let pages =
+                  Bluesky.paginateFollowers agent did None |> collectPages
+
+              Expect.equal pages.Length 1 "single page"
+              Expect.stringContains (captured.[0].RequestUri.ToString ()) "did%3Aplc%3Atestuser" "DID in query"
+
+          testCase "getProfiles takes Did list"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| profiles =
+                          [| {| did = "did:plc:test"
+                                handle = "test.bsky.social"
+                                displayName = "Test User" |} |] |}
+
+              let result =
+                  Bluesky.getProfiles agent [ parseDid' "did:plc:test"; parseDid' "did:plc:other" ]
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let url = captured.Value.RequestUri.ToString ()
+              Expect.stringContains url "did%3Aplc%3Atest" "first DID in query"
+              Expect.stringContains url "did%3Aplc%3Aother" "second DID in query" ]

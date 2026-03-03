@@ -151,19 +151,6 @@ type UndoWitness =
     static member UndoUri (UndoWitness, r : ListBlockRef) = r.Uri
 
 /// <summary>
-/// Witness type enabling SRTP-based overloading for actor parameters.
-/// Allows functions like <c>getProfile</c> to accept <see cref="Handle"/>, <see cref="Did"/>, or <c>string</c> directly.
-/// This type is an implementation detail and should not be used directly.
-/// </summary>
-[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
-type ActorWitness =
-    | ActorWitness
-
-    static member ToActorString (ActorWitness, h : Handle) = Handle.value h
-    static member ToActorString (ActorWitness, d : Did) = Did.value d
-    static member ToActorString (ActorWitness, s : string) = s
-
-/// <summary>
 /// Type alias for the thread union returned by <c>getPostThread</c>.
 /// Simplifies pattern matching when working with thread responses.
 /// </summary>
@@ -481,6 +468,21 @@ type PostRefWitness =
     | PostRefWitness
     static member ToPostRef (PostRefWitness, pr : PostRef) = pr
     static member ToPostRef (PostRefWitness, tp : TimelinePost) = { PostRef.Uri = tp.Uri; Cid = tp.Cid }
+
+/// <summary>
+/// Witness type enabling SRTP-based overloading for actor parameters.
+/// Allows functions like <c>getProfile</c> to accept <see cref="Handle"/>, <see cref="Did"/>,
+/// <see cref="ProfileSummary"/>, or <see cref="Profile"/> directly.
+/// This type is an implementation detail and should not be used directly.
+/// </summary>
+[<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+type ActorWitness =
+    | ActorWitness
+
+    static member ToActorString (ActorWitness, h : Handle) = Handle.value h
+    static member ToActorString (ActorWitness, d : Did) = Did.value d
+    static member ToActorString (ActorWitness, p : ProfileSummary) = Did.value p.Did
+    static member ToActorString (ActorWitness, p : Profile) = Did.value p.Did
 
 /// <summary>
 /// Witness type enabling SRTP-based overloading for actor DID parameters.
@@ -1565,10 +1567,11 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Get a user's profile. Accepts a <see cref="Handle"/>, <see cref="Did"/>, or plain <c>string</c>.
+    /// Get a user's profile. Accepts a <see cref="Handle"/>, <see cref="Did"/>,
+    /// <see cref="ProfileSummary"/>, or <see cref="Profile"/>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="actor">A <see cref="Handle"/>, <see cref="Did"/>, or string identifier.</param>
+    /// <param name="actor">A <see cref="Handle"/>, <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/>.</param>
     /// <returns>A <see cref="Profile"/> on success, or an <see cref="XrpcError"/>.</returns>
     let inline getProfile (agent : AtpAgent) (actor : ^a) : Task<Result<Profile, XrpcError>> =
         getProfileImpl agent (toActorString actor)
@@ -1680,17 +1683,10 @@ module Bluesky =
                       Cursor = output.Cursor })
         }
 
-    /// <summary>
-    /// Get the followers of an actor.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="actor">The actor identifier (handle or DID string).</param>
-    /// <param name="limit">Maximum number of followers to return (optional).</param>
-    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
-    /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
-    let getFollowers
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let getFollowersImpl
         (agent : AtpAgent)
-        (actor : string)
+        (actorStr : string)
         (limit : int64 option)
         (cursor : string option)
         : Task<Result<Page<ProfileSummary>, XrpcError>> =
@@ -1698,7 +1694,7 @@ module Bluesky =
             let! result =
                 AppBskyGraph.GetFollowers.query
                     agent
-                    { Actor = actor
+                    { Actor = actorStr
                       Cursor = cursor
                       Limit = limit }
 
@@ -1710,16 +1706,21 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Get the accounts that an actor follows.
+    /// Get the followers of an actor. Accepts a <see cref="Handle"/>, <see cref="Did"/>,
+    /// <see cref="ProfileSummary"/>, or <see cref="Profile"/>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="actor">The actor identifier (handle or DID string).</param>
-    /// <param name="limit">Maximum number of follows to return (optional).</param>
+    /// <param name="actor">A <see cref="Handle"/>, <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/>.</param>
+    /// <param name="limit">Maximum number of followers to return (optional).</param>
     /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
     /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
-    let getFollows
+    let inline getFollowers (agent : AtpAgent) (actor : ^a) (limit : int64 option) (cursor : string option) : Task<Result<Page<ProfileSummary>, XrpcError>> =
+        getFollowersImpl agent (toActorString actor) limit cursor
+
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let getFollowsImpl
         (agent : AtpAgent)
-        (actor : string)
+        (actorStr : string)
         (limit : int64 option)
         (cursor : string option)
         : Task<Result<Page<ProfileSummary>, XrpcError>> =
@@ -1727,7 +1728,7 @@ module Bluesky =
             let! result =
                 AppBskyGraph.GetFollows.query
                     agent
-                    { Actor = actor
+                    { Actor = actorStr
                       Cursor = cursor
                       Limit = limit }
 
@@ -1737,6 +1738,18 @@ module Bluesky =
                     { Items = output.Follows |> List.map ProfileSummary.ofView
                       Cursor = output.Cursor })
         }
+
+    /// <summary>
+    /// Get the accounts that an actor follows. Accepts a <see cref="Handle"/>, <see cref="Did"/>,
+    /// <see cref="ProfileSummary"/>, or <see cref="Profile"/>.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">A <see cref="Handle"/>, <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/>.</param>
+    /// <param name="limit">Maximum number of follows to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="ProfileSummary"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let inline getFollows (agent : AtpAgent) (actor : ^a) (limit : int64 option) (cursor : string option) : Task<Result<Page<ProfileSummary>, XrpcError>> =
+        getFollowsImpl agent (toActorString actor) limit cursor
 
     /// <summary>
     /// Search for posts matching a query string.
@@ -1829,17 +1842,10 @@ module Bluesky =
             return result |> Result.map (fun output -> output.Actors |> List.map ProfileSummary.ofBasic)
         }
 
-    /// <summary>
-    /// Get a specific user's feed (posts by that actor).
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="actor">The actor identifier (handle or DID string).</param>
-    /// <param name="limit">Maximum number of posts to return (optional).</param>
-    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
-    /// <returns>A page of <see cref="FeedItem"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
-    let getAuthorFeed
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let getAuthorFeedImpl
         (agent : AtpAgent)
-        (actor : string)
+        (actorStr : string)
         (limit : int64 option)
         (cursor : string option)
         : Task<Result<Page<FeedItem>, XrpcError>> =
@@ -1847,7 +1853,7 @@ module Bluesky =
             let! result =
                 AppBskyFeed.GetAuthorFeed.query
                     agent
-                    { Actor = actor
+                    { Actor = actorStr
                       Cursor = cursor
                       Filter = None
                       IncludePins = None
@@ -1861,16 +1867,21 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Get the posts that a specific actor has liked.
+    /// Get a specific user's feed (posts by that actor). Accepts a <see cref="Handle"/>, <see cref="Did"/>,
+    /// <see cref="ProfileSummary"/>, or <see cref="Profile"/>.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="actor">The actor identifier (handle or DID string).</param>
+    /// <param name="actor">A <see cref="Handle"/>, <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/>.</param>
     /// <param name="limit">Maximum number of posts to return (optional).</param>
     /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
     /// <returns>A page of <see cref="FeedItem"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
-    let getActorLikes
+    let inline getAuthorFeed (agent : AtpAgent) (actor : ^a) (limit : int64 option) (cursor : string option) : Task<Result<Page<FeedItem>, XrpcError>> =
+        getAuthorFeedImpl agent (toActorString actor) limit cursor
+
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let getActorLikesImpl
         (agent : AtpAgent)
-        (actor : string)
+        (actorStr : string)
         (limit : int64 option)
         (cursor : string option)
         : Task<Result<Page<FeedItem>, XrpcError>> =
@@ -1878,7 +1889,7 @@ module Bluesky =
             let! result =
                 AppBskyFeed.GetActorLikes.query
                     agent
-                    { Actor = actor
+                    { Actor = actorStr
                       Cursor = cursor
                       Limit = limit }
 
@@ -1888,6 +1899,18 @@ module Bluesky =
                     { Items = output.Feed |> List.map FeedItem.ofFeedViewPost
                       Cursor = output.Cursor })
         }
+
+    /// <summary>
+    /// Get the posts that a specific actor has liked. Accepts a <see cref="Handle"/>, <see cref="Did"/>,
+    /// <see cref="ProfileSummary"/>, or <see cref="Profile"/>.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">A <see cref="Handle"/>, <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/>.</param>
+    /// <param name="limit">Maximum number of posts to return (optional).</param>
+    /// <param name="cursor">Pagination cursor from a previous response (optional).</param>
+    /// <returns>A page of <see cref="FeedItem"/> with an optional cursor, or an <see cref="XrpcError"/>.</returns>
+    let inline getActorLikes (agent : AtpAgent) (actor : ^a) (limit : int64 option) (cursor : string option) : Task<Result<Page<FeedItem>, XrpcError>> =
+        getActorLikesImpl agent (toActorString actor) limit cursor
 
     /// <summary>
     /// Get the accounts that have liked a specific post.
@@ -1992,28 +2015,33 @@ module Bluesky =
         }
 
     /// <summary>
-    /// Get multiple profiles by their identifiers in a single request.
+    /// Get multiple profiles by their DIDs in a single request.
     /// </summary>
     /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="actors">A list of actor identifiers (handles or DID strings).</param>
+    /// <param name="actors">A list of <see cref="Did"/> values identifying the actors.</param>
     /// <returns>A list of <see cref="Profile"/> on success, or an <see cref="XrpcError"/>.</returns>
-    let getProfiles (agent : AtpAgent) (actors : string list) : Task<Result<Profile list, XrpcError>> =
+    let getProfiles (agent : AtpAgent) (actors : Did list) : Task<Result<Profile list, XrpcError>> =
         task {
-            let! result = AppBskyActor.GetProfiles.query agent { Actors = actors }
+            let! result = AppBskyActor.GetProfiles.query agent { Actors = actors |> List.map Did.value }
             return result |> Result.map (fun output -> output.Profiles |> List.map Profile.ofDetailed)
         }
 
-    /// <summary>
-    /// Get suggested accounts to follow based on a given actor.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="actor">The actor identifier (handle or DID string) to base suggestions on.</param>
-    /// <returns>A list of <see cref="ProfileSummary"/> on success, or an <see cref="XrpcError"/>.</returns>
-    let getSuggestedFollows (agent : AtpAgent) (actor : string) : Task<Result<ProfileSummary list, XrpcError>> =
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let getSuggestedFollowsImpl (agent : AtpAgent) (actorStr : string) : Task<Result<ProfileSummary list, XrpcError>> =
         task {
-            let! result = AppBskyGraph.GetSuggestedFollowsByActor.query agent { Actor = actor }
+            let! result = AppBskyGraph.GetSuggestedFollowsByActor.query agent { Actor = actorStr }
             return result |> Result.map (fun output -> output.Suggestions |> List.map ProfileSummary.ofView)
         }
+
+    /// <summary>
+    /// Get suggested accounts to follow based on a given actor. Accepts a <see cref="Handle"/>, <see cref="Did"/>,
+    /// <see cref="ProfileSummary"/>, or <see cref="Profile"/>.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">A <see cref="Handle"/>, <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/>.</param>
+    /// <returns>A list of <see cref="ProfileSummary"/> on success, or an <see cref="XrpcError"/>.</returns>
+    let inline getSuggestedFollows (agent : AtpAgent) (actor : ^a) : Task<Result<ProfileSummary list, XrpcError>> =
+        getSuggestedFollowsImpl agent (toActorString actor)
 
     /// <summary>
     /// Get general account suggestions for the authenticated user.
@@ -2239,23 +2267,15 @@ module Bluesky =
             { Items = output.Feed |> List.map FeedItem.ofFeedViewPost
               Cursor = output.Cursor })
 
-    /// <summary>
-    /// Paginate followers for an actor. Returns an async enumerable of pages.
-    /// Each element is a <c>Result</c> containing one page of follower profiles.
-    /// Pagination stops automatically when the server returns no cursor.
-    /// </summary>
-    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
-    /// <param name="actor">The actor identifier (handle or DID string) whose followers to list.</param>
-    /// <param name="pageSize">Maximum number of followers per page (optional, pass <c>None</c> for server default).</param>
-    /// <returns>An <see cref="System.Collections.Generic.IAsyncEnumerable{T}"/> of paginated results.</returns>
-    let paginateFollowers
+    [<System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)>]
+    let paginateFollowersImpl
         (agent : AtpAgent)
-        (actor : string)
+        (actorStr : string)
         (pageSize : int64 option)
         : System.Collections.Generic.IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>> =
         Xrpc.paginate<AppBskyGraph.GetFollowers.Params, AppBskyGraph.GetFollowers.Output>
             AppBskyGraph.GetFollowers.TypeId
-            { Actor = actor
+            { Actor = actorStr
               Cursor = None
               Limit = pageSize }
             (fun o -> o.Cursor)
@@ -2264,6 +2284,19 @@ module Bluesky =
         |> mapAsyncEnum (fun output ->
             { Items = output.Followers |> List.map ProfileSummary.ofView
               Cursor = output.Cursor })
+
+    /// <summary>
+    /// Paginate followers for an actor. Returns an async enumerable of pages.
+    /// Each element is a <c>Result</c> containing one page of follower profiles.
+    /// Pagination stops automatically when the server returns no cursor.
+    /// Accepts a <see cref="Handle"/>, <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/>.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="actor">A <see cref="Handle"/>, <see cref="Did"/>, <see cref="ProfileSummary"/>, or <see cref="Profile"/> whose followers to list.</param>
+    /// <param name="pageSize">Maximum number of followers per page (optional, pass <c>None</c> for server default).</param>
+    /// <returns>An <see cref="System.Collections.Generic.IAsyncEnumerable{T}"/> of paginated results.</returns>
+    let inline paginateFollowers (agent : AtpAgent) (actor : ^a) (pageSize : int64 option) : System.Collections.Generic.IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>> =
+        paginateFollowersImpl agent (toActorString actor) pageSize
 
     /// <summary>
     /// Paginate notifications for the authenticated user. Returns an async enumerable of pages.
