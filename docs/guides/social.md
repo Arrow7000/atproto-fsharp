@@ -154,9 +154,9 @@ taskResult {
 
 Social action functions accept multiple types via SRTP:
 
-- **`follow`, `block`, `muteUser`, `unmuteUser`** accept `Did`, `ProfileSummary`, or `Profile`
-- **`muteThread`, `unmuteThread`** accept `TimelinePost`, `PostRef`, or `AtUri`
-- **`undo`** accepts `LikeRef`, `RepostRef`, `FollowRef`, `BlockRef`, or `ListBlockRef`
+- `follow`, `block`, `muteUser`, `unmuteUser` accept `Did`, `ProfileSummary`, or `Profile`
+- `muteThread`, `unmuteThread` accept `TimelinePost`, `PostRef`, or `AtUri`
+- `undo` accepts `LikeRef`, `RepostRef`, `FollowRef`, `BlockRef`, or `ListBlockRef`
 
 ```fsharp
 taskResult {

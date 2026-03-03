@@ -114,9 +114,9 @@ Note: `upsertProfile` operates on the raw `AppBskyActor.Profile.Profile` type (a
 
 Read functions that take an actor accept multiple types via SRTP:
 
-- **`getProfile`, `getFollowers`, `getFollows`, `getSuggestedFollows`, `getAuthorFeed`, `getActorLikes`** accept `Handle`, `Did`, `ProfileSummary`, or `Profile`
-- **`getProfiles`** takes a `Did list`
-- **`getLikes`, `getRepostedBy`** accept `TimelinePost`, `PostRef`, or `AtUri`
+- `getProfile`, `getFollowers`, `getFollows`, `getSuggestedFollows`, `getAuthorFeed`, `getActorLikes` accept `Handle`, `Did`, `ProfileSummary`, or `Profile`
+- `getProfiles` takes a `Did list`
+- `getLikes`, `getRepostedBy` accept `TimelinePost`, `PostRef`, or `AtUri`
 
 ```fsharp
 taskResult {

@@ -198,8 +198,8 @@ taskResult {
 
 Many post functions accept multiple types via SRTP (statically resolved type parameters):
 
-- **`like`, `repost`, `replyTo`, `quotePost`, `addBookmark`** accept `TimelinePost` or `PostRef`
-- **`deleteRecord`, `removeBookmark`, `getPostThread`, `getPostThreadView`, `getLikes`, `getRepostedBy`, `getQuotes`, `muteThread`, `unmuteThread`** accept `TimelinePost`, `PostRef`, or `AtUri`
+- `like`, `repost`, `replyTo`, `quotePost`, `addBookmark` accept `TimelinePost` or `PostRef`
+- `deleteRecord`, `removeBookmark`, `getPostThread`, `getPostThreadView`, `getLikes`, `getRepostedBy`, `getQuotes`, `muteThread`, `unmuteThread` accept `TimelinePost`, `PostRef`, or `AtUri`
 
 Pass entities directly -- no need to extract `.Uri` or construct a `PostRef`:
 
