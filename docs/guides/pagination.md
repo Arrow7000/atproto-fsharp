@@ -37,10 +37,10 @@ When you need to process an unbounded result set without loading everything into
 | Paginator | Signature |
 |-----------|-----------|
 | `Bluesky.paginateTimeline` | `AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>` |
-| `Bluesky.paginateFollowers` | `AtpAgent -> string -> int64 option -> IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>` |
+| `Bluesky.paginateFollowers` | `AtpAgent -> actor -> int64 option -> IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>` |
 | `Bluesky.paginateNotifications` | `AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<Notification>, XrpcError>>` |
 
-Pass `None` as the page size to use the server's default.
+`paginateFollowers` accepts a `ProfileSummary`, `Profile`, `Handle`, or `Did` as the actor parameter -- pass entities directly instead of extracting identifiers. Pass `None` as the page size to use the server's default.
 
 ## Consuming Pages
 
@@ -100,7 +100,7 @@ For endpoints without a pre-built paginator, use `Xrpc.paginate` directly. It ta
 let pages =
     Xrpc.paginate<AppBskyFeed.GetAuthorFeed.Params, AppBskyFeed.GetAuthorFeed.Output>
         AppBskyFeed.GetAuthorFeed.TypeId
-        { Actor = "my-handle.bsky.social"
+        { Actor = Handle.value myHandle
           Cursor = None; Filter = None
           IncludePins = None; Limit = Some 25L }
         (fun o -> o.Cursor)

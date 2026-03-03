@@ -9,7 +9,7 @@ keywords: rich text, facets, mentions, links, hashtags, utf-8
 
 # Rich Text
 
-> All examples use `taskResult {}`. See the [Error Handling guide](error-handling.html) for details.
+> Most examples use `taskResult {}`. Some use `task {}` where noted -- `RichText` functions return bare `Task` (not `Task<Result<>>`), so `task {}` is appropriate when only calling those functions. See the [Error Handling guide](error-handling.html) for details.
 
 Posts and messages on Bluesky support rich text through **[facets](../concepts.html)** -- annotations on byte ranges within the text that mark up @mentions, links, and #hashtags. The AT Protocol specifies facet positions in UTF-8 byte offsets, not character indices.
 
@@ -76,6 +76,7 @@ type DetectedFacet =
 `RichText.resolve` takes detected facets and resolves mentions to DIDs via the API. Mentions that can't be resolved are silently dropped:
 
 ```fsharp
+// task {} because RichText.resolve returns Task<Facet list>, not Task<Result<_,_>>
 task {
     let! facets = RichText.resolve agent detected
     // facets : AppBskyRichtext.Facet.Facet list
@@ -88,6 +89,7 @@ task {
 `RichText.parse` combines both steps -- detect and resolve in one call:
 
 ```fsharp
+// task {} because RichText.parse returns Task<Facet list>, not Task<Result<_,_>>
 task {
     let! facets = RichText.parse agent "Hello @my-handle.bsky.social! #atproto"
     return facets
@@ -99,6 +101,7 @@ task {
 If you've already computed facets (for example, from `RichText.parse` or constructed manually), use `Bluesky.postWithFacets` to skip auto-detection:
 
 ```fsharp
+// task {} because RichText.parse returns bare Task, requiring manual match on postWithFacets result
 task {
     let! facets = RichText.parse agent text
 
@@ -150,6 +153,7 @@ taskResult {
 If you need to supply custom or pre-computed facets, drop down to the raw API:
 
 ```fsharp
+// task {} because RichText.parse returns bare Task, requiring manual match on the XRPC result
 task {
     let text = "Check out https://example.com!"
     let! facets = RichText.parse agent text

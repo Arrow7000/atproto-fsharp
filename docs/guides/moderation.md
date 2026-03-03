@@ -21,14 +21,17 @@ open FSharp.ATProto.Syntax
 
 ## Muting a User
 
-`Bluesky.muteUser` takes a typed [DID](../concepts.html). Muted users' posts are hidden from your feeds and notifications, but the muted user is never notified:
+`Bluesky.muteUser` accepts a `Profile`, `ProfileSummary`, or `Did` directly. Muted users' posts are hidden from your feeds and notifications, but the muted user is never notified:
 
 ```fsharp
 taskResult {
-    do! Bluesky.muteUser agent profile.Did
+    let! profile = Bluesky.getProfile agent someHandle
+
+    // Pass the profile directly -- no need to extract .Did
+    do! Bluesky.muteUser agent profile
 
     // later...
-    do! Bluesky.unmuteUser agent profile.Did
+    do! Bluesky.unmuteUser agent profile
 }
 ```
 
@@ -42,14 +45,15 @@ Muting is invisible. The muted user can still see and interact with your posts -
 
 ## Muting a Thread
 
-`Bluesky.muteThread` takes the [AT-URI](../concepts.html) of the thread root post. Posts in the muted thread are hidden from your notifications:
+`Bluesky.muteThread` accepts a `TimelinePost`, `PostRef`, or `AtUri`. Posts in the muted thread are hidden from your notifications:
 
 ```fsharp
 taskResult {
-    do! Bluesky.muteThread agent post.Uri
+    // Pass the post directly -- no need to extract .Uri
+    do! Bluesky.muteThread agent post
 
     // later...
-    do! Bluesky.unmuteThread agent post.Uri
+    do! Bluesky.unmuteThread agent post
 }
 ```
 

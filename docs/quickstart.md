@@ -171,12 +171,12 @@ let main _ =
 
                 // Clean up: undo the like and delete the reply
                 let! _ = Bluesky.undoLike agent likeRef
-                let! _ = Bluesky.deleteRecord agent reply.Uri
+                let! _ = Bluesky.deleteRecord agent reply
                 printfn "Cleaned up."
             | [] -> ()
 
             // Delete our original post
-            let! _ = Bluesky.deleteRecord agent post.Uri
+            let! _ = Bluesky.deleteRecord agent post
 
             printfn "Done!"
             return 0
