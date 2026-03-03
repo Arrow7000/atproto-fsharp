@@ -87,12 +87,12 @@ A post within a thread, with parent and reply context.
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.post` | `agent` `text:string` | `Result<PostRef, XrpcError>` | Create a post with auto-detected rich text |
-| `Bluesky.postWithFacets` | `agent` `text:string` `facets:Facet list` | `Result<PostRef, XrpcError>` | Create a post with pre-resolved facets |
-| `Bluesky.postWithImages` | `agent` `text:string` `images:ImageUpload list` | `Result<PostRef, XrpcError>` | Create a post with attached images |
-| `Bluesky.quotePost` | `agent` `text:string` `quoted:PostRef\|TimelinePost` | `Result<PostRef, XrpcError>` | Create a quote post |
-| `Bluesky.replyTo` | `agent` `text:string` `parent:PostRef\|TimelinePost` | `Result<PostRef, XrpcError>` | Reply to a post (auto-resolves thread root) |
-| `Bluesky.replyWithKnownRoot` | `agent` `text:string` `parent:PostRef` `root:PostRef` | `Result<PostRef, XrpcError>` | Reply with explicit parent and root |
+| `Bluesky.post` | `agent:AtpAgent` `text:string` | `Result<PostRef, XrpcError>` | Create a post with auto-detected rich text |
+| `Bluesky.postWithFacets` | `agent:AtpAgent` `text:string` `facets:Facet list` | `Result<PostRef, XrpcError>` | Create a post with pre-resolved facets |
+| `Bluesky.postWithImages` | `agent:AtpAgent` `text:string` `images:ImageUpload list` | `Result<PostRef, XrpcError>` | Create a post with attached images |
+| `Bluesky.quotePost` | `agent:AtpAgent` `text:string` `quoted:PostRef / TimelinePost` | `Result<PostRef, XrpcError>` | Create a quote post |
+| `Bluesky.replyTo` | `agent:AtpAgent` `text:string` `parent:PostRef / TimelinePost` | `Result<PostRef, XrpcError>` | Reply to a post (auto-resolves thread root) |
+| `Bluesky.replyWithKnownRoot` | `agent:AtpAgent` `text:string` `parent:PostRef` `root:PostRef` | `Result<PostRef, XrpcError>` | Reply with explicit parent and root |
 *)
 
 (*** hide ***)
@@ -132,11 +132,11 @@ taskResult {
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.getPosts` | `agent` `uris:AtUri list` | `Result<TimelinePost list, XrpcError>` | Fetch multiple posts by AT-URI |
-| `Bluesky.getPostThread` | `agent` `target:TimelinePost\|PostRef\|AtUri` `depth:int64 option` `parentHeight:int64 option` | `Result<ThreadNode, XrpcError>` | Get full thread tree for pattern matching |
-| `Bluesky.getPostThreadView` | `agent` `target:TimelinePost\|PostRef\|AtUri` `depth:int64 option` `parentHeight:int64 option` | `Result<ThreadPost option, XrpcError>` | Get thread as `Some ThreadPost` or `None` |
-| `Bluesky.searchPosts` | `agent` `query:string` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | Full-text post search |
-| `Bluesky.getQuotes` | `agent` `target:TimelinePost\|PostRef\|AtUri` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | Get posts that quote a given post |
+| `Bluesky.getPosts` | `agent:AtpAgent` `uris:AtUri list` | `Result<TimelinePost list, XrpcError>` | Fetch multiple posts by AT-URI |
+| `Bluesky.getPostThread` | `agent:AtpAgent` `target:TimelinePost / PostRef / AtUri` `depth:int64 option` `parentHeight:int64 option` | `Result<ThreadNode, XrpcError>` | Get full thread tree for pattern matching |
+| `Bluesky.getPostThreadView` | `agent:AtpAgent` `target:TimelinePost / PostRef / AtUri` `depth:int64 option` `parentHeight:int64 option` | `Result<ThreadPost option, XrpcError>` | Get thread as `Some ThreadPost` or `None` |
+| `Bluesky.searchPosts` | `agent:AtpAgent` `query:string` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | Full-text post search |
+| `Bluesky.getQuotes` | `agent:AtpAgent` `target:TimelinePost / PostRef / AtUri` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | Get posts that quote a given post |
 *)
 
 taskResult {
@@ -162,12 +162,12 @@ taskResult {
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.like` | `agent` `target:PostRef\|TimelinePost` | `Result<LikeRef, XrpcError>` | Like a post |
-| `Bluesky.repost` | `agent` `target:PostRef\|TimelinePost` | `Result<RepostRef, XrpcError>` | Repost a post |
-| `Bluesky.unlikePost` | `agent` `target:PostRef\|TimelinePost` | `Result<UndoResult, XrpcError>` | Unlike by post (looks up viewer state) |
-| `Bluesky.unrepostPost` | `agent` `target:PostRef\|TimelinePost` | `Result<UndoResult, XrpcError>` | Un-repost by post (looks up viewer state) |
-| `Bluesky.undoLike` | `agent` `likeRef:LikeRef` | `Result<UndoResult, XrpcError>` | Undo a like by its ref |
-| `Bluesky.undoRepost` | `agent` `repostRef:RepostRef` | `Result<UndoResult, XrpcError>` | Undo a repost by its ref |
+| `Bluesky.like` | `agent:AtpAgent` `target:PostRef / TimelinePost` | `Result<LikeRef, XrpcError>` | Like a post |
+| `Bluesky.repost` | `agent:AtpAgent` `target:PostRef / TimelinePost` | `Result<RepostRef, XrpcError>` | Repost a post |
+| `Bluesky.unlikePost` | `agent:AtpAgent` `target:PostRef / TimelinePost` | `Result<UndoResult, XrpcError>` | Unlike by post (looks up viewer state) |
+| `Bluesky.unrepostPost` | `agent:AtpAgent` `target:PostRef / TimelinePost` | `Result<UndoResult, XrpcError>` | Un-repost by post (looks up viewer state) |
+| `Bluesky.undoLike` | `agent:AtpAgent` `likeRef:LikeRef` | `Result<UndoResult, XrpcError>` | Undo a like by its ref |
+| `Bluesky.undoRepost` | `agent:AtpAgent` `repostRef:RepostRef` | `Result<UndoResult, XrpcError>` | Undo a repost by its ref |
 
 `unlike` and `unrepost` are also available as simpler alternatives that return `unit` instead of `UndoResult`. The generic `Bluesky.undo` accepts any ref type (`LikeRef`, `RepostRef`, `FollowRef`, `BlockRef`).
 *)
@@ -188,9 +188,9 @@ taskResult {
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.addBookmark` | `agent` `target:PostRef\|TimelinePost` | `Result<unit, XrpcError>` | Bookmark a post |
-| `Bluesky.removeBookmark` | `agent` `target:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Remove a bookmark |
-| `Bluesky.getBookmarks` | `agent` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | List bookmarked posts |
+| `Bluesky.addBookmark` | `agent:AtpAgent` `target:PostRef / TimelinePost` | `Result<unit, XrpcError>` | Bookmark a post |
+| `Bluesky.removeBookmark` | `agent:AtpAgent` `target:TimelinePost / PostRef / AtUri` | `Result<unit, XrpcError>` | Remove a bookmark |
+| `Bluesky.getBookmarks` | `agent:AtpAgent` `limit:int64 option` `cursor:string option` | `Result<Page<TimelinePost>, XrpcError>` | List bookmarked posts |
 *)
 
 taskResult {
@@ -204,7 +204,7 @@ taskResult {
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.deleteRecord` | `agent` `target:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Delete any record by AT-URI |
+| `Bluesky.deleteRecord` | `agent:AtpAgent` `target:TimelinePost / PostRef / AtUri` | `Result<unit, XrpcError>` | Delete any record by AT-URI |
 *)
 
 taskResult {

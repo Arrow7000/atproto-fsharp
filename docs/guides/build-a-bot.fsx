@@ -46,14 +46,14 @@ Then replace the contents of `Program.fs` with the code below.
 
 ## The Complete Bot
 
-```fsharp
+*)
+
 open System
 open System.Threading.Tasks
 open FSharp.ATProto.Syntax
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 
-[<EntryPoint>]
 let main _ =
     let run =
         task {
@@ -87,8 +87,8 @@ let main _ =
 
     run.GetAwaiter().GetResult()
     0
-```
 
+(**
 Replace `"your-handle.bsky.social"` and `"your-app-password"` with your actual credentials. Run it:
 
 ```bash

@@ -54,14 +54,14 @@ Pass a `ProfileSummary` to `getProfile` if you need the full `Profile` with coun
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.getProfile` | `agent` `actor:Handle\|Did\|ProfileSummary\|Profile` | `Result<Profile, XrpcError>` | Get a single full profile |
-| `Bluesky.getProfiles` | `agent` `actors:Did list` | `Result<Profile list, XrpcError>` | Get up to 25 profiles in one request |
-| `Bluesky.getFollowers` | `agent` `actor:Handle\|Did\|ProfileSummary\|Profile` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | List an actor's followers |
-| `Bluesky.getFollows` | `agent` `actor:Handle\|Did\|ProfileSummary\|Profile` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | List accounts an actor follows |
-| `Bluesky.getSuggestedFollows` | `agent` `actor:Handle\|Did\|ProfileSummary\|Profile` | `Result<ProfileSummary list, XrpcError>` | Suggested follows based on an actor |
-| `Bluesky.getSuggestions` | `agent` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | General account suggestions |
-| `Bluesky.searchActors` | `agent` `query:string` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Search users by name, handle, or bio |
-| `Bluesky.searchActorsTypeahead` | `agent` `query:string` `limit:int64 option` | `Result<ProfileSummary list, XrpcError>` | Lightweight typeahead search (no pagination) |
+| `Bluesky.getProfile` | `agent:AtpAgent` `actor:Handle / Did / ProfileSummary / Profile` | `Result<Profile, XrpcError>` | Get a single full profile |
+| `Bluesky.getProfiles` | `agent:AtpAgent` `actors:Did list` | `Result<Profile list, XrpcError>` | Get up to 25 profiles in one request |
+| `Bluesky.getFollowers` | `agent:AtpAgent` `actor:Handle / Did / ProfileSummary / Profile` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | List an actor's followers |
+| `Bluesky.getFollows` | `agent:AtpAgent` `actor:Handle / Did / ProfileSummary / Profile` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | List accounts an actor follows |
+| `Bluesky.getSuggestedFollows` | `agent:AtpAgent` `actor:Handle / Did / ProfileSummary / Profile` | `Result<ProfileSummary list, XrpcError>` | Suggested follows based on an actor |
+| `Bluesky.getSuggestions` | `agent:AtpAgent` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | General account suggestions |
+| `Bluesky.searchActors` | `agent:AtpAgent` `query:string` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Search users by name, handle, or bio |
+| `Bluesky.searchActorsTypeahead` | `agent:AtpAgent` `query:string` `limit:int64 option` | `Result<ProfileSummary list, XrpcError>` | Lightweight typeahead search (no pagination) |
 *)
 
 (*** hide ***)
@@ -93,8 +93,8 @@ taskResult {
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.getLikes` | `agent` `target:TimelinePost\|PostRef\|AtUri` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Who liked a post |
-| `Bluesky.getRepostedBy` | `agent` `target:TimelinePost\|PostRef\|AtUri` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Who reposted a post |
+| `Bluesky.getLikes` | `agent:AtpAgent` `target:TimelinePost / PostRef / AtUri` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Who liked a post |
+| `Bluesky.getRepostedBy` | `agent:AtpAgent` `target:TimelinePost / PostRef / AtUri` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Who reposted a post |
 *)
 
 taskResult {
@@ -108,8 +108,8 @@ taskResult {
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.upsertProfile` | `agent` `updateFn:(Profile option -> Profile)` | `Result<unit, XrpcError>` | Read-modify-write profile with CAS retry |
-| `Bluesky.updateHandle` | `agent` `handle:Handle` | `Result<unit, XrpcError>` | Change the authenticated user's handle |
+| `Bluesky.upsertProfile` | `agent:AtpAgent` `updateFn:(Profile option -> Profile)` | `Result<unit, XrpcError>` | Read-modify-write profile with CAS retry |
+| `Bluesky.updateHandle` | `agent:AtpAgent` `handle:Handle` | `Result<unit, XrpcError>` | Change the authenticated user's handle |
 *)
 
 taskResult {

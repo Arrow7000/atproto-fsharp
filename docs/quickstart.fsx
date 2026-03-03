@@ -55,13 +55,12 @@ dotnet add reference ../atproto-fsharp/src/FSharp.ATProto.Bluesky/FSharp.ATProto
 ## Log In
 
 Replace the contents of `Program.fs`:
+*)
 
-```fsharp
 open FSharp.ATProto.Syntax
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 
-[<EntryPoint>]
 let main _ =
     let result =
         taskResult {
@@ -74,8 +73,8 @@ let main _ =
     |> function
         | Ok code -> code
         | Error e -> printfn "Error: %A" e; 1
-```
 
+(**
 Run it:
 
 ```bash
@@ -172,12 +171,12 @@ taskResult {
 
 Here is a full program that ties everything together using the `taskResult` computation expression. Every `let!` binding short-circuits to the `Error` case if something fails -- no nested match trees needed:
 
-```fsharp
+*)
+
 open FSharp.ATProto.Syntax
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 
-[<EntryPoint>]
 let main _ =
     let result =
         taskResult {
@@ -223,8 +222,8 @@ let main _ =
     |> function
         | Ok code -> code
         | Error e -> printfn "Error: %A" e; 1
-```
 
+(**
 ## What's Next
 
 - [Build a Bot](guides/build-a-bot.html) -- end-to-end bot tutorial

@@ -71,10 +71,10 @@ Only `unlikePost` and `unrepostPost` can return `WasNotPresent` (they check view
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.follow` | `agent` `target:Did\|ProfileSummary\|Profile` | `Result<FollowRef, XrpcError>` | Follow a user |
-| `Bluesky.followByHandle` | `agent` `identifier:string` | `Result<FollowRef, XrpcError>` | Follow by handle or DID string (resolves automatically) |
-| `Bluesky.unfollow` | `agent` `followRef:FollowRef` | `Result<unit, XrpcError>` | Unfollow by ref |
-| `Bluesky.undoFollow` | `agent` `followRef:FollowRef` | `Result<UndoResult, XrpcError>` | Unfollow by ref, returning `UndoResult` |
+| `Bluesky.follow` | `agent:AtpAgent` `target:Did / ProfileSummary / Profile` | `Result<FollowRef, XrpcError>` | Follow a user |
+| `Bluesky.followByHandle` | `agent:AtpAgent` `identifier:string` | `Result<FollowRef, XrpcError>` | Follow by handle or DID string (resolves automatically) |
+| `Bluesky.unfollow` | `agent:AtpAgent` `followRef:FollowRef` | `Result<unit, XrpcError>` | Unfollow by ref |
+| `Bluesky.undoFollow` | `agent:AtpAgent` `followRef:FollowRef` | `Result<UndoResult, XrpcError>` | Unfollow by ref, returning `UndoResult` |
 *)
 
 (*** hide ***)
@@ -110,12 +110,12 @@ taskResult {
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.block` | `agent` `target:Did\|ProfileSummary\|Profile` | `Result<BlockRef, XrpcError>` | Block a user |
-| `Bluesky.blockByHandle` | `agent` `identifier:string` | `Result<BlockRef, XrpcError>` | Block by handle or DID string (resolves automatically) |
-| `Bluesky.unblock` | `agent` `blockRef:BlockRef` | `Result<unit, XrpcError>` | Unblock by ref |
-| `Bluesky.undoBlock` | `agent` `blockRef:BlockRef` | `Result<UndoResult, XrpcError>` | Unblock by ref, returning `UndoResult` |
-| `Bluesky.blockModList` | `agent` `listUri:AtUri` | `Result<ListBlockRef, XrpcError>` | Block an entire moderation list |
-| `Bluesky.unblockModList` | `agent` `listBlockRef:ListBlockRef` | `Result<unit, XrpcError>` | Unblock a moderation list |
+| `Bluesky.block` | `agent:AtpAgent` `target:Did / ProfileSummary / Profile` | `Result<BlockRef, XrpcError>` | Block a user |
+| `Bluesky.blockByHandle` | `agent:AtpAgent` `identifier:string` | `Result<BlockRef, XrpcError>` | Block by handle or DID string (resolves automatically) |
+| `Bluesky.unblock` | `agent:AtpAgent` `blockRef:BlockRef` | `Result<unit, XrpcError>` | Unblock by ref |
+| `Bluesky.undoBlock` | `agent:AtpAgent` `blockRef:BlockRef` | `Result<UndoResult, XrpcError>` | Unblock by ref, returning `UndoResult` |
+| `Bluesky.blockModList` | `agent:AtpAgent` `listUri:AtUri` | `Result<ListBlockRef, XrpcError>` | Block an entire moderation list |
+| `Bluesky.unblockModList` | `agent:AtpAgent` `listBlockRef:ListBlockRef` | `Result<unit, XrpcError>` | Unblock a moderation list |
 *)
 
 taskResult {
@@ -132,14 +132,14 @@ taskResult {
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.muteUser` | `agent` `target:Did\|ProfileSummary\|Profile` | `Result<unit, XrpcError>` | Mute an account |
-| `Bluesky.muteUserByHandle` | `agent` `identifier:string` | `Result<unit, XrpcError>` | Mute by handle or DID string |
-| `Bluesky.unmuteUser` | `agent` `target:Did\|ProfileSummary\|Profile` | `Result<unit, XrpcError>` | Unmute an account |
-| `Bluesky.unmuteUserByHandle` | `agent` `identifier:string` | `Result<unit, XrpcError>` | Unmute by handle or DID string |
-| `Bluesky.muteModList` | `agent` `listUri:AtUri` | `Result<unit, XrpcError>` | Mute all accounts on a moderation list |
-| `Bluesky.unmuteModList` | `agent` `listUri:AtUri` | `Result<unit, XrpcError>` | Unmute a moderation list |
-| `Bluesky.muteThread` | `agent` `root:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Mute a thread |
-| `Bluesky.unmuteThread` | `agent` `root:TimelinePost\|PostRef\|AtUri` | `Result<unit, XrpcError>` | Unmute a thread |
+| `Bluesky.muteUser` | `agent:AtpAgent` `target:Did / ProfileSummary / Profile` | `Result<unit, XrpcError>` | Mute an account |
+| `Bluesky.muteUserByHandle` | `agent:AtpAgent` `identifier:string` | `Result<unit, XrpcError>` | Mute by handle or DID string |
+| `Bluesky.unmuteUser` | `agent:AtpAgent` `target:Did / ProfileSummary / Profile` | `Result<unit, XrpcError>` | Unmute an account |
+| `Bluesky.unmuteUserByHandle` | `agent:AtpAgent` `identifier:string` | `Result<unit, XrpcError>` | Unmute by handle or DID string |
+| `Bluesky.muteModList` | `agent:AtpAgent` `listUri:AtUri` | `Result<unit, XrpcError>` | Mute all accounts on a moderation list |
+| `Bluesky.unmuteModList` | `agent:AtpAgent` `listUri:AtUri` | `Result<unit, XrpcError>` | Unmute a moderation list |
+| `Bluesky.muteThread` | `agent:AtpAgent` `root:TimelinePost / PostRef / AtUri` | `Result<unit, XrpcError>` | Mute a thread |
+| `Bluesky.unmuteThread` | `agent:AtpAgent` `root:TimelinePost / PostRef / AtUri` | `Result<unit, XrpcError>` | Unmute a thread |
 *)
 
 taskResult {
@@ -154,7 +154,7 @@ taskResult {
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.undo` | `agent` `ref:LikeRef\|RepostRef\|FollowRef\|BlockRef\|ListBlockRef` | `Result<UndoResult, XrpcError>` | Delete any ref type via SRTP |
+| `Bluesky.undo` | `agent:AtpAgent` `ref:LikeRef / RepostRef / FollowRef / BlockRef / ListBlockRef` | `Result<UndoResult, XrpcError>` | Delete any ref type via SRTP |
 *)
 
 taskResult {
