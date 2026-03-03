@@ -90,6 +90,10 @@ function formatTooltips() {
 // Convert inline XML tags to HTML
 function inlineXml(text) {
     return text
+        // Strip example/code blocks first (before converting <c>/<see> to <code>)
+        .replace(/<example>[\s\S]*?<\/example>/g, '')
+        .replace(/<code>[\s\S]*?<\/code>/g, '')
+        // Now convert inline XML to HTML
         .replace(/<see\s+cref="([^"]*)"(?:\s*\/>|>[^<]*<\/see>)/g, (_, ref) => {
             const name = ref.split('.').pop().replace(/^T:/, '');
             return `<code>${name}</code>`;
@@ -97,8 +101,6 @@ function inlineXml(text) {
         .replace(/<c>([\s\S]*?)<\/c>/g, '<code>$1</code>')
         .replace(/<paramref\s+name="([^"]*)"(?:\s*\/>|>[^<]*<\/paramref>)/g, '<code>$1</code>')
         .replace(/<para>([\s\S]*?)<\/para>/g, '<p>$1</p>')
-        .replace(/<example>[\s\S]*?<\/example>/g, '')
-        .replace(/<code>[\s\S]*?<\/code>/g, '')
         .trim();
 }
 
