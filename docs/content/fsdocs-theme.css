@@ -182,6 +182,11 @@
     --code-tooltip-color: #334155;
 }
 
+/* Hide Release Notes link (no releases yet) */
+.release-notes-menu-item {
+    display: none;
+}
+
 /* ===== Custom Structural Styles ===== */
 
 /* Tighter code block styling */
