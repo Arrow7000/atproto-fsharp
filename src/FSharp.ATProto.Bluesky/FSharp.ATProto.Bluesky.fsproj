@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Description>Native F# client for Bluesky and the AT Protocol. Type-safe, functional-first, exception-free. Posts, social graph, chat, feeds, profiles, notifications, moderation, and full XRPC access via 237 typed endpoint wrappers generated from 324 Lexicon schemas.</Description>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Generated/Generated.fs" />
