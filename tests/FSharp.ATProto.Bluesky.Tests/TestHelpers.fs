@@ -17,6 +17,12 @@ let jsonResponse (statusCode : HttpStatusCode) (body : obj) =
     response.Content <- new StringContent (json, Encoding.UTF8, "application/json")
     response
 
+let binaryResponse (statusCode : HttpStatusCode) (bytes : byte[]) =
+    let response = new HttpResponseMessage (statusCode)
+    response.Content <- new ByteArrayContent (bytes)
+    response.Content.Headers.ContentType <- Headers.MediaTypeHeaderValue ("application/octet-stream")
+    response
+
 let emptyResponse (statusCode : HttpStatusCode) = new HttpResponseMessage (statusCode)
 
 let createMockAgent (handler : HttpRequestMessage -> HttpResponseMessage) =

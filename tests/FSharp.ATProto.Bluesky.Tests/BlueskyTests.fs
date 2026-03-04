@@ -7,6 +7,8 @@ open System.Text.Json
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 open FSharp.ATProto.Syntax
+open FSharp.ATProto.Streaming
+open FSharp.ATProto.DRISL
 open TestHelpers
 
 let private parseDid' s = Did.parse s |> Result.defaultWith failwith
@@ -1322,7 +1324,7 @@ let imageMimeTests =
           <| fun _ -> Expect.equal (ImageMime.toMimeString Webp) "image/webp" "Webp"
 
           testCase "Custom passes through arbitrary string"
-          <| fun _ -> Expect.equal (ImageMime.toMimeString (Custom "video/mp4")) "video/mp4" "Custom" ]
+          <| fun _ -> Expect.equal (ImageMime.toMimeString (ImageMime.Custom "video/mp4")) "video/mp4" "Custom" ]
 
 [<Tests>]
 let imagePostTests =
@@ -4166,3 +4168,1841 @@ let postUriSrtpTests =
                   |> Async.RunSynchronously
 
               Expect.isOk result "should succeed" ]
+
+// ── Phase 1: New convenience method tests ────────────────────────────
+
+[<Tests>]
+let getBlocksTests =
+    testList
+        "Bluesky.getBlocks"
+        [ testCase "getBlocks calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| blocks = ([||] : obj array)
+                         cursor = "c1" |}
+
+              let result =
+                  Bluesky.getBlocks agent None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.graph.getBlocks" "correct endpoint"
+
+          testCase "getBlocks returns Page with cursor"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| blocks =
+                          [| {| did = "did:plc:blocked1"
+                                handle = "blocked.bsky.social" |} |]
+                         cursor = "next" |}
+
+              let result =
+                  Bluesky.getBlocks agent (Some 10L) None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "next") "cursor"
+              Expect.equal page.Items.Length 1 "one blocked account" ]
+
+[<Tests>]
+let getMutesTests =
+    testList
+        "Bluesky.getMutes"
+        [ testCase "getMutes calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| mutes = ([||] : obj array)
+                         cursor = "c1" |}
+
+              let result =
+                  Bluesky.getMutes agent None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.graph.getMutes" "correct endpoint"
+
+          testCase "getMutes returns Page with cursor"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| mutes =
+                          [| {| did = "did:plc:muted1"
+                                handle = "muted.bsky.social" |} |]
+                         cursor = "next" |}
+
+              let result =
+                  Bluesky.getMutes agent (Some 10L) None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "next") "cursor"
+              Expect.equal page.Items.Length 1 "one muted account" ]
+
+[<Tests>]
+let getListTests =
+    testList
+        "Bluesky.getList"
+        [ testCase "getList calls correct XRPC endpoint with list param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| list =
+                          {| uri = "at://did:plc:owner/app.bsky.graph.list/abc"
+                             cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                             name = "My List"
+                             purpose = "app.bsky.graph.defs#curatelist"
+                             indexedAt = "2024-01-15T12:00:00.000Z"
+                             creator =
+                              {| did = "did:plc:owner"
+                                 handle = "owner.bsky.social" |} |}
+                         items = ([||] : obj array)
+                         cursor = "c1" |}
+
+              let listUri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.list/abc"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.getList agent listUri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.graph.getList" "correct endpoint"
+
+          testCase "getList returns ListDetail with list metadata and items"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| list =
+                          {| uri = "at://did:plc:owner/app.bsky.graph.list/abc"
+                             cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                             name = "Cool List"
+                             purpose = "app.bsky.graph.defs#curatelist"
+                             indexedAt = "2024-01-15T12:00:00.000Z"
+                             creator =
+                              {| did = "did:plc:owner"
+                                 handle = "owner.bsky.social" |} |}
+                         items =
+                          [| {| subject =
+                                  {| did = "did:plc:member1"
+                                     handle = "member1.bsky.social" |}
+                                uri = "at://did:plc:owner/app.bsky.graph.listitem/1" |} |]
+                         cursor = "page2" |}
+
+              let listUri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.list/abc"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.getList agent listUri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let detail = Expect.wantOk result "should succeed"
+              Expect.equal detail.List.Name "Cool List" "list name"
+              Expect.equal detail.Items.Length 1 "one member"
+              Expect.equal detail.Cursor (Some "page2") "cursor" ]
+
+[<Tests>]
+let getListsTests =
+    testList
+        "Bluesky.getLists"
+        [ testCase "getLists calls correct XRPC endpoint with actor param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| lists = ([||] : obj array) |}
+
+              let handle = parseHandle' "my-handle.bsky.social"
+
+              let result =
+                  Bluesky.getLists agent handle None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.graph.getLists" "correct endpoint"
+              Expect.stringContains (req.RequestUri.ToString ()) "my-handle.bsky.social" "actor in query"
+
+          testCase "getLists returns Page of ListView"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| lists =
+                          [| {| uri = "at://did:plc:owner/app.bsky.graph.list/abc"
+                                cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                name = "My List"
+                                purpose = "app.bsky.graph.defs#curatelist"
+                                indexedAt = "2024-01-15T12:00:00.000Z"
+                                creator =
+                                 {| did = "did:plc:owner"
+                                    handle = "owner.bsky.social" |} |} |]
+                         cursor = "next" |}
+
+              let handle = parseHandle' "owner.bsky.social"
+
+              let result =
+                  Bluesky.getLists agent handle None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Items.Length 1 "one list"
+              Expect.equal page.Items.[0].Name "My List" "list name"
+              Expect.equal page.Cursor (Some "next") "cursor" ]
+
+[<Tests>]
+let getRelationshipsTests =
+    testList
+        "Bluesky.getRelationships"
+        [ testCase "getRelationships calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| actor = "did:plc:testuser"
+                         relationships =
+                          [| {| Case = "app.bsky.graph.defs#relationship"
+                                item =
+                                 {| did = "did:plc:other"
+                                    following = "at://did:plc:testuser/app.bsky.graph.follow/1" |} |} |] |}
+
+              let did = parseDid' "did:plc:testuser"
+
+              let result =
+                  Bluesky.getRelationships agent did None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.graph.getRelationships" "correct endpoint"
+
+          testCase "getRelationships returns Relationship list"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| actor = "did:plc:testuser"
+                         relationships =
+                          [| {| Case = "app.bsky.graph.defs#relationship"
+                                item =
+                                 {| did = "did:plc:other"
+                                    following = "at://did:plc:testuser/app.bsky.graph.follow/1" |} |} |] |}
+
+              let did = parseDid' "did:plc:testuser"
+
+              let result =
+                  Bluesky.getRelationships agent did None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let rels = Expect.wantOk result "should succeed"
+              Expect.equal rels.Length 1 "one relationship" ]
+
+[<Tests>]
+let getKnownFollowersTests =
+    testList
+        "Bluesky.getKnownFollowers"
+        [ testCase "getKnownFollowers calls correct XRPC endpoint with actor param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| followers = ([||] : obj array)
+                         subject =
+                          {| did = "did:plc:testuser"
+                             handle = "test.bsky.social" |} |}
+
+              let handle = parseHandle' "test.bsky.social"
+
+              let result =
+                  Bluesky.getKnownFollowers agent handle None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.graph.getKnownFollowers" "correct endpoint"
+              Expect.stringContains (req.RequestUri.ToString ()) "test.bsky.social" "actor in query"
+
+          testCase "getKnownFollowers returns Page of ProfileSummary"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| followers =
+                          [| {| did = "did:plc:mutual"
+                                handle = "mutual.bsky.social" |} |]
+                         subject =
+                          {| did = "did:plc:testuser"
+                             handle = "test.bsky.social" |}
+                         cursor = "c2" |}
+
+              let handle = parseHandle' "test.bsky.social"
+
+              let result =
+                  Bluesky.getKnownFollowers agent handle None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Items.Length 1 "one known follower"
+              Expect.equal page.Cursor (Some "c2") "cursor" ]
+
+[<Tests>]
+let getFeedTests =
+    testList
+        "Bluesky.getFeed"
+        [ testCase "getFeed calls correct XRPC endpoint with feed param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| feed = ([||] : obj array)
+                         cursor = "c1" |}
+
+              let feedUri =
+                  AtUri.parse "at://did:plc:gen/app.bsky.feed.generator/whats-hot"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.getFeed agent feedUri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.feed.getFeed" "correct endpoint"
+
+          testCase "getFeed returns Page of FeedItem"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| feed = ([||] : obj array)
+                         cursor = "next" |}
+
+              let feedUri =
+                  AtUri.parse "at://did:plc:gen/app.bsky.feed.generator/whats-hot"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.getFeed agent feedUri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "next") "cursor" ]
+
+[<Tests>]
+let getActorFeedsTests =
+    testList
+        "Bluesky.getActorFeeds"
+        [ testCase "getActorFeeds calls correct XRPC endpoint with actor param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| feeds = ([||] : obj array) |}
+
+              let handle = parseHandle' "creator.bsky.social"
+
+              let result =
+                  Bluesky.getActorFeeds agent handle None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.feed.getActorFeeds" "correct endpoint"
+              Expect.stringContains (req.RequestUri.ToString ()) "creator.bsky.social" "actor in query"
+
+          testCase "getActorFeeds returns Page of FeedGenerator"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| feeds =
+                          [| {| uri = "at://did:plc:gen/app.bsky.feed.generator/hot"
+                                cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                                did = "did:plc:gen"
+                                displayName = "What's Hot"
+                                indexedAt = "2024-01-15T12:00:00.000Z"
+                                creator =
+                                 {| did = "did:plc:gen"
+                                    handle = "creator.bsky.social" |} |} |]
+                         cursor = "next" |}
+
+              let handle = parseHandle' "creator.bsky.social"
+
+              let result =
+                  Bluesky.getActorFeeds agent handle None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Items.Length 1 "one feed generator"
+              Expect.equal page.Items.[0].DisplayName "What's Hot" "feed name"
+              Expect.equal page.Cursor (Some "next") "cursor" ]
+
+[<Tests>]
+let getListFeedTests =
+    testList
+        "Bluesky.getListFeed"
+        [ testCase "getListFeed calls correct XRPC endpoint with list param"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| feed = ([||] : obj array) |}
+
+              let listUri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.list/abc"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.getListFeed agent listUri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.feed.getListFeed" "correct endpoint"
+
+          testCase "getListFeed returns Page of FeedItem"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| feed = ([||] : obj array)
+                         cursor = "next" |}
+
+              let listUri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.list/abc"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.getListFeed agent listUri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let page = Expect.wantOk result "should succeed"
+              Expect.equal page.Cursor (Some "next") "cursor" ]
+
+[<Tests>]
+let getFeedGeneratorTests =
+    testList
+        "Bluesky.getFeedGenerator"
+        [ testCase "getFeedGenerator calls correct XRPC endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| view =
+                          {| uri = "at://did:plc:gen/app.bsky.feed.generator/hot"
+                             cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                             did = "did:plc:gen"
+                             displayName = "What's Hot"
+                             indexedAt = "2024-01-15T12:00:00.000Z"
+                             creator =
+                              {| did = "did:plc:gen"
+                                 handle = "creator.bsky.social" |} |}
+                         isOnline = true
+                         isValid = true |}
+
+              let feedUri =
+                  AtUri.parse "at://did:plc:gen/app.bsky.feed.generator/hot"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.getFeedGenerator agent feedUri
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Get "GET method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.feed.getFeedGenerator" "correct endpoint"
+
+          testCase "getFeedGenerator returns FeedGenerator with online/valid status"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| view =
+                          {| uri = "at://did:plc:gen/app.bsky.feed.generator/hot"
+                             cid = "bafyreie5cvv4h45feadgeuwhbcutmh6t7ceseocckahdoe6uat64zmz454"
+                             did = "did:plc:gen"
+                             displayName = "What's Hot"
+                             indexedAt = "2024-01-15T12:00:00.000Z"
+                             creator =
+                              {| did = "did:plc:gen"
+                                 handle = "creator.bsky.social" |} |}
+                         isOnline = true
+                         isValid = false |}
+
+              let feedUri =
+                  AtUri.parse "at://did:plc:gen/app.bsky.feed.generator/hot"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.getFeedGenerator agent feedUri
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let fg = Expect.wantOk result "should succeed"
+              Expect.equal fg.DisplayName "What's Hot" "display name"
+              Expect.isTrue fg.IsOnline "is online"
+              Expect.isFalse fg.IsValid "is not valid" ]
+
+// ── Paginator tests for new methods ──────────────────────────────────
+
+[<Tests>]
+let paginateBlocksTests =
+    testList
+        "Bluesky.paginateBlocks"
+        [ testCase "returns pages and stops when no cursor"
+          <| fun _ ->
+              let page1 =
+                  {| blocks = ([||] : obj array)
+                     cursor = "page2" |}
+
+              let page2 = {| blocks = ([||] : obj array) |}
+              let agent = paginatingAgent page1 page2
+              let pages = Bluesky.paginateBlocks agent (Some 10L) |> collectPages
+              Expect.equal pages.Length 2 "exactly 2 pages"
+              Expect.isOk pages.[0] "first page is Ok"
+              Expect.isOk pages.[1] "second page is Ok"
+
+          testCase "single page when server returns no cursor"
+          <| fun _ ->
+              let agent = queryAgent (fun _ -> ()) {| blocks = ([||] : obj array) |}
+              let pages = Bluesky.paginateBlocks agent None |> collectPages
+              Expect.equal pages.Length 1 "exactly 1 page" ]
+
+[<Tests>]
+let paginateMutesTests =
+    testList
+        "Bluesky.paginateMutes"
+        [ testCase "returns pages and stops when no cursor"
+          <| fun _ ->
+              let page1 =
+                  {| mutes = ([||] : obj array)
+                     cursor = "page2" |}
+
+              let page2 = {| mutes = ([||] : obj array) |}
+              let agent = paginatingAgent page1 page2
+              let pages = Bluesky.paginateMutes agent (Some 10L) |> collectPages
+              Expect.equal pages.Length 2 "exactly 2 pages"
+              Expect.isOk pages.[0] "first page is Ok"
+              Expect.isOk pages.[1] "second page is Ok"
+
+          testCase "single page when server returns no cursor"
+          <| fun _ ->
+              let agent = queryAgent (fun _ -> ()) {| mutes = ([||] : obj array) |}
+              let pages = Bluesky.paginateMutes agent None |> collectPages
+              Expect.equal pages.Length 1 "exactly 1 page" ]
+
+[<Tests>]
+let paginateFeedTests =
+    testList
+        "Bluesky.paginateFeed"
+        [ testCase "returns pages and stops when no cursor"
+          <| fun _ ->
+              let page1 =
+                  {| feed = ([||] : obj array)
+                     cursor = "page2" |}
+
+              let page2 = {| feed = ([||] : obj array) |}
+              let agent = paginatingAgent page1 page2
+
+              let feedUri =
+                  AtUri.parse "at://did:plc:gen/app.bsky.feed.generator/hot"
+                  |> Result.defaultWith failwith
+
+              let pages = Bluesky.paginateFeed agent feedUri (Some 10L) |> collectPages
+              Expect.equal pages.Length 2 "exactly 2 pages"
+              Expect.isOk pages.[0] "first page is Ok"
+              Expect.isOk pages.[1] "second page is Ok"
+
+          testCase "single page when server returns no cursor"
+          <| fun _ ->
+              let agent = queryAgent (fun _ -> ()) {| feed = ([||] : obj array) |}
+
+              let feedUri =
+                  AtUri.parse "at://did:plc:gen/app.bsky.feed.generator/hot"
+                  |> Result.defaultWith failwith
+
+              let pages = Bluesky.paginateFeed agent feedUri None |> collectPages
+              Expect.equal pages.Length 1 "exactly 1 page" ]
+
+[<Tests>]
+let paginateListFeedTests =
+    testList
+        "Bluesky.paginateListFeed"
+        [ testCase "returns pages and stops when no cursor"
+          <| fun _ ->
+              let page1 =
+                  {| feed = ([||] : obj array)
+                     cursor = "page2" |}
+
+              let page2 = {| feed = ([||] : obj array) |}
+              let agent = paginatingAgent page1 page2
+
+              let listUri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.list/abc"
+                  |> Result.defaultWith failwith
+
+              let pages = Bluesky.paginateListFeed agent listUri (Some 10L) |> collectPages
+              Expect.equal pages.Length 2 "exactly 2 pages"
+              Expect.isOk pages.[0] "first page is Ok"
+              Expect.isOk pages.[1] "second page is Ok"
+
+          testCase "single page when server returns no cursor"
+          <| fun _ ->
+              let agent = queryAgent (fun _ -> ()) {| feed = ([||] : obj array) |}
+
+              let listUri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.list/abc"
+                  |> Result.defaultWith failwith
+
+              let pages = Bluesky.paginateListFeed agent listUri None |> collectPages
+              Expect.equal pages.Length 1 "exactly 1 page" ]
+
+// ── Preference mutation tests ────────────────────────────────────────
+
+/// Create a mock agent that returns getPreferences on GET and captures putPreferences on POST
+let private preferencesAgent
+    (prefs : obj list)
+    (captureBody : string -> unit)
+    =
+    let agent =
+        createMockAgent (fun req ->
+            if req.Method = HttpMethod.Get then
+                jsonResponse HttpStatusCode.OK {| preferences = prefs |}
+            else
+                let body = req.Content.ReadAsStringAsync().Result
+                captureBody body
+                emptyResponse HttpStatusCode.OK)
+
+    agent.Session <- Some testSession
+    agent
+
+[<Tests>]
+let upsertPreferencesTests =
+    testList
+        "Bluesky.upsertPreferences"
+        [ testCase "upsertPreferences reads then writes preferences"
+          <| fun _ ->
+              let mutable capturedBody = ""
+
+              let agent =
+                  preferencesAgent
+                      [ {| ``$type`` = "app.bsky.actor.defs#adultContentPref"
+                           enabled = false |} ]
+                      (fun body -> capturedBody <- body)
+
+              let result =
+                  Bluesky.upsertPreferences agent (fun prefs -> prefs)
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.isNotEmpty capturedBody "putPreferences was called" ]
+
+[<Tests>]
+let setAdultContentEnabledTests =
+    testList
+        "Bluesky.setAdultContentEnabled"
+        [ testCase "setAdultContentEnabled updates existing pref"
+          <| fun _ ->
+              let mutable capturedBody = ""
+
+              let agent =
+                  preferencesAgent
+                      [ {| ``$type`` = "app.bsky.actor.defs#adultContentPref"
+                           enabled = false |} ]
+                      (fun body -> capturedBody <- body)
+
+              let result =
+                  Bluesky.setAdultContentEnabled agent true
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains capturedBody "true" "body contains enabled=true"
+              Expect.stringContains capturedBody "adultContentPref" "body contains the pref type"
+
+          testCase "setAdultContentEnabled inserts when not present"
+          <| fun _ ->
+              let mutable capturedBody = ""
+              let agent = preferencesAgent [] (fun body -> capturedBody <- body)
+
+              let result =
+                  Bluesky.setAdultContentEnabled agent true
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains capturedBody "adultContentPref" "pref was inserted" ]
+
+[<Tests>]
+let addMutedWordTests =
+    testList
+        "Bluesky.addMutedWord"
+        [ testCase "addMutedWord adds word to existing muted words pref"
+          <| fun _ ->
+              let mutable capturedBody = ""
+
+              let agent =
+                  preferencesAgent
+                      [ {| ``$type`` = "app.bsky.actor.defs#mutedWordsPref"
+                           items =
+                            [| {| value = "existing"
+                                  targets = [| "content" |] |} |] |} ]
+                      (fun body -> capturedBody <- body)
+
+              let word : AppBskyActor.Defs.MutedWord =
+                  { Value = "newword"
+                    Targets = [ AppBskyActor.Defs.MutedWordTarget.Content ]
+                    ActorTarget = None
+                    ExpiresAt = None
+                    Id = None }
+
+              let result =
+                  Bluesky.addMutedWord agent word
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains capturedBody "newword" "new word in body"
+              Expect.stringContains capturedBody "existing" "existing word preserved" ]
+
+[<Tests>]
+let removeMutedWordTests =
+    testList
+        "Bluesky.removeMutedWord"
+        [ testCase "removeMutedWord removes word by value"
+          <| fun _ ->
+              let mutable capturedBody = ""
+
+              let agent =
+                  preferencesAgent
+                      [ {| ``$type`` = "app.bsky.actor.defs#mutedWordsPref"
+                           items =
+                            [| {| value = "remove-me"
+                                  targets = [| "content" |] |}
+                               {| value = "keep-me"
+                                  targets = [| "content" |] |} |] |} ]
+                      (fun body -> capturedBody <- body)
+
+              let result =
+                  Bluesky.removeMutedWord agent "remove-me"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.isFalse (capturedBody.Contains "remove-me") "removed word not in body"
+              Expect.stringContains capturedBody "keep-me" "kept word in body" ]
+
+[<Tests>]
+let setContentLabelPrefTests =
+    testList
+        "Bluesky.setContentLabelPref"
+        [ testCase "setContentLabelPref inserts new label pref"
+          <| fun _ ->
+              let mutable capturedBody = ""
+              let agent = preferencesAgent [] (fun body -> capturedBody <- body)
+
+              let result =
+                  Bluesky.setContentLabelPref agent "nsfw" AppBskyActor.Defs.ContentLabelPrefVisibility.Hide None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains capturedBody "nsfw" "label in body"
+              Expect.stringContains capturedBody "hide" "visibility in body" ]
+
+[<Tests>]
+let setThreadViewPrefTests =
+    testList
+        "Bluesky.setThreadViewPref"
+        [ testCase "setThreadViewPref sets sort order"
+          <| fun _ ->
+              let mutable capturedBody = ""
+              let agent = preferencesAgent [] (fun body -> capturedBody <- body)
+
+              let result =
+                  Bluesky.setThreadViewPref agent AppBskyActor.Defs.ThreadViewPrefSort.Oldest
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains capturedBody "threadViewPref" "pref type in body"
+              Expect.stringContains capturedBody "oldest" "sort order in body" ]
+
+[<Tests>]
+let addHiddenPostTests =
+    testList
+        "Bluesky.addHiddenPost"
+        [ testCase "addHiddenPost adds URI to hidden posts"
+          <| fun _ ->
+              let mutable capturedBody = ""
+              let agent = preferencesAgent [] (fun body -> capturedBody <- body)
+
+              let uri =
+                  AtUri.parse "at://did:plc:test/app.bsky.feed.post/abc"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.addHiddenPost agent uri
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.stringContains capturedBody "hiddenPostsPref" "pref type in body"
+              Expect.stringContains capturedBody "app.bsky.feed.post/abc" "post URI in body" ]
+
+[<Tests>]
+let removeHiddenPostTests =
+    testList
+        "Bluesky.removeHiddenPost"
+        [ testCase "removeHiddenPost removes URI from hidden posts"
+          <| fun _ ->
+              let mutable capturedBody = ""
+
+              let agent =
+                  preferencesAgent
+                      [ {| ``$type`` = "app.bsky.actor.defs#hiddenPostsPref"
+                           items =
+                            [| "at://did:plc:test/app.bsky.feed.post/remove"
+                               "at://did:plc:test/app.bsky.feed.post/keep" |] |} ]
+                      (fun body -> capturedBody <- body)
+
+              let uri =
+                  AtUri.parse "at://did:plc:test/app.bsky.feed.post/remove"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.removeHiddenPost agent uri
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.isFalse (capturedBody.Contains "post/remove") "removed URI not in body"
+              Expect.stringContains capturedBody "post/keep" "kept URI in body" ]
+
+// ── List & starter pack management tests ─────────────────────────────
+
+[<Tests>]
+let createListTests =
+    testList
+        "Bluesky.createList"
+        [ testCase "createList calls createRecord with correct collection"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let result =
+                  Bluesky.createList agent "My List" AppBskyGraph.Defs.ListPurpose.Curatelist (Some "A cool list")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+              let body = req.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "app.bsky.graph.list" "correct collection type"
+              Expect.stringContains body "My List" "list name in body"
+              Expect.stringContains body "curatelist" "purpose in body"
+
+          testCase "createList returns ListRef"
+          <| fun _ ->
+              let agent = createRecordAgent (fun _ -> ())
+
+              let result =
+                  Bluesky.createList agent "Test" AppBskyGraph.Defs.ListPurpose.Modlist None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let listRef = Expect.wantOk result "should succeed"
+              Expect.isTrue (AtUri.value listRef.Uri |> fun s -> s.Contains "app.bsky") "has valid URI" ]
+
+[<Tests>]
+let deleteListTests =
+    testList
+        "Bluesky.deleteList"
+        [ testCase "deleteList calls delete endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = deleteRecordAgent (fun req -> captured <- Some req)
+
+              let uri =
+                  AtUri.parse "at://did:plc:test/app.bsky.graph.list/abc"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.deleteList agent uri
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method (deleteRecord is a procedure)" ]
+
+[<Tests>]
+let addListItemTests =
+    testList
+        "Bluesky.addListItem"
+        [ testCase "addListItem creates listitem record"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let listUri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.list/abc"
+                  |> Result.defaultWith failwith
+
+              let subject = parseDid' "did:plc:member1"
+
+              let result =
+                  Bluesky.addListItem agent listUri subject
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "app.bsky.graph.listitem" "correct collection type"
+              Expect.stringContains body "did:plc:member1" "subject DID in body"
+
+          testCase "addListItem returns ListItemRef"
+          <| fun _ ->
+              let agent = createRecordAgent (fun _ -> ())
+
+              let listUri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.list/abc"
+                  |> Result.defaultWith failwith
+
+              let subject = parseDid' "did:plc:member1"
+
+              let result =
+                  Bluesky.addListItem agent listUri subject
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let itemRef = Expect.wantOk result "should succeed"
+              Expect.isTrue (AtUri.value itemRef.Uri |> fun s -> s.Length > 0) "has URI" ]
+
+[<Tests>]
+let removeListItemTests =
+    testList
+        "Bluesky.removeListItem"
+        [ testCase "removeListItem deletes the list item record"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = deleteRecordAgent (fun req -> captured <- Some req)
+
+              let itemUri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.listitem/xyz"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.removeListItem agent itemUri
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed" ]
+
+[<Tests>]
+let createStarterPackTests =
+    testList
+        "Bluesky.createStarterPack"
+        [ testCase "createStarterPack creates record with name and list"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let listUri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.list/members"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.createStarterPack agent "My Starter Pack" listUri (Some "Welcome!") None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "app.bsky.graph.starterpack" "correct collection type"
+              Expect.stringContains body "My Starter Pack" "name in body"
+
+          testCase "createStarterPack returns StarterPackRef"
+          <| fun _ ->
+              let agent = createRecordAgent (fun _ -> ())
+
+              let listUri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.list/members"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.createStarterPack agent "Test" listUri None None
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let spRef = Expect.wantOk result "should succeed"
+              Expect.isTrue (AtUri.value spRef.Uri |> fun s -> s.Length > 0) "has URI" ]
+
+[<Tests>]
+let deleteStarterPackTests =
+    testList
+        "Bluesky.deleteStarterPack"
+        [ testCase "deleteStarterPack deletes the record"
+          <| fun _ ->
+              let agent = deleteRecordAgent (fun _ -> ())
+
+              let uri =
+                  AtUri.parse "at://did:plc:owner/app.bsky.graph.starterpack/abc"
+                  |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.deleteStarterPack agent uri
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed" ]
+
+// ── Video upload tests ───────────────────────────────────────────────
+
+[<Tests>]
+let uploadVideoTests =
+    testList
+        "Bluesky.uploadVideo"
+        [ testCase "uploadVideo sends binary data with correct content type"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createMockAgent (fun req ->
+                      captured <- Some req
+
+                      jsonResponse
+                          HttpStatusCode.OK
+                          {| jobStatus =
+                              {| jobId = "job123"
+                                 did = "did:plc:testuser"
+                                 state = "JOB_STATE_COMPLETED" |} |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.uploadVideo agent [| 0x00uy; 0x01uy |] VideoMime.Mp4
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.equal req.Method HttpMethod.Post "POST method"
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.video.uploadVideo" "correct endpoint"
+              Expect.equal (req.Content.Headers.ContentType.MediaType) "video/mp4" "correct content type"
+
+          testCase "uploadVideo returns job status"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun _ ->
+                      jsonResponse
+                          HttpStatusCode.OK
+                          {| jobStatus =
+                              {| jobId = "job456"
+                                 did = "did:plc:testuser"
+                                 state = "JOB_STATE_COMPLETED" |} |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.uploadVideo agent [| 0x00uy |] VideoMime.Webm
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let status = Expect.wantOk result "should succeed"
+              Expect.equal status.JobId "job456" "correct job ID" ]
+
+[<Tests>]
+let getVideoJobStatusTests =
+    testList
+        "Bluesky.getVideoJobStatus"
+        [ testCase "getVideoJobStatus queries correct endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  queryAgent
+                      (fun req -> captured <- Some req)
+                      {| jobStatus =
+                          {| jobId = "job123"
+                             did = "did:plc:testuser"
+                             state = "JOB_STATE_COMPLETED" |} |}
+
+              let result =
+                  Bluesky.getVideoJobStatus agent "job123"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.stringContains (req.RequestUri.ToString ()) "app.bsky.video.getJobStatus" "correct endpoint"
+              Expect.stringContains (req.RequestUri.ToString ()) "job123" "job ID in query"
+
+          testCase "getVideoJobStatus returns failed status"
+          <| fun _ ->
+              let agent =
+                  queryAgent
+                      (fun _ -> ())
+                      {| jobStatus =
+                          {| jobId = "job789"
+                             did = "did:plc:testuser"
+                             state = "JOB_STATE_FAILED"
+                             error = "VideoTooLong"
+                             message = "Video exceeds maximum duration" |} |}
+
+              let result =
+                  Bluesky.getVideoJobStatus agent "job789"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let status = Expect.wantOk result "should succeed"
+              Expect.equal status.State AppBskyVideo.Defs.JobStatusState.JOBSTATEFAILED "failed state"
+              Expect.equal status.Error (Some "VideoTooLong") "error code" ]
+
+// ── Sync / binary endpoint helpers ────────────────────────────────────
+
+/// Build a CIDv1 dag-cbor SHA-256 from raw data (same helper as CarParserTests).
+let private computeCidBytes (data : byte[]) : byte[] =
+    use sha = System.Security.Cryptography.SHA256.Create ()
+    let hash = sha.ComputeHash data
+
+    Array.concat
+        [| Varint.encode 1UL
+           Varint.encode 0x71UL
+           Varint.encode 0x12UL
+           Varint.encode 0x20UL
+           hash |]
+
+/// Encode a CID as a DAG-CBOR tag-42 link (0x00 prefix + CID bytes).
+let private writeCborCidLink (writer : System.Formats.Cbor.CborWriter) (cidBytes : byte[]) =
+    writer.WriteTag (LanguagePrimitives.EnumOfValue 42UL)
+    writer.WriteByteString (Array.concat [| [| 0uy |]; cidBytes |])
+
+/// Build a minimal valid CAR v1 file with given blocks.
+let private buildCar (roots : byte[] list) (blocks : (byte[] * byte[]) list) : byte[] =
+    let headerWriter = System.Formats.Cbor.CborWriter (System.Formats.Cbor.CborConformanceMode.Lax)
+    headerWriter.WriteStartMap (System.Nullable 2)
+    headerWriter.WriteTextString "version"
+    headerWriter.WriteInt32 1
+    headerWriter.WriteTextString "roots"
+    headerWriter.WriteStartArray (System.Nullable roots.Length)
+
+    for root in roots do
+        writeCborCidLink headerWriter root
+
+    headerWriter.WriteEndArray ()
+    headerWriter.WriteEndMap ()
+    let headerCbor = headerWriter.Encode ()
+    let headerLenVarint = Varint.encode (uint64 headerCbor.Length)
+
+    let blockParts =
+        blocks
+        |> List.map (fun (cidBytes, data) ->
+            let blockContent = Array.concat [| cidBytes; data |]
+            let lenVarint = Varint.encode (uint64 blockContent.Length)
+            Array.concat [| lenVarint; blockContent |])
+
+    Array.concat (headerLenVarint :: headerCbor :: blockParts)
+
+let private binaryAgent (captureRequest : HttpRequestMessage -> unit) (bytes : byte[]) =
+    let agent =
+        createMockAgent (fun req ->
+            captureRequest req
+            binaryResponse HttpStatusCode.OK bytes)
+
+    agent.Session <- Some testSession
+    agent
+
+[<Tests>]
+let getBlobTests =
+    testList
+        "Bluesky.getBlob"
+        [ testCase "getBlob returns raw bytes from sync endpoint"
+          <| fun _ ->
+              let mutable captured = None
+              let blobBytes = [| 0xFFuy; 0xD8uy; 0xFFuy; 0xE0uy |]
+              let agent = binaryAgent (fun req -> captured <- Some req) blobBytes
+
+              let result =
+                  Bluesky.getBlob agent (parseDid "did:plc:testuser") (parseCid "bafyreiabc123")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let bytes = Expect.wantOk result "should succeed"
+              Expect.equal bytes blobBytes "returns raw blob bytes"
+
+          testCase "getBlob sends correct query parameters"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = binaryAgent (fun req -> captured <- Some req) [| 0x00uy |]
+
+              let _ =
+                  Bluesky.getBlob agent (parseDid "did:plc:testuser") (parseCid "bafyreiabc123")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let req = captured.Value
+              let uri = req.RequestUri.ToString ()
+              Expect.stringContains uri "com.atproto.sync.getBlob" "correct endpoint"
+              Expect.stringContains uri "did%3Aplc%3Atestuser" "DID in query"
+              Expect.stringContains uri "bafyreiabc123" "CID in query"
+
+          testCase "getBlob returns error on failure"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun _ ->
+                      jsonResponse HttpStatusCode.NotFound {| error = "BlobNotFound"; message = "not found" |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.getBlob agent (parseDid "did:plc:testuser") (parseCid "bafyreiabc123")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail"
+              Expect.equal err.StatusCode 404 "404 status"
+              Expect.equal err.Error (Some "BlobNotFound") "error code" ]
+
+[<Tests>]
+let getRepoTests =
+    testList
+        "Bluesky.getRepo"
+        [ testCase "getRepo parses CAR response"
+          <| fun _ ->
+              let mutable captured = None
+              let blockData = [| 0x01uy; 0x02uy; 0x03uy |]
+              let cidBytes = computeCidBytes blockData
+              let carBytes = buildCar [ cidBytes ] [ (cidBytes, blockData) ]
+              let agent = binaryAgent (fun req -> captured <- Some req) carBytes
+
+              let result =
+                  Bluesky.getRepo agent (parseDid "did:plc:testuser")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let carFile = Expect.wantOk result "should succeed"
+              Expect.equal carFile.Roots.Length 1 "one root"
+              Expect.equal carFile.Blocks.Count 1 "one block"
+
+          testCase "getRepo sends correct query parameters"
+          <| fun _ ->
+              let mutable captured = None
+              let blockData = [| 0x42uy |]
+              let cidBytes = computeCidBytes blockData
+              let carBytes = buildCar [ cidBytes ] []
+              let agent = binaryAgent (fun req -> captured <- Some req) carBytes
+
+              let _ =
+                  Bluesky.getRepo agent (parseDid "did:plc:testuser")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let req = captured.Value
+              let uri = req.RequestUri.ToString ()
+              Expect.stringContains uri "com.atproto.sync.getRepo" "correct endpoint"
+              Expect.stringContains uri "did%3Aplc%3Atestuser" "DID in query"
+
+          testCase "getRepo returns error on server failure"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun _ ->
+                      jsonResponse HttpStatusCode.NotFound {| error = "RepoNotFound"; message = "not found" |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.getRepo agent (parseDid "did:plc:testuser")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail"
+              Expect.equal err.StatusCode 404 "404 status"
+              Expect.equal err.Error (Some "RepoNotFound") "error code"
+
+          testCase "getRepo returns error on invalid CAR data"
+          <| fun _ ->
+              let agent = binaryAgent (fun _ -> ()) [| 0x01uy |]
+
+              let result =
+                  Bluesky.getRepo agent (parseDid "did:plc:testuser")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail on invalid CAR"
+              Expect.equal err.Error (Some "CarParseError") "CAR parse error" ]
+
+[<Tests>]
+let getRecordSyncTests =
+    testList
+        "Bluesky.getRecord (sync)"
+        [ testCase "getRecord parses CAR response"
+          <| fun _ ->
+              let mutable captured = None
+              let blockData = [| 0xAAuy; 0xBBuy |]
+              let cidBytes = computeCidBytes blockData
+              let carBytes = buildCar [ cidBytes ] [ (cidBytes, blockData) ]
+              let agent = binaryAgent (fun req -> captured <- Some req) carBytes
+
+              let nsid = Nsid.parse "app.bsky.feed.post" |> Result.defaultWith failwith
+              let rkey = RecordKey.parse "abc123" |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.getRecord agent (parseDid "did:plc:testuser") nsid rkey
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let carFile = Expect.wantOk result "should succeed"
+              Expect.equal carFile.Roots.Length 1 "one root"
+              Expect.equal carFile.Blocks.Count 1 "one block"
+
+          testCase "getRecord sends correct query parameters"
+          <| fun _ ->
+              let mutable captured = None
+              let blockData = [| 0x42uy |]
+              let cidBytes = computeCidBytes blockData
+              let carBytes = buildCar [ cidBytes ] []
+              let agent = binaryAgent (fun req -> captured <- Some req) carBytes
+
+              let nsid = Nsid.parse "app.bsky.feed.post" |> Result.defaultWith failwith
+              let rkey = RecordKey.parse "abc123" |> Result.defaultWith failwith
+
+              let _ =
+                  Bluesky.getRecord agent (parseDid "did:plc:testuser") nsid rkey
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let req = captured.Value
+              let uri = req.RequestUri.ToString ()
+              Expect.stringContains uri "com.atproto.sync.getRecord" "correct endpoint"
+              Expect.stringContains uri "did%3Aplc%3Atestuser" "DID in query"
+              Expect.stringContains uri "app.bsky.feed.post" "collection in query"
+              Expect.stringContains uri "abc123" "rkey in query"
+
+          testCase "getRecord returns error on server failure"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun _ ->
+                      jsonResponse HttpStatusCode.NotFound {| error = "RecordNotFound"; message = "not found" |})
+
+              agent.Session <- Some testSession
+
+              let nsid = Nsid.parse "app.bsky.feed.post" |> Result.defaultWith failwith
+              let rkey = RecordKey.parse "abc123" |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.getRecord agent (parseDid "did:plc:testuser") nsid rkey
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail"
+              Expect.equal err.StatusCode 404 "404 status"
+              Expect.equal err.Error (Some "RecordNotFound") "error code"
+
+          testCase "getRecord returns error on invalid CAR data"
+          <| fun _ ->
+              let agent = binaryAgent (fun _ -> ()) [| 0x01uy |]
+
+              let nsid = Nsid.parse "app.bsky.feed.post" |> Result.defaultWith failwith
+              let rkey = RecordKey.parse "abc123" |> Result.defaultWith failwith
+
+              let result =
+                  Bluesky.getRecord agent (parseDid "did:plc:testuser") nsid rkey
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail on invalid CAR"
+              Expect.equal err.Error (Some "CarParseError") "CAR parse error" ]
+
+// ── Account management tests ──────────────────────────────────────
+
+[<Tests>]
+let createAccountTests =
+    testList
+        "Bluesky.createAccount"
+        [ testCase "createAccount sends handle, email, password, inviteCode to endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createMockAgent (fun req ->
+                      captured <- Some req
+
+                      jsonResponse
+                          HttpStatusCode.OK
+                          {| accessJwt = "jwt"
+                             refreshJwt = "refresh"
+                             did = "did:plc:new"
+                             handle = "new.bsky.social" |})
+
+              let handle = Handle.parse "new.bsky.social" |> Result.defaultWith failwith
+
+              let result =
+                  ComAtprotoServer.CreateAccount.call
+                      agent
+                      { Handle = handle
+                        Email = Some "user@test.com"
+                        Password = Some "pass123"
+                        InviteCode = Some "invite-abc"
+                        Did = None
+                        PlcOp = None
+                        RecoveryKey = None
+                        VerificationCode = None
+                        VerificationPhone = None }
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "new.bsky.social" "handle in body"
+              Expect.stringContains body "user@test.com" "email in body"
+              Expect.stringContains body "pass123" "password in body"
+              Expect.stringContains body "invite-abc" "invite code in body"
+
+          testCase "createAccount returns error when server rejects"
+          <| fun _ ->
+              let errorAgent =
+                  createMockAgent (fun _ ->
+                      jsonResponse
+                          HttpStatusCode.BadRequest
+                          {| error = "HandleNotAvailable"
+                             message = "Handle already taken" |})
+
+              let handle = Handle.parse "taken.bsky.social" |> Result.defaultWith failwith
+
+              let result =
+                  ComAtprotoServer.CreateAccount.call
+                      errorAgent
+                      { Handle = handle
+                        Email = Some "test@example.com"
+                        Password = Some "password123"
+                        InviteCode = None
+                        Did = None
+                        PlcOp = None
+                        RecoveryKey = None
+                        VerificationCode = None
+                        VerificationPhone = None }
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail with HandleNotAvailable"
+              Expect.equal err.Error (Some "HandleNotAvailable") "error code" ]
+
+[<Tests>]
+let requestAccountDeleteTests =
+    testList
+        "Bluesky.requestAccountDelete"
+        [ testCase "requestAccountDelete sends POST to correct endpoint"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createMockAgent (fun req ->
+                      captured <- Some req
+                      emptyResponse HttpStatusCode.OK)
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.requestAccountDelete agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let req = captured.Value
+              Expect.stringContains (req.RequestUri.ToString ()) "com.atproto.server.requestAccountDelete" "correct endpoint"
+              Expect.equal req.Method HttpMethod.Post "should be POST"
+
+          testCase "requestAccountDelete includes auth header"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createMockAgent (fun req ->
+                      captured <- Some req
+                      emptyResponse HttpStatusCode.OK)
+
+              agent.Session <- Some testSession
+
+              let _ =
+                  Bluesky.requestAccountDelete agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let req = captured.Value
+              Expect.isNotNull req.Headers.Authorization "should have auth header"
+              Expect.stringContains (req.Headers.Authorization.ToString ()) "test-jwt" "should contain access JWT"
+
+          testCase "requestAccountDelete returns error without session"
+          <| fun _ ->
+              let agent = createMockAgent (fun _ -> emptyResponse HttpStatusCode.OK)
+
+              let result =
+                  Bluesky.requestAccountDelete agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail without session"
+              Expect.equal err.StatusCode 401 "status code"
+              Expect.equal err.Error (Some "NotLoggedIn") "error code"
+
+          testCase "requestAccountDelete returns server error"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun _ ->
+                      jsonResponse
+                          HttpStatusCode.InternalServerError
+                          {| error = "InternalServerError"
+                             message = "Something went wrong" |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.requestAccountDelete agent
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail"
+              Expect.equal err.StatusCode 500 "status code"
+              Expect.equal err.Error (Some "InternalServerError") "error code" ]
+
+[<Tests>]
+let deleteAccountTests =
+    testList
+        "Bluesky.deleteAccount"
+        [ testCase "deleteAccount sends DID, password, and token"
+          <| fun _ ->
+              let mutable captured = None
+
+              let agent =
+                  createMockAgent (fun req ->
+                      captured <- Some req
+                      jsonResponse HttpStatusCode.OK {| |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.deleteAccount agent "mypassword" "delete-token-123"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "did:plc:testuser" "DID in body"
+              Expect.stringContains body "mypassword" "password in body"
+              Expect.stringContains body "delete-token-123" "token in body"
+
+          testCase "deleteAccount clears session on success"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.deleteAccount agent "pass" "token"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              Expect.isNone agent.Session "session should be cleared after deletion"
+
+          testCase "deleteAccount returns error without session"
+          <| fun _ ->
+              let agent = createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
+
+              let result =
+                  Bluesky.deleteAccount agent "pass" "token"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail without session"
+              Expect.equal err.StatusCode 401 "status code"
+
+          testCase "deleteAccount returns server error on invalid token"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun _ ->
+                      jsonResponse
+                          HttpStatusCode.BadRequest
+                          {| error = "InvalidToken"
+                             message = "Token is invalid" |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.deleteAccount agent "pass" "bad-token"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail"
+              Expect.equal err.Error (Some "InvalidToken") "error code" ]
+
+// ── Via attribution tests ──────────────────────────────────────────
+
+[<Tests>]
+let viaAttributionTests =
+    testList
+        "Bluesky via attribution"
+        [ testCase "likeVia includes via field in record"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let viaPost =
+                  { PostRef.Uri = parseAtUri "at://did:plc:feed/app.bsky.feed.post/feed123"
+                    Cid = parseCid "bafyreifeed" }
+
+              let result =
+                  Bluesky.likeVia agent testPostRef viaPost
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "app.bsky.feed.like" "like collection"
+              Expect.stringContains body "\"via\"" "should contain via field"
+              Expect.stringContains body "at://did:plc:feed/app.bsky.feed.post/feed123" "via URI"
+              Expect.stringContains body "bafyreifeed" "via CID"
+
+          testCase "likeVia returns LikeRef"
+          <| fun _ ->
+              let agent = createRecordAgent (fun _ -> ())
+
+              let viaPost =
+                  { PostRef.Uri = parseAtUri "at://did:plc:feed/app.bsky.feed.post/feed123"
+                    Cid = parseCid "bafyreifeed" }
+
+              let result =
+                  Bluesky.likeVia agent testPostRef viaPost
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let likeRef = Expect.wantOk result "should succeed"
+              Expect.equal (AtUri.value likeRef.Uri) "at://did:plc:testuser/app.bsky.feed.post/abc123" "returns uri"
+
+          testCase "repostVia includes via field in record"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let viaPost =
+                  { PostRef.Uri = parseAtUri "at://did:plc:feed/app.bsky.feed.post/feed123"
+                    Cid = parseCid "bafyreifeed" }
+
+              let result =
+                  Bluesky.repostVia agent testPostRef viaPost
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "app.bsky.feed.repost" "repost collection"
+              Expect.stringContains body "\"via\"" "should contain via field"
+              Expect.stringContains body "at://did:plc:feed/app.bsky.feed.post/feed123" "via URI"
+
+          testCase "followVia includes via field in record"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let viaPost =
+                  { PostRef.Uri = parseAtUri "at://did:plc:feed/app.bsky.feed.post/feed123"
+                    Cid = parseCid "bafyreifeed" }
+
+              let result =
+                  Bluesky.followVia agent (parseDid "did:plc:other") viaPost
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "app.bsky.graph.follow" "follow collection"
+              Expect.stringContains body "did:plc:other" "subject DID"
+              Expect.stringContains body "\"via\"" "should contain via field"
+              Expect.stringContains body "at://did:plc:feed/app.bsky.feed.post/feed123" "via URI"
+
+          testCase "likeVia accepts TimelinePost as via"
+          <| fun _ ->
+              let mutable captured = None
+              let agent = createRecordAgent (fun req -> captured <- Some req)
+
+              let viaTimelinePost = TestFactory.TimelinePost (
+                  uri = parseAtUri "at://did:plc:feed/app.bsky.feed.post/tp123",
+                  cid = parseCid "bafyreifeedtp"
+              )
+
+              let result =
+                  Bluesky.likeVia agent testPostRef viaTimelinePost
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+              let body = captured.Value.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "bafyreifeedtp" "via CID from TimelinePost"
+
+          testCase "likeVia returns NotLoggedIn without session"
+          <| fun _ ->
+              let agent = createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
+
+              let viaPost =
+                  { PostRef.Uri = parseAtUri "at://did:plc:feed/app.bsky.feed.post/feed123"
+                    Cid = parseCid "bafyreifeed" }
+
+              let result =
+                  Bluesky.likeVia agent testPostRef viaPost
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail without session"
+              Expect.equal err.StatusCode 401 "status code" ]
+
+// ── TestFactory tests ──────────────────────────────────────────────
+
+[<Tests>]
+let testFactoryTests =
+    testList
+        "TestFactory"
+        [ testCase "PostRef creates with defaults"
+          <| fun _ ->
+              let pr = TestFactory.PostRef ()
+              Expect.isTrue (AtUri.value pr.Uri |> fun s -> s.Contains "testfactory") "default URI contains testfactory"
+              Expect.isTrue (Cid.value pr.Cid |> fun s -> s.Length > 0) "default CID is non-empty"
+
+          testCase "PostRef allows overriding uri"
+          <| fun _ ->
+              let customUri = parseAtUri "at://did:plc:custom/app.bsky.feed.post/xyz"
+              let pr = TestFactory.PostRef (uri = customUri)
+              Expect.equal pr.Uri customUri "uri should be overridden"
+
+          testCase "ProfileSummary creates with defaults"
+          <| fun _ ->
+              let ps = TestFactory.ProfileSummary ()
+              Expect.equal ps.DisplayName "Test User" "default display name"
+              Expect.isTrue (Did.value ps.Did |> fun s -> s.Contains "testfactory") "default DID"
+              Expect.isNone ps.Avatar "default avatar is None"
+
+          testCase "Profile creates with defaults"
+          <| fun _ ->
+              let p = TestFactory.Profile ()
+              Expect.equal p.DisplayName "Test User" "default display name"
+              Expect.equal p.PostsCount 0L "default posts count"
+              Expect.isFalse p.IsFollowing "default not following"
+
+          testCase "Profile allows overriding fields"
+          <| fun _ ->
+              let p = TestFactory.Profile (displayName = "Custom", postsCount = 42L, isFollowing = true)
+              Expect.equal p.DisplayName "Custom" "display name overridden"
+              Expect.equal p.PostsCount 42L "posts count overridden"
+              Expect.isTrue p.IsFollowing "isFollowing overridden"
+
+          testCase "TimelinePost creates with defaults"
+          <| fun _ ->
+              let tp = TestFactory.TimelinePost ()
+              Expect.equal tp.Text "Test post" "default text"
+              Expect.equal tp.LikeCount 0L "default like count"
+              Expect.isFalse tp.IsLiked "default not liked"
+
+          testCase "TimelinePost allows overriding text and counts"
+          <| fun _ ->
+              let tp = TestFactory.TimelinePost (text = "Hello world", likeCount = 5L, isLiked = true)
+              Expect.equal tp.Text "Hello world" "text overridden"
+              Expect.equal tp.LikeCount 5L "like count overridden"
+              Expect.isTrue tp.IsLiked "isLiked overridden"
+
+          testCase "LikeRef creates with default"
+          <| fun _ ->
+              let lr = TestFactory.LikeRef ()
+              Expect.isTrue (AtUri.value lr.Uri |> fun s -> s.Contains "app.bsky.feed.like") "default like URI"
+
+          testCase "RepostRef creates with default"
+          <| fun _ ->
+              let rr = TestFactory.RepostRef ()
+              Expect.isTrue (AtUri.value rr.Uri |> fun s -> s.Contains "app.bsky.feed.repost") "default repost URI"
+
+          testCase "FollowRef creates with default"
+          <| fun _ ->
+              let fr = TestFactory.FollowRef ()
+              Expect.isTrue (AtUri.value fr.Uri |> fun s -> s.Contains "app.bsky.graph.follow") "default follow URI"
+
+          testCase "BlockRef creates with default"
+          <| fun _ ->
+              let br = TestFactory.BlockRef ()
+              Expect.isTrue (AtUri.value br.Uri |> fun s -> s.Contains "app.bsky.graph.block") "default block URI"
+
+          testCase "FeedItem creates with defaults"
+          <| fun _ ->
+              let fi = TestFactory.FeedItem ()
+              Expect.equal fi.Post.Text "Test post" "default post text"
+              Expect.isNone fi.Reason "default no reason"
+
+          testCase "Notification creates with defaults"
+          <| fun _ ->
+              let n = TestFactory.Notification ()
+              Expect.equal n.Kind NotificationKind.Like "default kind is Like"
+              Expect.isFalse n.IsRead "default not read"
+              Expect.isNone n.SubjectUri "default no subject URI" ]

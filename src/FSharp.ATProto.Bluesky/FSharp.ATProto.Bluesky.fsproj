@@ -10,11 +10,13 @@
     <Compile Include="Identity.fs" />
     <Compile Include="Bluesky.fs" />
     <Compile Include="Chat.fs" />
+    <Compile Include="Ozone.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FSharp.ATProto.Syntax\FSharp.ATProto.Syntax.fsproj" />
     <ProjectReference Include="..\FSharp.ATProto.DRISL\FSharp.ATProto.DRISL.fsproj" />
     <ProjectReference Include="..\FSharp.ATProto.Core\FSharp.ATProto.Core.fsproj" />
+    <ProjectReference Include="..\FSharp.ATProto.Streaming\FSharp.ATProto.Streaming.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FSharp.SystemTextJson" Version="1.4.36" />
