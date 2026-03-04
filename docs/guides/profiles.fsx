@@ -62,6 +62,19 @@ Pass a `ProfileSummary` to `getProfile` if you need the full `Profile` with coun
 | `Bluesky.getSuggestions` | `agent:AtpAgent` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | General account suggestions |
 | `Bluesky.searchActors` | `agent:AtpAgent` `query:string` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Search users by name, handle, or bio |
 | `Bluesky.searchActorsTypeahead` | `agent:AtpAgent` `query:string` `limit:int64 option` | `Result<ProfileSummary list, XrpcError>` | Lightweight typeahead search (no pagination) |
+| `Bluesky.getBlocks` | `agent:AtpAgent` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Get blocked users (paginated) |
+| `Bluesky.getMutes` | `agent:AtpAgent` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Get muted users (paginated) |
+| `Bluesky.getRelationships` | `agent:AtpAgent` `did:Did` `others:Did list option` | `Result<Relationship list, XrpcError>` | Get relationship details between users |
+| `Bluesky.getKnownFollowers` | `agent:AtpAgent` `actor:Handle / Did / ProfileSummary / Profile` `limit:int64 option` `cursor:string option` | `Result<Page<ProfileSummary>, XrpcError>` | Get followers you also follow (SRTP) |
+| `Bluesky.getLists` | `agent:AtpAgent` `actor:Handle / Did / ProfileSummary / Profile` `limit:int64 option` `cursor:string option` | `Result<Page<ListView>, XrpcError>` | Get user's lists (SRTP) |
+
+### Relationship
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Did` | `Did` | The other user's DID |
+| `Following` | `AtUri option` | AT-URI of follow record if you follow them |
+| `FollowedBy` | `AtUri option` | AT-URI of follow record if they follow you |
 *)
 
 (*** hide ***)

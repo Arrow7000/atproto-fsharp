@@ -93,6 +93,9 @@ A post within a thread, with parent and reply context.
 | `Bluesky.quotePost` | `agent:AtpAgent` `text:string` `quoted:PostRef / TimelinePost` | `Result<PostRef, XrpcError>` | Create a quote post |
 | `Bluesky.replyTo` | `agent:AtpAgent` `text:string` `parent:PostRef / TimelinePost` | `Result<PostRef, XrpcError>` | Reply to a post (auto-resolves thread root) |
 | `Bluesky.replyWithKnownRoot` | `agent:AtpAgent` `text:string` `parent:PostRef` `root:PostRef` | `Result<PostRef, XrpcError>` | Reply with explicit parent and root |
+| `Bluesky.postWithVideo` | `agent:AtpAgent` `text:string` `videoBytes:byte[]` `mimeType:string` `altText:string` | `Result<PostRef, XrpcError>` | Upload video, wait for processing, and post with caption and alt text |
+
+> Video upload involves three steps: `uploadVideo` to initiate, `awaitVideoProcessing` to poll until ready, then creating a post with the video blob. `postWithVideo` wraps all three steps.
 *)
 
 (*** hide ***)

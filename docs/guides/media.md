@@ -15,7 +15,7 @@ FSharp.ATProto provides convenience methods for uploading images and attaching t
 
 > **Size limit:** Bluesky enforces a **1 MB maximum** per image blob. If your images may exceed this, resize them before uploading. The library sends bytes directly to the PDS without resizing, and oversized uploads will be rejected by the server.
 
-> **Video:** Video uploads are not yet supported by this library.
+> **Video:** See the [Video](#video) section below for video upload support.
 
 ```fsharp
 open FSharp.ATProto.Core
@@ -137,6 +137,52 @@ type BlobRef =
 ```
 
 This is useful when `postWithImages` is not flexible enough -- for example, uploading a blob once and referencing it in multiple records, or constructing a custom embed type via the [raw XRPC](raw-xrpc.html) layer.
+
+## Video
+
+Upload and post video content. Video processing is asynchronous -- the server transcodes the video after upload.
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `Bluesky.uploadVideo` | Upload video bytes, returns a `JobStatus` with processing state |
+| `Bluesky.getVideoJobStatus` | Poll the processing status of an uploaded video |
+| `Bluesky.awaitVideoProcessing` | Poll until processing completes (with configurable max attempts) |
+| `Bluesky.postWithVideo` | Upload, wait for processing, and create a post -- all in one call |
+
+### Quick Example
+
+```fsharp
+taskResult {
+    let! agent = Bluesky.login "https://bsky.social" "handle" "app-password"
+    let videoBytes = System.IO.File.ReadAllBytes("clip.mp4")
+    let! post = Bluesky.postWithVideo agent "Check out this video!" videoBytes "video/mp4" "A short clip"
+    printfn "Posted video: %s" (AtUri.value post.Uri)
+}
+```
+
+### Step-by-Step
+
+For more control over the upload process:
+
+```fsharp
+taskResult {
+    let! agent = Bluesky.login "https://bsky.social" "handle" "app-password"
+    let videoBytes = System.IO.File.ReadAllBytes("clip.mp4")
+
+    // 1. Upload the video
+    let! jobStatus = Bluesky.uploadVideo agent videoBytes "video/mp4"
+
+    // 2. Wait for server-side processing (max 60 poll attempts)
+    let! completed = Bluesky.awaitVideoProcessing agent jobStatus.JobId 60
+
+    // 3. Create a post with the processed video
+    // (use raw XRPC with the blob ref from the completed job)
+}
+```
+
+> **Note:** Videos have server-enforced size limits. MP4 is the supported format.
 
 ## Supported Formats
 

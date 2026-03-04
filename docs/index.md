@@ -26,7 +26,6 @@ taskResult {
 
 Add a project reference to `FSharp.ATProto.Bluesky` -- it pulls in all dependencies transitively. Then head to the [Quickstart](quickstart.html) to go from zero to first post in five minutes.
 
-## Getting Started
 - [Quickstart](quickstart.html) — authenticate and make your first post
 - [Build a Bot](guides/build-a-bot.html) — full bot example with notifications and replies
 - [Concepts](concepts.html) — domain types, SRTP, and design philosophy
@@ -39,14 +38,31 @@ Add a project reference to `FSharp.ATProto.Bluesky` -- it pulls in all dependenc
 - [Feeds](guides/feeds.html) — timelines, author feeds, and pagination
 - [Chat](guides/chat.html) — direct messaging conversations
 - [Notifications](guides/notifications.html) — reading and managing notifications
+- [Lists](guides/lists.html) — list and starter pack management
+- [Preferences](guides/preferences.html) — saved feeds, muted words, content filtering
 
 ## Advanced Guides
-- [Media](guides/media.html) — uploading images and blobs
-- [Rich Text](guides/rich-text.html) — mentions, links, and hashtags
+- [Media](guides/media.html) — uploading images, video, and blobs
+- [Rich Text](guides/rich-text.html) — mentions, links, hashtags, and text manipulation
 - [Identity](guides/identity.html) — DID resolution and handle verification
-- [Moderation](guides/moderation.html) — muting, reporting, and moderation lists
+- [Moderation](guides/moderation.html) — muting, reporting, and the moderation engine
 - [Pagination](guides/pagination.html) — IAsyncEnumerable-based paginators
 - [Raw XRPC](guides/raw-xrpc.html) — direct XRPC calls for uncovered endpoints
+- [Streaming](guides/streaming.html) — real-time event streams via Jetstream and Firehose
+- [Ozone](guides/ozone.html) — moderation tooling for labeler operators
+- [Account](guides/account.html) — account creation, deletion, and session management
+
+## Server-Side
+- [Feed Generator](guides/feed-generator.html) — build custom feed algorithms
+- [XRPC Server](guides/xrpc-server.html) — host AT Protocol endpoints
+- [OAuth](guides/oauth.html) — OAuth client and authorization server
+
+## Infrastructure
+- [Cryptography](guides/crypto.html) — P-256/K-256 keys, signing, did:key encoding
+- [Repository](guides/repository.html) — MST, signed commits, CAR export
+- [Service Auth](guides/service-auth.html) — inter-service JWT authentication
+- [PLC Directory](guides/plc.html) — DID PLC resolution and operations
+- [Testing](guides/testing.html) — TestFactory for unit testing
 
 ## Architecture
 
@@ -59,8 +75,16 @@ The library is organized in layers, each building on the one below:
 | `FSharp.ATProto.Lexicon` | Lexicon schema parser and record validator |
 | `FSharp.ATProto.Core` | XRPC client, session auth, rate limiting, pagination |
 | `FSharp.ATProto.Bluesky` | Generated types, rich text, identity, convenience methods |
+| `FSharp.ATProto.Streaming` | Jetstream and Firehose event streams |
+| `FSharp.ATProto.Moderation` | Label-aware moderation engine |
+| `FSharp.ATProto.FeedGenerator` | Custom feed generator framework |
+| `FSharp.ATProto.OAuth` | OAuth 2.0 client with DPoP and PKCE |
+| `FSharp.ATProto.OAuthServer` | OAuth 2.0 authorization server |
+| `FSharp.ATProto.Crypto` | Cryptographic keys, signing, did:key |
+| `FSharp.ATProto.Repo` | Repository MST, commits, CAR export |
+| `FSharp.ATProto.XrpcServer` | XRPC server framework with auth and rate limiting |
 
-1,761 tests across the stack.
+2,608 tests across 14 projects.
 
 ## License
 

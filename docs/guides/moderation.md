@@ -187,3 +187,67 @@ taskResult {
 ```
 
 This gives access to the full response, including `CreatedAt`, `ReportedBy`, and the resolved `Subject` union.
+
+## Moderation Engine
+
+The `FSharp.ATProto.Moderation` package provides a label-aware moderation engine that computes context-specific decisions based on user preferences, labels, muted words, and block state.
+
+### Overview
+
+The engine takes moderation preferences, labels on content/accounts, and context (e.g., "is this being shown in a list or a full view?"), and returns a `ModerationDecision` that tells you what to do: blur, alert, filter, or show normally.
+
+### Key Types
+
+| Type | Description |
+|------|-------------|
+| `ModerationPrefs` | User's label visibility settings, muted words, hidden posts, adult content preference |
+| `ModerationDecision` | Computed decision with prioritized causes |
+| `ModerationAction` | What to do: `Blur`, `Alert`, `Filter`, `Inform`, or `NoOp` |
+| `ModerationContext` | Where the content appears: `ProfileList`, `ProfileView`, `Avatar`, `Banner`, `ContentList`, `ContentView`, `ContentMedia` |
+| `Label` | A label applied to content: value, source DID, negation flag |
+| `LabelDefinition` | Built-in label behavior definition |
+| `CustomLabelValueDef` | Custom label definition from a labeler |
+
+### Usage
+
+```fsharp
+open FSharp.ATProto.Moderation
+
+// Set up preferences
+let prefs : ModerationPrefs =
+    { AdultContentEnabled = false
+      Labels = Map.ofList [ "nsfw", LabelVisibility.Warn ]
+      LabelerSettings = Map.empty
+      MutedWords = []
+      HiddenPosts = Set.empty }
+
+// Labels on a post
+let labels = [ { Value = "nsfw"; Source = labelerDid; Neg = false; CreatedAt = DateTimeOffset.UtcNow } ]
+
+// Get moderation decision
+let decision = Moderation.moderatePost prefs labels [] "" DateTimeOffset.UtcNow postUri
+
+// Check what to do in content list context
+match Moderation.moderate decision ModerationContext.ContentList with
+| ModerationAction.Blur -> printfn "Blur this content"
+| ModerationAction.Filter -> printfn "Hide from feed"
+| ModerationAction.Alert -> printfn "Show with warning"
+| _ -> printfn "Show normally"
+```
+
+### Built-in Labels
+
+The engine includes 8 built-in label definitions: `porn`, `sexual`, `nudity`, `graphic-media`, `gore`, `nsfl`, `!hide`, `!warn`. Custom labels from labeler services are supported via `Labels.interpretLabelValueDefinition`.
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `Moderation.moderatePost` | Compute decision for a post (labels + muted words + hidden posts) |
+| `Moderation.moderateProfile` | Compute decision for a profile |
+| `Moderation.moderateNotification` | Compute decision for a notification |
+| `Moderation.moderateFeedGenerator` | Compute decision for a feed generator |
+| `Moderation.moderateUserList` | Compute decision for a user list |
+| `Moderation.moderate` | Apply decision to a specific UI context |
+| `Labels.findLabel` | Look up a built-in label definition |
+| `Labels.interpretLabelValueDefinition` | Convert a labeler's custom label to a `CustomLabelValueDef` |

@@ -63,6 +63,22 @@ A paginated result containing a list of items and an optional cursor for the nex
 | `Items` | `'T list` | The items in this page |
 | `Cursor` | `string option` | Cursor for the next page, or `None` if this is the last page |
 
+### FeedGenerator
+
+Metadata about a custom feed generator.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Uri` | `AtUri` | Feed generator AT-URI |
+| `Did` | `Did` | Feed generator service DID |
+| `Creator` | `ProfileSummary` | Feed creator |
+| `DisplayName` | `string` | Display name |
+| `Description` | `string option` | Description |
+| `Avatar` | `string option` | Avatar URL |
+| `LikeCount` | `int64` | Number of likes |
+| `IsOnline` | `bool` | Whether the generator is currently online |
+| `IsValid` | `bool` | Whether the generator is valid |
+
 ## Functions
 
 ### Reading Feeds
@@ -73,8 +89,12 @@ A paginated result containing a list of items and an optional cursor for the nex
 | `Bluesky.getAuthorFeed` | `agent`, `actor`, `limit: int64 option`, `cursor: string option` | `Result<Page<FeedItem>, XrpcError>` | Fetch posts by a specific user |
 | `Bluesky.getActorLikes` | `agent`, `actor`, `limit: int64 option`, `cursor: string option` | `Result<Page<FeedItem>, XrpcError>` | Fetch posts that a specific user has liked |
 | `Bluesky.getBookmarks` | `agent`, `limit: int64 option`, `cursor: string option` | `Result<Page<TimelinePost>, XrpcError>` | Fetch the authenticated user's bookmarked posts |
+| `Bluesky.getFeed` | `agent`, `feed: AtUri`, `limit: int64 option`, `cursor: string option` | `Result<Page<FeedItem>, XrpcError>` | Fetch posts from a custom feed generator |
+| `Bluesky.getActorFeeds` | `agent`, `actor`, `limit: int64 option`, `cursor: string option` | `Result<Page<FeedGenerator>, XrpcError>` | List feed generators created by a user (SRTP) |
+| `Bluesky.getListFeed` | `agent`, `list: AtUri`, `limit: int64 option`, `cursor: string option` | `Result<Page<FeedItem>, XrpcError>` | Fetch posts from a list-based feed |
+| `Bluesky.getFeedGenerator` | `agent`, `feed: AtUri` | `Result<FeedGenerator, XrpcError>` | Get metadata for a feed generator |
 
-**SRTP:** `getAuthorFeed` and `getActorLikes` accept `ProfileSummary`, `Profile`, `Handle`, or `Did` for the `actor` parameter.
+**SRTP:** `getAuthorFeed`, `getActorLikes`, and `getActorFeeds` accept `ProfileSummary`, `Profile`, `Handle`, or `Did` for the `actor` parameter.
 *)
 
 (*** hide ***)
@@ -135,6 +155,10 @@ taskResult {
 | `Bluesky.paginateTimeline` | `agent`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>` | Lazily paginate the home timeline |
 | `Bluesky.paginateFollowers` | `agent`, `actor`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>` | Lazily paginate an actor's followers |
 | `Bluesky.paginateNotifications` | `agent`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<Notification>, XrpcError>>` | Lazily paginate notifications |
+| `Bluesky.paginateBlocks` | `agent`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>` | Paginate blocked users |
+| `Bluesky.paginateMutes` | `agent`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>` | Paginate muted users |
+| `Bluesky.paginateFeed` | `agent`, `feed: AtUri`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>` | Paginate a custom feed |
+| `Bluesky.paginateListFeed` | `agent`, `list: AtUri`, `pageSize: int64 option` | `IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>` | Paginate a list-based feed |
 
 **SRTP:** `paginateFollowers` accepts `ProfileSummary`, `Profile`, `Handle`, or `Did` for the `actor` parameter.
 
@@ -184,7 +208,7 @@ for item in page.Items do
 (**
 ## Custom Feeds
 
-Custom feeds (algorithmic feeds by third parties) are identified by an AT-URI. Use the raw XRPC wrapper to read them:
+Custom feeds (algorithmic feeds by third parties) are identified by an AT-URI. Use `Bluesky.getFeed` for convenience, or the raw XRPC wrapper for full control:
 *)
 
 taskResult {

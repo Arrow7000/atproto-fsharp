@@ -173,3 +173,50 @@ task {
 ```
 
 See the [Chat / DMs](chat.html) guide for more on sending messages.
+
+## Rich Text Manipulation
+
+The `RichTextValue` type pairs text with its facets and supports safe manipulation that keeps byte offsets correct.
+
+### RichTextValue
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Text` | `string` | The text content |
+| `Facets` | `Facet list` | Rich text annotations |
+
+### Creating
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `RichText.create` | `string -> Facet list -> RichTextValue` | Create from text and facets |
+| `RichText.plain` | `string -> RichTextValue` | Create plain text (no facets) |
+
+### Manipulating
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `RichText.insert` | `int -> string -> RichTextValue -> RichTextValue` | Insert text at byte index, shifting facets |
+| `RichText.delete` | `int -> int -> RichTextValue -> RichTextValue` | Delete byte range, adjusting facets |
+| `RichText.segments` | `RichTextValue -> RichTextSegment list` | Split into annotated segments |
+| `RichText.sanitize` | `RichTextValue -> RichTextValue` | Remove invalid or out-of-range facets |
+| `RichText.truncate` | `int -> RichTextValue -> RichTextValue` | Truncate to grapheme length, trimming facets |
+
+### Example
+
+```fsharp
+let rt = RichText.create "Hello @alice.bsky.social!" facets
+
+// Insert text -- facet offsets shift automatically
+let updated = rt |> RichText.insert 0 "Hey! "
+
+// Truncate to 50 graphemes -- facets that extend past the boundary are trimmed
+let truncated = rt |> RichText.truncate 50
+
+// Split into segments for rendering
+let segments = rt |> RichText.segments
+for seg in segments do
+    match seg.Facet with
+    | Some _ -> printfn "[rich] %s" seg.Text
+    | None -> printfn "%s" seg.Text
+```

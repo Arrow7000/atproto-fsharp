@@ -39,6 +39,10 @@ When you need to process an unbounded result set without loading everything into
 | `Bluesky.paginateTimeline` | `AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>` |
 | `Bluesky.paginateFollowers` | `AtpAgent -> actor -> int64 option -> IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>` |
 | `Bluesky.paginateNotifications` | `AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<Notification>, XrpcError>>` |
+| `Bluesky.paginateBlocks` | `AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>` |
+| `Bluesky.paginateMutes` | `AtpAgent -> int64 option -> IAsyncEnumerable<Result<Page<ProfileSummary>, XrpcError>>` |
+| `Bluesky.paginateFeed` | `AtpAgent -> AtUri -> int64 option -> IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>` |
+| `Bluesky.paginateListFeed` | `AtpAgent -> AtUri -> int64 option -> IAsyncEnumerable<Result<Page<FeedItem>, XrpcError>>` |
 
 `paginateFollowers` accepts a `ProfileSummary`, `Profile`, `Handle`, or `Did` as the actor parameter -- pass entities directly instead of extracting identifiers. Pass `None` as the page size to use the server's default.
 
