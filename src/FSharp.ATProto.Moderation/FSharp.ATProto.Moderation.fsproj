@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Client-side moderation engine for AT Protocol: label interpretation, muted word matching, and context-aware UI decisions.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Labels.fs" />
+    <Compile Include="MutedWords.fs" />
+    <Compile Include="Moderation.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FSharp.ATProto.Syntax\FSharp.ATProto.Syntax.fsproj" />
+  </ItemGroup>
+
+</Project>
