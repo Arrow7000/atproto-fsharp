@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Jetstream event streaming client for the AT Protocol.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="CarParser.fs" />
+    <Compile Include="Jetstream.fs" />
+    <Compile Include="Firehose.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FSharp.ATProto.Syntax\FSharp.ATProto.Syntax.fsproj" />
+    <ProjectReference Include="..\FSharp.ATProto.DRISL\FSharp.ATProto.DRISL.fsproj" />
+  </ItemGroup>
+</Project>
