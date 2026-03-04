@@ -8,7 +8,7 @@
   <a href="https://www.nuget.org/packages/FSharp.ATProto.Bluesky"><img src="https://img.shields.io/nuget/v/FSharp.ATProto.Bluesky" alt="NuGet"></a>
   <a href="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml"><img src="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10">
-  <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Arrow7000/TEST_BADGE_GIST_ID_PLACEHOLDER/raw/test-count.json" alt="Tests">
+  <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Arrow7000/b4926c04f5a0cf1326acd6be7fab8ef3/raw/test-count.json" alt="Tests">
   <a href="https://github.com/Arrow7000/atproto-fsharp/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
 </p>
 
