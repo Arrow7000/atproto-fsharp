@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Cryptographic operations for the AT Protocol: P-256 and secp256k1 key management, signing, verification, and multikey/did:key encoding.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Base58.fs" />
+    <Compile Include="Keys.fs" />
+    <Compile Include="Signing.fs" />
+    <Compile Include="Multikey.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="FSharp.ATProto.Crypto.Tests" />
+  </ItemGroup>
+</Project>
