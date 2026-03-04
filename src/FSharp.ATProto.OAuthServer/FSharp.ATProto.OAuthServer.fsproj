@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>OAuth 2.0 authorization server for the AT Protocol with DPoP, PAR, and PKCE support.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="InMemoryStores.fs" />
+    <Compile Include="DPoPValidator.fs" />
+    <Compile Include="ClientDiscovery.fs" />
+    <Compile Include="TokenSigner.fs" />
+    <Compile Include="Endpoints.fs" />
+    <Compile Include="ConsentApi.fs" />
+    <Compile Include="Server.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FSharp.ATProto.Syntax\FSharp.ATProto.Syntax.fsproj" />
+    <ProjectReference Include="..\FSharp.ATProto.OAuth\FSharp.ATProto.OAuth.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="FSharp.ATProto.OAuthServer.Tests" />
+  </ItemGroup>
+
+</Project>

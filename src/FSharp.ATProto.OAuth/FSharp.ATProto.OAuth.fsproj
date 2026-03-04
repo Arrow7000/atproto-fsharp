@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>OAuth 2.0 authentication with DPoP support for the AT Protocol.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="DPoP.fs" />
+    <Compile Include="Discovery.fs" />
+    <Compile Include="OAuthClient.fs" />
+    <Compile Include="OAuthBridge.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FSharp.ATProto.Syntax\FSharp.ATProto.Syntax.fsproj" />
+    <ProjectReference Include="..\FSharp.ATProto.Core\FSharp.ATProto.Core.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="FSharp.ATProto.OAuth.Tests" />
+    <InternalsVisibleTo Include="FSharp.ATProto.OAuthServer.Tests" />
+  </ItemGroup>
+</Project>
