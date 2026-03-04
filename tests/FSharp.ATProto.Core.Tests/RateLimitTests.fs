@@ -35,7 +35,10 @@ let tests =
                   { HttpClient = new HttpClient (handler)
                     BaseUrl = System.Uri ("https://bsky.social/")
                     Session = None
-                    ExtraHeaders = [] }
+                    ExtraHeaders = []
+                    AuthenticateRequest = None
+                    RefreshAuthentication = None
+                    OnSessionChanged = None }
 
               let result =
                   Xrpc.query<SimpleParams, SimpleOutput> "test.method" { X = "a" } agent
@@ -60,7 +63,10 @@ let tests =
                   { HttpClient = new HttpClient (handler)
                     BaseUrl = System.Uri ("https://bsky.social/")
                     Session = None
-                    ExtraHeaders = [] }
+                    ExtraHeaders = []
+                    AuthenticateRequest = None
+                    RefreshAuthentication = None
+                    OnSessionChanged = None }
 
               let result =
                   Xrpc.query<SimpleParams, SimpleOutput> "test.method" { X = "a" } agent

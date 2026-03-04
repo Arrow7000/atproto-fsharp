@@ -65,6 +65,32 @@ type KnownValueConverter<'T when 'T : equality> () =
                 writer.WriteStringValue (string value)
 
 /// <summary>
+/// Factory that intercepts types annotated with <c>[&lt;JsonConverter(typeof&lt;KnownValueConverter&lt;_&gt;&gt;)&gt;]</c>
+/// and creates the appropriate <see cref="KnownValueConverter{T}"/>. Must be registered before
+/// <c>JsonFSharpConverter</c> in options to take precedence (System.Text.Json checks
+/// Options.Converters before type-level attributes).
+/// </summary>
+type KnownValueConverterFactory () =
+    inherit JsonConverterFactory ()
+
+    override _.CanConvert (typeToConvert : System.Type) =
+        typeToConvert.GetCustomAttributes (typeof<JsonConverterAttribute>, false)
+        |> Array.tryHead
+        |> Option.bind (fun attr ->
+            let a = attr :?> JsonConverterAttribute
+            let ct = a.ConverterType
+
+            if ct <> null && ct.IsGenericType && ct.GetGenericTypeDefinition () = typedefof<KnownValueConverter<_>> then
+                Some true
+            else
+                None)
+        |> Option.defaultValue false
+
+    override _.CreateConverter (typeToConvert, _options) =
+        let converterType = typedefof<KnownValueConverter<_>>.MakeGenericType ([| typeToConvert |])
+        System.Activator.CreateInstance (converterType) :?> JsonConverter
+
+/// <summary>
 /// Shared JSON serialization configuration for the AT Protocol.
 /// </summary>
 module Json =
@@ -85,6 +111,11 @@ module Json =
     let options =
         let opts = JsonSerializerOptions (PropertyNamingPolicy = JsonNamingPolicy.CamelCase)
         opts.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull
+
+        // KnownValueConverterFactory must come before JsonFSharpConverter so that
+        // types with [<JsonConverter(typeof<KnownValueConverter<_>>)>] are handled
+        // correctly (Options.Converters has higher priority than type-level attributes).
+        opts.Converters.Add (KnownValueConverterFactory ())
 
         opts.Converters.Add (
             JsonFSharpConverter (JsonFSharpOptions.Default().WithUnionInternalTag().WithUnionNamedFields ())

@@ -2,6 +2,7 @@ namespace FSharp.ATProto.Core
 
 open System
 open System.Net.Http
+open System.Threading.Tasks
 open FSharp.ATProto.Syntax
 
 /// <summary>
@@ -77,4 +78,23 @@ type AtpAgent =
         /// for Bluesky Chat service proxying).
         /// </summary>
         ExtraHeaders : (string * string) list
+        /// <summary>
+        /// Custom authentication handler. When set, overrides the default Bearer token auth.
+        /// The function receives the <see cref="HttpRequestMessage"/> (with Method and RequestUri already set)
+        /// and should add appropriate Authorization/DPoP headers.
+        /// Used by OAuth/DPoP bridge to inject DPoP-bound authentication.
+        /// </summary>
+        AuthenticateRequest : (HttpRequestMessage -> unit) option
+        /// <summary>
+        /// Custom session refresh handler. When set, overrides the default app-password refresh
+        /// (<c>com.atproto.server.refreshSession</c>). Should update internal session state and return
+        /// <c>Ok ()</c> on success or <c>Error</c> with an <see cref="XrpcError"/> on failure.
+        /// Used by OAuth bridge for DPoP token refresh.
+        /// </summary>
+        RefreshAuthentication : (unit -> Task<Result<unit, XrpcError>>) option
+        /// <summary>
+        /// Called when session state changes (login, token refresh, session resume).
+        /// Consumers can use this to persist sessions to disk or database.
+        /// </summary>
+        OnSessionChanged : (unit -> unit) option
     }

@@ -13,10 +13,15 @@
     <Compile Include="PaginationTests.fs" />
     <Compile Include="ExtraHeadersTests.fs" />
     <Compile Include="TaskResultTests.fs" />
+    <Compile Include="PluggableAuthTests.fs" />
+    <Compile Include="ServiceAuthTests.fs" />
+    <Compile Include="PlcTests.fs" />
+    <Compile Include="ConfigureLabelerTests.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\FSharp.ATProto.Core\FSharp.ATProto.Core.fsproj" />
+    <ProjectReference Include="..\..\src\FSharp.ATProto.Crypto\FSharp.ATProto.Crypto.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Expecto" Version="10.2.3" />

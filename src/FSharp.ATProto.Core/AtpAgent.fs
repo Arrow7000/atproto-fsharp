@@ -33,7 +33,10 @@ module AtpAgent =
         { HttpClient = new HttpClient ()
           BaseUrl = uri
           Session = None
-          ExtraHeaders = [] }
+          ExtraHeaders = []
+          AuthenticateRequest = None
+          RefreshAuthentication = None
+          OnSessionChanged = None }
 
     /// <summary>
     /// Creates a new unauthenticated agent with a caller-supplied <see cref="System.Net.Http.HttpClient"/>.
@@ -61,7 +64,10 @@ module AtpAgent =
         { HttpClient = httpClient
           BaseUrl = uri
           Session = None
-          ExtraHeaders = [] }
+          ExtraHeaders = []
+          AuthenticateRequest = None
+          RefreshAuthentication = None
+          OnSessionChanged = None }
 
     /// <summary>
     /// Returns a copy of the agent configured to proxy requests through the Bluesky Chat service.
@@ -76,6 +82,37 @@ module AtpAgent =
     let withChatProxy (agent : AtpAgent) : AtpAgent =
         { agent with
             ExtraHeaders = ("atproto-proxy", "did:web:api.bsky.chat#bsky_chat") :: agent.ExtraHeaders }
+
+    /// <summary>
+    /// Returns a copy of the agent configured with the <c>atproto-accept-labelers</c> header.
+    /// This tells the server which labeler services to include labels from in responses.
+    /// </summary>
+    /// <param name="labelers">
+    /// A list of labeler DIDs and optional redact flags. Each entry is a tuple of
+    /// (labeler DID string, redact flag). When <c>redact=true</c>, the labeler's labels
+    /// can cause content to be entirely removed from responses.
+    /// </param>
+    /// <param name="agent">The agent to copy with labeler configuration.</param>
+    /// <returns>A new <see cref="AtpAgent"/> with the <c>atproto-accept-labelers</c> header.</returns>
+    /// <remarks>
+    /// The header format follows IETF RFC-8941 Structured Field Values:
+    /// <c>did:plc:abc123;redact, did:plc:def456</c>
+    /// </remarks>
+    let configureLabelers (labelers : (string * bool) list) (agent : AtpAgent) : AtpAgent =
+        let headerValue =
+            labelers
+            |> List.map (fun (did, redact) ->
+                if redact then $"{did};redact"
+                else did)
+            |> String.concat ", "
+
+        // Remove any existing atproto-accept-labelers header
+        let filteredHeaders =
+            agent.ExtraHeaders
+            |> List.filter (fun (key, _) -> key <> "atproto-accept-labelers")
+
+        { agent with
+            ExtraHeaders = ("atproto-accept-labelers", headerValue) :: filteredHeaders }
 
     /// <summary>
     /// Logs in to a PDS with an identifier and app password.
@@ -121,6 +158,7 @@ module AtpAgent =
             match result with
             | Ok session ->
                 agent.Session <- Some session
+                agent.OnSessionChanged |> Option.iter (fun f -> f ())
                 return Ok session
             | Error e -> return Error e
         }

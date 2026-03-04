@@ -8,6 +8,8 @@
     <Compile Include="Types.fs" />
     <Compile Include="Json.fs" />
     <Compile Include="QueryParams.fs" />
+    <Compile Include="ServiceAuth.fs" />
+    <Compile Include="Plc.fs" />
     <Compile Include="Xrpc.fs" />
     <Compile Include="AtpAgent.fs" />
   </ItemGroup>

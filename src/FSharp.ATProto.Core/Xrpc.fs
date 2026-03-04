@@ -25,9 +25,13 @@ open System.Threading.Tasks
 module Xrpc =
 
     let private addAuth (agent : AtpAgent) (request : HttpRequestMessage) =
-        match agent.Session with
-        | Some session -> request.Headers.Authorization <- AuthenticationHeaderValue ("Bearer", session.AccessJwt)
-        | None -> ()
+        match agent.AuthenticateRequest with
+        | Some authenticate ->
+            authenticate request
+        | None ->
+            match agent.Session with
+            | Some session -> request.Headers.Authorization <- AuthenticationHeaderValue ("Bearer", session.AccessJwt)
+            | None -> ()
 
         for (key, value) in agent.ExtraHeaders do
             request.Headers.TryAddWithoutValidation (key, value) |> ignore
@@ -83,10 +87,27 @@ module Xrpc =
                     let! body = response.Content.ReadAsStringAsync ()
                     let newSession = JsonSerializer.Deserialize<AtpSession> (body, Json.options)
                     agent.Session <- Some newSession
+                    agent.OnSessionChanged |> Option.iter (fun f -> f ())
                     return Ok newSession
                 else
                     let! error = tryDeserializeError response
                     return Error error
+        }
+
+    /// Try to refresh authentication using custom handler or default app-password refresh.
+    let private tryRefresh (agent : AtpAgent) : Task<Result<unit, XrpcError>> =
+        task {
+            match agent.RefreshAuthentication with
+            | Some refresh ->
+                let! result = refresh ()
+                match result with
+                | Ok () ->
+                    agent.OnSessionChanged |> Option.iter (fun f -> f ())
+                    return Ok ()
+                | Error e -> return Error e
+            | None ->
+                let! result = refreshSession agent
+                return result |> Result.map ignore
         }
 
     let private waitForRateLimit (response : HttpResponseMessage) : Task<bool> =
@@ -152,12 +173,12 @@ module Xrpc =
                 elif
                     error.StatusCode = 401
                     && error.Error = Some "ExpiredToken"
-                    && agent.Session.IsSome
+                    && (agent.Session.IsSome || agent.RefreshAuthentication.IsSome)
                 then
-                    let! refreshResult = refreshSession agent
+                    let! refreshResult = tryRefresh agent
 
                     match refreshResult with
-                    | Ok _ ->
+                    | Ok () ->
                         let retryRequest = new HttpRequestMessage (HttpMethod.Get, url)
                         addAuth agent retryRequest
                         let! retryResponse = agent.HttpClient.SendAsync (retryRequest)
@@ -230,12 +251,12 @@ module Xrpc =
                 elif
                     error.StatusCode = 401
                     && error.Error = Some "ExpiredToken"
-                    && agent.Session.IsSome
+                    && (agent.Session.IsSome || agent.RefreshAuthentication.IsSome)
                 then
-                    let! refreshResult = refreshSession agent
+                    let! refreshResult = tryRefresh agent
 
                     match refreshResult with
-                    | Ok _ ->
+                    | Ok () ->
                         // Retry the original request with new token
                         let retryRequest = new HttpRequestMessage (HttpMethod.Get, url)
                         addAuth agent retryRequest
@@ -244,6 +265,77 @@ module Xrpc =
                         if retryResponse.IsSuccessStatusCode then
                             let! retryBody = retryResponse.Content.ReadAsStringAsync ()
                             return Ok (JsonSerializer.Deserialize<'O> (retryBody, Json.options))
+                        else
+                            let! retryError = tryDeserializeError retryResponse
+                            return Error retryError
+                    | Error refreshError -> return Error refreshError
+                else
+                    return Error error
+        }
+
+    /// <summary>
+    /// Executes an XRPC query (HTTP GET) with query-string parameters that returns raw bytes
+    /// instead of JSON. Used for binary endpoints such as <c>com.atproto.sync.*</c>.
+    /// </summary>
+    /// <param name="nsid">The NSID of the XRPC method (e.g. <c>"com.atproto.sync.getBlob"</c>).</param>
+    /// <param name="parameters">
+    /// An F# record whose fields are serialized to query-string parameters via <see cref="QueryParams.toQueryString"/>.
+    /// </param>
+    /// <param name="agent">The <see cref="AtpAgent"/> to send the request through.</param>
+    /// <typeparam name="P">The parameter record type.</typeparam>
+    /// <returns>
+    /// A <c>Task</c> resolving to <c>Ok</c> with the raw response bytes on success,
+    /// or <c>Error</c> with an <see cref="XrpcError"/> on failure.
+    /// </returns>
+    /// <remarks>
+    /// Automatically retries once on 429 (rate limit) after waiting for the <c>Retry-After</c> duration.
+    /// Automatically refreshes the session and retries once on 401 <c>ExpiredToken</c>.
+    /// </remarks>
+    let queryBinary<'P> (nsid : string) (parameters : 'P) (agent : AtpAgent) : Task<Result<byte[], XrpcError>> =
+        task {
+            let queryString = QueryParams.toQueryString parameters
+            let url = $"{agent.BaseUrl}xrpc/{nsid}{queryString}"
+            let request = new HttpRequestMessage (HttpMethod.Get, url)
+            addAuth agent request
+
+            let! response = agent.HttpClient.SendAsync (request)
+
+            if response.IsSuccessStatusCode then
+                let! bytes = response.Content.ReadAsByteArrayAsync ()
+                return Ok bytes
+            else
+                let! error = tryDeserializeError response
+                // Rate limit retry
+                if error.StatusCode = 429 then
+                    let! _ = waitForRateLimit response
+                    let retryRequest = new HttpRequestMessage (HttpMethod.Get, url)
+                    addAuth agent retryRequest
+                    let! retryResponse = agent.HttpClient.SendAsync (retryRequest)
+
+                    if retryResponse.IsSuccessStatusCode then
+                        let! retryBytes = retryResponse.Content.ReadAsByteArrayAsync ()
+                        return Ok retryBytes
+                    else
+                        let! retryError = tryDeserializeError retryResponse
+                        return Error retryError
+                // Auto-refresh on ExpiredToken
+                elif
+                    error.StatusCode = 401
+                    && error.Error = Some "ExpiredToken"
+                    && (agent.Session.IsSome || agent.RefreshAuthentication.IsSome)
+                then
+                    let! refreshResult = tryRefresh agent
+
+                    match refreshResult with
+                    | Ok () ->
+                        // Retry the original request with new token
+                        let retryRequest = new HttpRequestMessage (HttpMethod.Get, url)
+                        addAuth agent retryRequest
+                        let! retryResponse = agent.HttpClient.SendAsync (retryRequest)
+
+                        if retryResponse.IsSuccessStatusCode then
+                            let! retryBytes = retryResponse.Content.ReadAsByteArrayAsync ()
+                            return Ok retryBytes
                         else
                             let! retryError = tryDeserializeError retryResponse
                             return Error retryError
@@ -309,12 +401,12 @@ module Xrpc =
                 elif
                     error.StatusCode = 401
                     && error.Error = Some "ExpiredToken"
-                    && agent.Session.IsSome
+                    && (agent.Session.IsSome || agent.RefreshAuthentication.IsSome)
                 then
-                    let! refreshResult = refreshSession agent
+                    let! refreshResult = tryRefresh agent
 
                     match refreshResult with
-                    | Ok _ ->
+                    | Ok () ->
                         // Retry the original request with new token
                         let retryRequest = new HttpRequestMessage (HttpMethod.Post, url)
                         retryRequest.Content <- new StringContent (json, Encoding.UTF8, "application/json")
@@ -380,12 +472,12 @@ module Xrpc =
                 elif
                     error.StatusCode = 401
                     && error.Error = Some "ExpiredToken"
-                    && agent.Session.IsSome
+                    && (agent.Session.IsSome || agent.RefreshAuthentication.IsSome)
                 then
-                    let! refreshResult = refreshSession agent
+                    let! refreshResult = tryRefresh agent
 
                     match refreshResult with
-                    | Ok _ ->
+                    | Ok () ->
                         // Retry the original request with new token
                         let retryRequest = new HttpRequestMessage (HttpMethod.Post, url)
                         retryRequest.Content <- new StringContent (json, Encoding.UTF8, "application/json")

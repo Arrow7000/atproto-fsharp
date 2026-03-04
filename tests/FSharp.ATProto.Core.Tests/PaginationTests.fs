@@ -66,7 +66,10 @@ let tests =
                   { HttpClient = new HttpClient (handler)
                     BaseUrl = System.Uri ("https://bsky.social/")
                     Session = None
-                    ExtraHeaders = [] }
+                    ExtraHeaders = []
+                    AuthenticateRequest = None
+                    RefreshAuthentication = None
+                    OnSessionChanged = None }
 
               let pages =
                   Xrpc.paginate<PageParams, PageOutput>
@@ -110,7 +113,10 @@ let tests =
                   { HttpClient = new HttpClient (handler)
                     BaseUrl = System.Uri ("https://bsky.social/")
                     Session = None
-                    ExtraHeaders = [] }
+                    ExtraHeaders = []
+                    AuthenticateRequest = None
+                    RefreshAuthentication = None
+                    OnSessionChanged = None }
 
               let pages =
                   Xrpc.paginate<PageParams, PageOutput>

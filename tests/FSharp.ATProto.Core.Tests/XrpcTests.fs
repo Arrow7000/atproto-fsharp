@@ -33,7 +33,10 @@ let makeAgent (handler : HttpRequestMessage -> HttpResponseMessage) =
     { HttpClient = client
       BaseUrl = System.Uri ("https://bsky.social/")
       Session = None
-      ExtraHeaders = [] }
+      ExtraHeaders = []
+      AuthenticateRequest = None
+      RefreshAuthentication = None
+      OnSessionChanged = None }
 
 [<Tests>]
 let queryTests =
