@@ -8,7 +8,7 @@
   <a href="https://www.nuget.org/packages/FSharp.ATProto.Bluesky"><img src="https://img.shields.io/nuget/v/FSharp.ATProto.Bluesky" alt="NuGet"></a>
   <a href="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml"><img src="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10">
-  <img src="https://img.shields.io/badge/tests-1%2C761-brightgreen" alt="Tests: 1,761">
+  <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Arrow7000/TEST_BADGE_GIST_ID_PLACEHOLDER/raw/test-count.json" alt="Tests">
   <a href="https://github.com/Arrow7000/atproto-fsharp/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
 </p>
 
@@ -64,9 +64,15 @@ See the [Quickstart](docs/quickstart.md) to get up and running in 5 minutes.
 - **Profiles** -- get, search, typeahead, batch fetch, upsert ([guide](docs/guides/profiles.md))
 - **Chat / DMs** -- conversations, messages, reactions, with automatic proxy headers ([guide](docs/guides/chat.md))
 - **Notifications** -- fetch, count unread, mark seen ([guide](docs/guides/notifications.md))
-- **Moderation** -- report content, mute threads and mod lists ([guide](docs/guides/moderation.md))
+- **Moderation** -- report content, mute threads, mod lists, and a full moderation engine ([guide](docs/guides/moderation.md))
 - **Identity** -- DID resolution, handle verification, PDS discovery ([guide](docs/guides/identity.md))
+- **Lists** -- create and manage lists and starter packs ([guide](docs/guides/lists.md))
+- **Preferences** -- saved feeds, muted words, content filtering ([guide](docs/guides/preferences.md))
+- **Streaming** -- real-time events via Jetstream and Firehose ([guide](docs/guides/streaming.md))
+- **Video** -- upload and post video content ([guide](docs/guides/media.md))
 - **Pagination** -- lazy `IAsyncEnumerable` paginators for timeline, followers, notifications ([guide](docs/guides/pagination.md))
+- **OAuth** -- OAuth 2.0 client with DPoP/PKCE, plus authorization server ([guide](docs/guides/oauth.md))
+- **Server-side** -- feed generator framework, XRPC server, service auth
 - **Full XRPC access** -- all 237 Bluesky endpoints available as typed wrappers ([guide](docs/guides/raw-xrpc.md))
 
 ## Documentation
@@ -74,7 +80,7 @@ See the [Quickstart](docs/quickstart.md) to get up and running in 5 minutes.
 - [Quickstart](docs/quickstart.md) -- zero to first post
 - [Build a Bot](docs/guides/build-a-bot.md) -- end-to-end tutorial
 - [Concepts](docs/concepts.md) -- AT Protocol terms explained (DID, Handle, AT-URI, PDS, Lexicon)
-- [Guides](docs/guides/) -- posts, social, feeds, profiles, media, chat, notifications, moderation, rich text, identity, error handling, pagination, raw XRPC
+- [Guides](docs/guides/) -- 25+ guides covering posts, social, feeds, profiles, media, chat, notifications, moderation, streaming, OAuth, and more
 
 ## Building & Testing
 
@@ -84,7 +90,7 @@ Requires [.NET 10 SDK](https://dotnet.microsoft.com/download).
 dotnet build && dotnet test
 ```
 
-1,761 tests across six projects.
+2,608 tests across 14 projects.
 
 ## AI Transparency
 
@@ -98,7 +104,7 @@ To ensure correctness the project validates against ground truth at every layer:
 - **Rich text** -- [property-based tests](tests/FSharp.ATProto.Bluesky.Tests/RichTextTests.fs) verify byte-range correctness and facet ordering
 - **XRPC / Bluesky** -- [tested](tests/FSharp.ATProto.Bluesky.Tests/) via mock HTTP handlers that verify request construction, multi-step orchestration (e.g. thread root resolution), error handling, and domain type mapping (note: the mocks don't validate against real Bluesky API responses -- that contract is covered by the generated types matching the lexicon schemas above)
 
-All told, 1,761 tests across six projects, with zero reliance on manual testing or live API calls.
+All told, 2,608 tests across 14 projects, with zero reliance on manual testing or live API calls.
 
 ## License
 

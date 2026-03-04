@@ -43,9 +43,15 @@ taskResult {
 - **Profiles** -- get, search, typeahead, batch fetch, upsert
 - **Chat / DMs** -- conversations, messages, reactions, with automatic proxy headers
 - **Notifications** -- fetch, count unread, mark seen
-- **Moderation** -- report content, mute threads and mod lists
+- **Moderation** -- report content, mute threads, mod lists, and a full moderation engine
 - **Identity** -- DID resolution, handle verification, PDS discovery
+- **Lists** -- create and manage lists and starter packs
+- **Preferences** -- saved feeds, muted words, content filtering
+- **Streaming** -- real-time events via Jetstream and Firehose
+- **Video** -- upload and post video content
 - **Pagination** -- lazy `IAsyncEnumerable` paginators for timeline, followers, notifications
+- **OAuth** -- OAuth 2.0 client with DPoP/PKCE, plus authorization server
+- **Server-side** -- feed generator framework, XRPC server, service auth
 - **Full XRPC access** -- all 237 Bluesky endpoints available as typed wrappers
 
 ## Documentation

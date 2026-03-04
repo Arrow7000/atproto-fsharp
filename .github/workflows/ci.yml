@@ -23,4 +23,23 @@ jobs:
         run: dotnet build --configuration Release
 
       - name: Test
-        run: dotnet test --configuration Release --no-build
+        run: |
+          dotnet test --configuration Release --no-build 2>&1 | tee test-output.txt
+
+      - name: Extract test count
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          TOTAL=$(grep -oP 'Passed:\s+\K\d+' test-output.txt | awk '{s+=$1} END {print s}')
+          echo "TEST_COUNT=$TOTAL" >> $GITHUB_ENV
+          echo "Total tests: $TOTAL"
+
+      - name: Update test count badge
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: ${{ vars.TEST_BADGE_GIST_ID }}
+          filename: test-count.json
+          label: tests
+          message: ${{ env.TEST_COUNT }}
+          color: brightgreen
