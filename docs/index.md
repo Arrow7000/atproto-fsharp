@@ -84,7 +84,7 @@ The library is organized in layers, each building on the one below:
 | `FSharp.ATProto.Repo` | Repository MST, commits, CAR export |
 | `FSharp.ATProto.XrpcServer` | XRPC server framework with auth and rate limiting |
 
-2,608 tests across 14 projects.
+![Tests](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Arrow7000/b4926c04f5a0cf1326acd6be7fab8ef3/raw/test-count.json) across 14 projects.
 
 ## License
 
