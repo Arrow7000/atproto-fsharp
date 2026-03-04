@@ -45,11 +45,10 @@ dotnet new console -lang F# -n MyBskyBot
 cd MyBskyBot
 ```
 
-The library is not yet published on NuGet. Clone the repository and add a project reference:
+Add the NuGet package:
 
 ```bash
-git clone https://github.com/aron/atproto-fsharp.git ../atproto-fsharp
-dotnet add reference ../atproto-fsharp/src/FSharp.ATProto.Bluesky/FSharp.ATProto.Bluesky.fsproj
+dotnet add package FSharp.ATProto.Bluesky
 ```
 
 ## Log In

@@ -1,14 +1,15 @@
 <!-- @format -->
 
 <p align="center">
-  <img src="docs/assets/header.svg" alt="FSharp.ATProto" width="400"/>
+  <img src="https://raw.githubusercontent.com/Arrow7000/atproto-fsharp/main/docs/assets/header.svg" alt="FSharp.ATProto" width="400"/>
 </p>
 
 <p align="center">
+  <a href="https://www.nuget.org/packages/FSharp.ATProto.Bluesky"><img src="https://img.shields.io/nuget/v/FSharp.ATProto.Bluesky" alt="NuGet"></a>
   <a href="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml"><img src="https://github.com/Arrow7000/atproto-fsharp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10">
   <img src="https://img.shields.io/badge/tests-1%2C761-brightgreen" alt="Tests: 1,761">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
+  <a href="https://github.com/Arrow7000/atproto-fsharp/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
 </p>
 
 <p align="center">
@@ -18,6 +19,14 @@
 </p>
 
 ---
+
+## Install
+
+```bash
+dotnet add package FSharp.ATProto.Bluesky
+```
+
+## Quick Example
 
 ```fsharp
 open FSharp.ATProto.Bluesky
