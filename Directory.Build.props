@@ -25,7 +25,7 @@
   <PropertyGroup>
     <!-- fsdocs -->
     <FsDocsLogoSource>img/logo.svg</FsDocsLogoSource>
-    <FsDocsLogoLink>https://github.com/Arrow7000/atproto-fsharp</FsDocsLogoLink>
+    <FsDocsLogoLink>https://arrow7000.github.io/atproto-fsharp/</FsDocsLogoLink>
     <FsDocsLicenseLink>https://github.com/Arrow7000/atproto-fsharp/blob/main/LICENSE</FsDocsLicenseLink>
     <FsDocsReleaseNotesLink></FsDocsReleaseNotesLink>
   </PropertyGroup>
