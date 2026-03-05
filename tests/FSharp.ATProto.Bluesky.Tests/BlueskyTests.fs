@@ -5920,6 +5920,31 @@ let viaAttributionTests =
               let err = Expect.wantError result "should fail without session"
               Expect.equal err.StatusCode 401 "status code" ]
 
+// ── FeedItem reply parent tests ─────────────────────────────────────
+
+[<Tests>]
+let feedItemReplyParentTests =
+    testList
+        "FeedItem reply parent"
+        [ testCase "FeedItem.ofFeedViewPost maps reply parent"
+          <| fun _ ->
+              let json =
+                  """{"post":{"uri":"at://did:plc:a/app.bsky.feed.post/1","cid":"bafyreiabc","author":{"did":"did:plc:a","handle":"a.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"reply","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"},"reply":{"parent":{"$type":"app.bsky.feed.defs#postView","uri":"at://did:plc:b/app.bsky.feed.post/2","cid":"bafyreicde","author":{"did":"did:plc:b","handle":"b.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"original","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"},"root":{"$type":"app.bsky.feed.defs#postView","uri":"at://did:plc:b/app.bsky.feed.post/2","cid":"bafyreicde","author":{"did":"did:plc:b","handle":"b.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"original","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"}}}"""
+
+              let fvp = JsonSerializer.Deserialize<AppBskyFeed.Defs.FeedViewPost> (json, Json.options)
+              let fi = FeedItem.ofFeedViewPost fvp
+              Expect.isSome fi.ReplyParent "should have reply parent"
+              Expect.equal fi.ReplyParent.Value.Text "original" "parent text"
+
+          testCase "FeedItem.ofFeedViewPost with no reply has None ReplyParent"
+          <| fun _ ->
+              let json =
+                  """{"post":{"uri":"at://did:plc:a/app.bsky.feed.post/1","cid":"bafyreiabc","author":{"did":"did:plc:a","handle":"a.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"hello","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"}}"""
+
+              let fvp = JsonSerializer.Deserialize<AppBskyFeed.Defs.FeedViewPost> (json, Json.options)
+              let fi = FeedItem.ofFeedViewPost fvp
+              Expect.isNone fi.ReplyParent "no reply parent" ]
+
 // ── PostEmbed mapping tests ─────────────────────────────────────────
 
 [<Tests>]

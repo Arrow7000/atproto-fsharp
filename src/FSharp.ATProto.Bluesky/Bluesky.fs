@@ -402,7 +402,8 @@ type FeedReason =
 /// <summary>A single item in a feed or timeline.</summary>
 type FeedItem =
     { Post : TimelinePost
-      Reason : FeedReason option }
+      Reason : FeedReason option
+      ReplyParent : TimelinePost option }
 
 module FeedItem =
 
@@ -416,8 +417,16 @@ module FeedItem =
                 | AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin _ -> Some FeedReason.Pin
                 | _ -> None)
 
+        let replyParent =
+            fvp.Reply
+            |> Option.bind (fun r ->
+                match r.Parent with
+                | AppBskyFeed.Defs.ReplyRefParentUnion.PostView pv -> Some (TimelinePost.ofPostView pv)
+                | _ -> None)
+
         { Post = TimelinePost.ofPostView fvp.Post
-          Reason = reason }
+          Reason = reason
+          ReplyParent = replyParent }
 
 /// <summary>The kind of notification received.</summary>
 [<RequireQualifiedAccess>]
@@ -4027,9 +4036,10 @@ type TestFactory private () =
     /// <summary>
     /// Create a <see cref="FeedItem"/> wrapping a <see cref="TimelinePost"/> with no feed reason.
     /// </summary>
-    static member FeedItem (?post : TimelinePost, ?reason : FeedReason) : FeedItem =
+    static member FeedItem (?post : TimelinePost, ?reason : FeedReason, ?replyParent : TimelinePost) : FeedItem =
         { Post = post |> Option.defaultValue (TestFactory.TimelinePost ())
-          Reason = reason }
+          Reason = reason
+          ReplyParent = replyParent }
 
     /// <summary>
     /// Create a <see cref="Notification"/> with sensible defaults.
