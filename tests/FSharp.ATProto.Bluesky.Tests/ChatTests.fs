@@ -412,7 +412,11 @@ let removeReactionTests =
 let private testConvoSummary =
     { ConvoSummary.Id = "convo-123"
       Members = []
-      LastMessageText = Some "hello"
+      LastMessage =
+          Some
+              { Text = "hello"
+                Sender = Did.parse "did:plc:sender" |> Result.defaultWith failwith
+                SentAt = System.DateTimeOffset.UtcNow }
       UnreadCount = 0L
       IsMuted = false }
 

@@ -532,27 +532,37 @@ module ChatMessage =
             Some(ChatMessage.Deleted {| Id = dv.Id; Sender = dv.Sender.Did |})
         | _ -> None
 
+/// <summary>Summary of the last message in a conversation.</summary>
+type LastMessage =
+    { Text : string
+      Sender : Did
+      SentAt : DateTimeOffset }
+
 /// <summary>A summary of a chat conversation.</summary>
 type ConvoSummary =
     { Id : string
       Members : ProfileSummary list
-      LastMessageText : string option
+      LastMessage : LastMessage option
       UnreadCount : int64
       IsMuted : bool }
 
 module ConvoSummary =
 
     let ofConvoView (cv : ChatBskyConvo.Defs.ConvoView) : ConvoSummary =
-        let lastText =
+        let lastMessage =
             cv.LastMessage
             |> Option.bind (fun lm ->
                 match lm with
-                | ChatBskyConvo.Defs.ConvoViewLastMessageUnion.MessageView mv -> Some mv.Text
+                | ChatBskyConvo.Defs.ConvoViewLastMessageUnion.MessageView mv ->
+                    Some
+                        { Text = mv.Text
+                          Sender = mv.Sender.Did
+                          SentAt = ProfileSummary.toDateTimeOffset mv.SentAt }
                 | _ -> None)
 
         { Id = cv.Id
           Members = cv.Members |> List.map ProfileSummary.ofChatBasic
-          LastMessageText = lastText
+          LastMessage = lastMessage
           UnreadCount = cv.UnreadCount
           IsMuted = cv.Muted }
 
