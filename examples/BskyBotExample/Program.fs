@@ -264,7 +264,7 @@ let main _ =
 
                 // ─────────────────────────────────────────────────────
                 // 12. NOTIFICATIONS
-                // Each notification has a typed Kind DU.
+                // Each notification has a typed Content DU with associated data.
                 // ─────────────────────────────────────────────────────
                 section "12. Notifications"
 
@@ -273,15 +273,15 @@ let main _ =
 
                 for notif in notifs.Items do
                     let reasonStr =
-                        match notif.Kind with
-                        | NotificationKind.Like -> "like"
-                        | NotificationKind.Repost -> "repost"
-                        | NotificationKind.Follow -> "follow"
-                        | NotificationKind.Mention -> "mention"
-                        | NotificationKind.Reply -> "reply"
-                        | NotificationKind.Quote -> "quote"
-                        | NotificationKind.StarterpackJoined -> "starterpack-joined"
-                        | NotificationKind.Unknown s -> sprintf "unknown(%s)" s
+                        match notif.Content with
+                        | NotificationContent.Like _ -> "like"
+                        | NotificationContent.Repost _ -> "repost"
+                        | NotificationContent.Follow -> "follow"
+                        | NotificationContent.Mention _ -> "mention"
+                        | NotificationContent.Reply _ -> "reply"
+                        | NotificationContent.Quote _ -> "quote"
+                        | NotificationContent.StarterpackJoined _ -> "starterpack-joined"
+                        | NotificationContent.Unknown s -> sprintf "unknown(%s)" s
 
                     printfn "  [%s] from @%s (read: %b)" reasonStr (Handle.value notif.Author.Handle) notif.IsRead
 
