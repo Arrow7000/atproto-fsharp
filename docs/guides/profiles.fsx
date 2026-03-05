@@ -121,23 +121,34 @@ taskResult {
 
 | Function | Accepts | Returns | Description |
 |----------|---------|---------|-------------|
-| `Bluesky.upsertProfile` | `agent:AtpAgent` `updateFn:(Profile option -> Profile)` | `Result<unit, XrpcError>` | Read-modify-write profile with CAS retry |
+| `Bluesky.updateProfile` | `agent:AtpAgent` `transform:(Profile -> Profile)` | `Result<unit, XrpcError>` | Transform the profile record with optimistic concurrency |
+| `Bluesky.setDisplayName` | `agent:AtpAgent` `name:string option` | `Result<unit, XrpcError>` | Set or clear display name (auto-retries on conflict) |
+| `Bluesky.setDescription` | `agent:AtpAgent` `description:string option` | `Result<unit, XrpcError>` | Set or clear bio (auto-retries on conflict) |
+| `Bluesky.setAvatar` | `agent:AtpAgent` `avatar:(byte[] * ImageMime) option` | `Result<unit, XrpcError>` | Upload and set avatar, or clear with `None` |
+| `Bluesky.setBanner` | `agent:AtpAgent` `banner:(byte[] * ImageMime) option` | `Result<unit, XrpcError>` | Upload and set banner, or clear with `None` |
+| `Bluesky.upsertProfile` | `agent:AtpAgent` `updateFn:(Profile option -> Profile)` | `Result<unit, XrpcError>` | Low-level read-modify-write with CAS retry |
 | `Bluesky.updateHandle` | `agent:AtpAgent` `handle:Handle` | `Result<unit, XrpcError>` | Change the authenticated user's handle |
+
+Field-specific setters (`setDisplayName`, `setDescription`, `setAvatar`, `setBanner`) auto-retry once on conflict -- safe because they touch a single field. `updateProfile` does not retry; the caller controls the transform.
 *)
 
 taskResult {
-    do! Bluesky.upsertProfile agent (fun existing ->
-        let current =
-            existing |> Option.defaultValue
-                { DisplayName = None; Description = None; Avatar = None
-                  Banner = None; Labels = None; CreatedAt = None
-                  PinnedPost = None; JoinedViaStarterPack = None
-                  Pronouns = None; Website = None }
-        { current with DisplayName = Some "New Display Name" })
+    // Simple field setters
+    do! Bluesky.setDisplayName agent (Some "New Display Name")
+    do! Bluesky.setDescription agent (Some "F# developer | AT Protocol enthusiast")
+
+    // Set avatar from file
+    let avatarBytes = System.IO.File.ReadAllBytes "avatar.jpg"
+    do! Bluesky.setAvatar agent (Some (avatarBytes, Jpeg))
+
+    // Full transform for multiple fields at once
+    do! Bluesky.updateProfile agent (fun p ->
+        { p with DisplayName = Some "Updated Name"
+                 Description = Some "Updated bio" })
 }
 
 (**
-Note: `upsertProfile` operates on the raw `AppBskyActor.Profile.Profile` type (all `Option` fields), not the convenience `Profile` domain type.
+Note: `updateProfile` and `upsertProfile` operate on the raw `AppBskyActor.Profile.Profile` type (all `Option` fields), not the convenience `Profile` domain type.
 
 ## SRTP Polymorphism
 

@@ -24,9 +24,19 @@ A summary of a chat conversation.
 |-------|------|-------------|
 | `Id` | `string` | The conversation identifier |
 | `Members` | `ProfileSummary list` | Participants in the conversation |
-| `LastMessageText` | `string option` | Text of the most recent message, if any |
+| `LastMessage` | `LastMessage option` | The most recent message summary, if any |
 | `UnreadCount` | `int64` | Number of unread messages |
 | `IsMuted` | `bool` | Whether notifications are muted for this conversation |
+
+### LastMessage
+
+Summary of the most recent message in a conversation.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Text` | `string` | Message text |
+| `Sender` | `Did` | DID of the sender |
+| `SentAt` | `DateTimeOffset` | When the message was sent |
 
 ### ChatMessage
 
@@ -34,7 +44,7 @@ Discriminated union representing a message in a conversation. Uses `[<RequireQua
 
 | Case | Fields | Description |
 |------|--------|-------------|
-| `ChatMessage.Message` | `Id : string`, `Text : string`, `Sender : Did`, `SentAt : DateTimeOffset` | A visible message |
+| `ChatMessage.Message` | `Id : string`, `Text : string`, `Sender : Did`, `SentAt : DateTimeOffset`, `Embed : PostEmbed option` | A visible message |
 | `ChatMessage.Deleted` | `Id : string`, `Sender : Did` | A deleted message placeholder |
 
 ### Page&lt;'T&gt;

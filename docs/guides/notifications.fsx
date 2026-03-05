@@ -22,26 +22,26 @@ A notification from the user's notification feed.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `Kind` | `NotificationKind` | The type of notification |
+| `RecordUri` | `AtUri` | AT-URI of the notification record |
 | `Author` | `ProfileSummary` | The user who triggered the notification |
-| `SubjectUri` | `AtUri option` | The post that was liked, replied to, etc. `None` for follows |
+| `Content` | `NotificationContent` | Rich discriminated union with type-specific data |
 | `IsRead` | `bool` | Whether the notification has been seen |
 | `IndexedAt` | `DateTimeOffset` | When the notification was indexed |
 
-### NotificationKind
+### NotificationContent
 
-Discriminated union for notification types. Uses `[<RequireQualifiedAccess>]`, so all cases must be qualified (e.g. `NotificationKind.Like`).
+Rich discriminated union for notification types. Uses `[<RequireQualifiedAccess>]`, so all cases must be qualified (e.g. `NotificationContent.Like`). Each case carries the data relevant to that notification kind.
 
-| Case | Description |
-|------|-------------|
-| `NotificationKind.Like` | Someone liked your post |
-| `NotificationKind.Repost` | Someone reposted your post |
-| `NotificationKind.Follow` | Someone followed you |
-| `NotificationKind.Mention` | Someone mentioned you in a post |
-| `NotificationKind.Reply` | Someone replied to your post |
-| `NotificationKind.Quote` | Someone quoted your post |
-| `NotificationKind.StarterpackJoined` | Someone joined via your starter pack |
-| `NotificationKind.Unknown of string` | A notification type not yet recognized by the library |
+| Case | Fields | Description |
+|------|--------|-------------|
+| `NotificationContent.Like` | `post: PostRef` | Someone liked your post |
+| `NotificationContent.Repost` | `post: PostRef` | Someone reposted your post |
+| `NotificationContent.Follow` | -- | Someone followed you |
+| `NotificationContent.Reply` | `text: string * inReplyTo: PostRef` | Someone replied to your post |
+| `NotificationContent.Mention` | `text: string` | Someone mentioned you in a post |
+| `NotificationContent.Quote` | `text: string * quotedPost: PostRef` | Someone quoted your post |
+| `NotificationContent.StarterpackJoined` | `starterPackUri: AtUri` | Someone joined via your starter pack |
+| `NotificationContent.Unknown` | `reason: string` | A notification type not yet recognized by the library |
 
 ## Functions
 
@@ -78,13 +78,19 @@ taskResult {
     let! page = Bluesky.getNotifications agent (Some 25L) None
 
     for n in page.Items do
-        match n.Kind with
-        | NotificationKind.Like -> printfn "%s liked your post" n.Author.DisplayName
-        | NotificationKind.Follow -> printfn "%s followed you" n.Author.DisplayName
-        | NotificationKind.Reply -> printfn "%s replied" n.Author.DisplayName
-        | NotificationKind.Mention -> printfn "%s mentioned you" n.Author.DisplayName
-        | NotificationKind.Repost -> printfn "%s reposted" n.Author.DisplayName
-        | NotificationKind.Quote -> printfn "%s quoted you" n.Author.DisplayName
+        match n.Content with
+        | NotificationContent.Like postRef ->
+            printfn "%s liked your post (%O)" n.Author.DisplayName postRef.Uri
+        | NotificationContent.Follow ->
+            printfn "%s followed you" n.Author.DisplayName
+        | NotificationContent.Reply (text, _) ->
+            printfn "%s replied: %s" n.Author.DisplayName text
+        | NotificationContent.Mention text ->
+            printfn "%s mentioned you: %s" n.Author.DisplayName text
+        | NotificationContent.Repost postRef ->
+            printfn "%s reposted (%O)" n.Author.DisplayName postRef.Uri
+        | NotificationContent.Quote (text, _) ->
+            printfn "%s quoted you: %s" n.Author.DisplayName text
         | _ -> printfn "Other notification from %s" n.Author.DisplayName
 }
 
@@ -123,7 +129,7 @@ task {
             match enumerator.Current with
             | Ok page ->
                 for n in page.Items do
-                    printfn "%s: %A" n.Author.DisplayName n.Kind
+                    printfn "%s: %A" n.Author.DisplayName n.Content
             | Error err ->
                 printfn "Error: %A" err
             do! loop ()
@@ -154,18 +160,18 @@ taskResult {
 
         for n in page.Items do
             if not n.IsRead then
-                match n.Kind with
-                | NotificationKind.Follow ->
+                match n.Content with
+                | NotificationContent.Follow ->
                     printfn "New follower: %s (%O)" n.Author.DisplayName n.Author.Handle
-                | NotificationKind.Like
-                | NotificationKind.Repost ->
-                    n.SubjectUri |> Option.iter (fun uri ->
-                        printfn "%s interacted with %O" n.Author.DisplayName uri)
-                | NotificationKind.Reply
-                | NotificationKind.Mention
-                | NotificationKind.Quote ->
-                    n.SubjectUri |> Option.iter (fun uri ->
-                        printfn "%s wants your attention on %O" n.Author.DisplayName uri)
+                | NotificationContent.Like postRef
+                | NotificationContent.Repost postRef ->
+                    printfn "%s interacted with %O" n.Author.DisplayName postRef.Uri
+                | NotificationContent.Reply (text, _) ->
+                    printfn "%s replied: %s" n.Author.DisplayName text
+                | NotificationContent.Mention text ->
+                    printfn "%s mentioned you: %s" n.Author.DisplayName text
+                | NotificationContent.Quote (text, _) ->
+                    printfn "%s quoted you: %s" n.Author.DisplayName text
                 | _ -> ()
 
         do! Bluesky.markNotificationsSeen agent

@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <PackageId>$(MSBuildProjectName)</PackageId>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <Authors>Aron Adler</Authors>
     <Description>Idiomatic F# library for the AT Protocol (Bluesky)</Description>
     <PackageTags>fsharp;atproto;bluesky;at-protocol</PackageTags>

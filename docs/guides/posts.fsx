@@ -33,6 +33,7 @@ A post with engagement counts and viewer state, returned by feed, search, and th
 | `IsLiked` | `bool` | Whether you have liked this post |
 | `IsReposted` | `bool` | Whether you have reposted this post |
 | `IsBookmarked` | `bool` | Whether you have bookmarked this post |
+| `Embed` | `PostEmbed option` | Embedded content (images, video, link card, quoted post) |
 
 ### PostRef
 
@@ -51,6 +52,7 @@ A single item from a feed or timeline, pairing a post with an optional reason.
 |-------|------|-------------|
 | `Post` | `TimelinePost` | The post content |
 | `Reason` | `FeedReason option` | Why the post appeared (repost, pin, or `None` for organic) |
+| `ReplyParent` | `TimelinePost option` | The parent post if this is a reply |
 
 ### FeedReason
 
@@ -60,6 +62,21 @@ Discriminated union indicating why a post appeared in a feed.
 |------|--------|-------------|
 | `Repost` | `by: ProfileSummary` | Someone reposted this post |
 | `Pin` | -- | Post is pinned |
+
+### PostEmbed
+
+Discriminated union for embedded content in a post. Uses `[<RequireQualifiedAccess>]`.
+
+| Case | Fields | Description |
+|------|--------|-------------|
+| `PostEmbed.Images` | `PostImage list` | One or more attached images |
+| `PostEmbed.Video` | `PostVideo` | An attached video |
+| `PostEmbed.ExternalLink` | `PostExternalLink` | A link card preview |
+| `PostEmbed.QuotedPost` | `ViewRecordUnion` | A quoted post embed |
+| `PostEmbed.RecordWithMedia` | `ViewRecordUnion * PostMediaEmbed` | A quoted post with additional media |
+| `PostEmbed.Unknown` | -- | An unrecognized embed type |
+
+Supporting types: `PostImage` has `Thumb`, `Fullsize`, `Alt` (all `string`). `PostVideo` has `Thumbnail`, `Playlist` (both `string option`), `Alt` (`string option`). `PostExternalLink` has `Uri`, `Title`, `Description` (all `string`), `Thumb` (`string option`).
 
 ### ThreadNode
 
