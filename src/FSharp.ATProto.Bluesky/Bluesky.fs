@@ -513,10 +513,16 @@ type ChatMessage =
         {| Id : string
            Text : string
            Sender : Did
-           SentAt : DateTimeOffset |}
+           SentAt : DateTimeOffset
+           Embed : PostEmbed option |}
     | Deleted of {| Id : string; Sender : Did |}
 
 module ChatMessage =
+
+    let internal mapEmbed (eu : ChatBskyConvo.Defs.MessageViewEmbedUnion) : PostEmbed =
+        match eu with
+        | ChatBskyConvo.Defs.MessageViewEmbedUnion.View rv -> PostEmbed.QuotedPost rv.Record
+        | _ -> PostEmbed.Unknown
 
     let ofMessagesItem (item : ChatBskyConvo.GetMessages.OutputMessagesItem) : ChatMessage option =
         match item with
@@ -526,7 +532,8 @@ module ChatMessage =
                     {| Id = mv.Id
                        Text = mv.Text
                        Sender = mv.Sender.Did
-                       SentAt = ProfileSummary.toDateTimeOffset mv.SentAt |}
+                       SentAt = ProfileSummary.toDateTimeOffset mv.SentAt
+                       Embed = mv.Embed |> Option.map mapEmbed |}
             )
         | ChatBskyConvo.GetMessages.OutputMessagesItem.DeletedMessageView dv ->
             Some(ChatMessage.Deleted {| Id = dv.Id; Sender = dv.Sender.Did |})

@@ -102,7 +102,8 @@ module Chat =
                         {| Id = mv.Id
                            Text = mv.Text
                            Sender = mv.Sender.Did
-                           SentAt = ProfileSummary.toDateTimeOffset mv.SentAt |})
+                           SentAt = ProfileSummary.toDateTimeOffset mv.SentAt
+                           Embed = mv.Embed |> Option.map ChatMessage.mapEmbed |})
         }
 
     /// <summary>
