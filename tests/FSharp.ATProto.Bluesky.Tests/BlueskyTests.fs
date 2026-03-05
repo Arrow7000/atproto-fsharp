@@ -4396,10 +4396,9 @@ let getRelationshipsTests =
                       (fun req -> captured <- Some req)
                       {| actor = "did:plc:testuser"
                          relationships =
-                          [| {| Case = "app.bsky.graph.defs#relationship"
-                                item =
-                                 {| did = "did:plc:other"
-                                    following = "at://did:plc:testuser/app.bsky.graph.follow/1" |} |} |] |}
+                          [| {| ``$type`` = "app.bsky.graph.defs#relationship"
+                                did = "did:plc:other"
+                                following = "at://did:plc:testuser/app.bsky.graph.follow/1" |} |] |}
 
               let did = parseDid' "did:plc:testuser"
 
@@ -4420,10 +4419,9 @@ let getRelationshipsTests =
                       (fun _ -> ())
                       {| actor = "did:plc:testuser"
                          relationships =
-                          [| {| Case = "app.bsky.graph.defs#relationship"
-                                item =
-                                 {| did = "did:plc:other"
-                                    following = "at://did:plc:testuser/app.bsky.graph.follow/1" |} |} |] |}
+                          [| {| ``$type`` = "app.bsky.graph.defs#relationship"
+                                did = "did:plc:other"
+                                following = "at://did:plc:testuser/app.bsky.graph.follow/1" |} |] |}
 
               let did = parseDid' "did:plc:testuser"
 
@@ -5920,6 +5918,38 @@ let viaAttributionTests =
 
               let err = Expect.wantError result "should fail without session"
               Expect.equal err.StatusCode 401 "status code" ]
+
+// ── Union deserialization tests ──────────────────────────────────────
+
+[<Tests>]
+let unionDeserializationTests =
+    testList
+        "Union deserialization"
+        [ testCase "ReplyRefParentUnion deserializes PostView case"
+          <| fun _ ->
+              let json =
+                  """{"$type":"app.bsky.feed.defs#postView","uri":"at://did:plc:test/app.bsky.feed.post/abc","cid":"bafyreiabc","author":{"did":"did:plc:test","handle":"test.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"hello","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"}"""
+
+              let result =
+                  JsonSerializer.Deserialize<AppBskyFeed.Defs.ReplyRefParentUnion> (json, Json.options)
+
+              match result with
+              | AppBskyFeed.Defs.ReplyRefParentUnion.PostView pv ->
+                  Expect.equal (AtUri.value pv.Uri) "at://did:plc:test/app.bsky.feed.post/abc" "uri"
+              | other -> failtest $"Expected PostView, got {other}"
+
+          testCase "PostViewEmbedUnion deserializes images view case"
+          <| fun _ ->
+              let json =
+                  """{"$type":"app.bsky.embed.images#view","images":[{"thumb":"https://cdn.example/thumb.jpg","fullsize":"https://cdn.example/full.jpg","alt":"photo"}]}"""
+
+              let result =
+                  JsonSerializer.Deserialize<AppBskyFeed.Defs.PostViewEmbedUnion> (json, Json.options)
+
+              match result with
+              | AppBskyFeed.Defs.PostViewEmbedUnion.View iv ->
+                  Expect.equal iv.Images.Length 1 "one image"
+              | other -> failtest $"Expected View (images), got {other}" ]
 
 // ── TestFactory tests ──────────────────────────────────────────────
 

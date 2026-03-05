@@ -32,10 +32,9 @@ let private createOzoneAgent (captureRequest : HttpRequestMessage -> unit) (resp
     agent
 
 /// A minimal valid ModEventView JSON response that the generated deserializer can parse.
-/// FSharp.SystemTextJson uses "Case"/"item" format (from global JsonFSharpConverter in Json.options),
-/// with [<JsonName>] values as case discriminators.
+/// Uses $type internal tag with unwrapped record fields (matching AT Protocol JSON format).
 let private minimalModEventViewJson =
-    """{"createdAt":"2026-03-01T00:00:00.000Z","createdBy":"did:plc:testmod","event":{"Case":"tools.ozone.moderation.defs#modEventAcknowledge","item":{}},"id":1,"subject":{"Case":"com.atproto.admin.defs#repoRef","item":{"did":"did:plc:target"}},"subjectBlobCids":[]}"""
+    """{"createdAt":"2026-03-01T00:00:00.000Z","createdBy":"did:plc:testmod","event":{"$type":"tools.ozone.moderation.defs#modEventAcknowledge"},"id":1,"subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:target"},"subjectBlobCids":[]}"""
 
 /// Creates a mock agent that returns a pre-built JSON string (not serialized from an object).
 let private createOzoneAgentWithRawJson (captureRequest : HttpRequestMessage -> unit) (jsonBody : string) =
@@ -488,7 +487,7 @@ let queryTests =
           <| fun _ ->
               let mutable captured = None
               let eventJson =
-                  """{"createdAt":"2026-03-01T00:00:00.000Z","createdBy":"did:plc:testmod","event":{"Case":"tools.ozone.moderation.defs#modEventAcknowledge","item":{}},"id":42,"subject":{"Case":"tools.ozone.moderation.defs#repoView","item":{"did":"did:plc:target","handle":"target.bsky.social","indexedAt":"2026-03-01T00:00:00.000Z","moderation":{},"relatedRecords":[]}},"subjectBlobs":[]}"""
+                  """{"createdAt":"2026-03-01T00:00:00.000Z","createdBy":"did:plc:testmod","event":{"$type":"tools.ozone.moderation.defs#modEventAcknowledge"},"id":42,"subject":{"$type":"tools.ozone.moderation.defs#repoView","did":"did:plc:target","handle":"target.bsky.social","indexedAt":"2026-03-01T00:00:00.000Z","moderation":{},"relatedRecords":[]},"subjectBlobs":[]}"""
 
               let agent = createOzoneAgentWithRawJson (fun req -> captured <- Some req) eventJson
 

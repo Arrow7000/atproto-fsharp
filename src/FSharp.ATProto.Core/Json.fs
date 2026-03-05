@@ -118,7 +118,15 @@ module Json =
         opts.Converters.Add (KnownValueConverterFactory ())
 
         opts.Converters.Add (
-            JsonFSharpConverter (JsonFSharpOptions.Default().WithUnionInternalTag().WithUnionNamedFields ())
+            JsonFSharpConverter (
+                JsonFSharpOptions
+                    .Default()
+                    .WithUnionInternalTag()
+                    .WithUnionNamedFields()
+                    .WithUnionUnwrapSingleFieldCases()
+                    .WithUnionUnwrapRecordCases()
+                    .WithUnionTagName ("$type")
+            )
         )
 
         opts.Converters.Add (DidConverter ())
