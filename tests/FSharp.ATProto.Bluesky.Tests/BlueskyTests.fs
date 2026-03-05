@@ -3721,7 +3721,8 @@ let private testTimelinePost : TimelinePost =
       IndexedAt = System.DateTimeOffset.UtcNow
       IsLiked = false
       IsReposted = false
-      IsBookmarked = false }
+      IsBookmarked = false
+      Embed = None }
 
 [<Tests>]
 let postRefSrtpTests =
@@ -5918,6 +5919,50 @@ let viaAttributionTests =
 
               let err = Expect.wantError result "should fail without session"
               Expect.equal err.StatusCode 401 "status code" ]
+
+// ── PostEmbed mapping tests ─────────────────────────────────────────
+
+[<Tests>]
+let postEmbedTests =
+    testList
+        "PostEmbed mapping"
+        [ testCase "TimelinePost.ofPostView maps image embed"
+          <| fun _ ->
+              let json =
+                  """{"uri":"at://did:plc:a/app.bsky.feed.post/1","cid":"bafyreiabc","author":{"did":"did:plc:a","handle":"a.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"pic","createdAt":"2024-01-01T00:00:00Z"},"embed":{"$type":"app.bsky.embed.images#view","images":[{"thumb":"https://cdn.example/thumb.jpg","fullsize":"https://cdn.example/full.jpg","alt":"a photo"}]},"indexedAt":"2024-01-01T00:00:00Z"}"""
+
+              let pv = JsonSerializer.Deserialize<AppBskyFeed.Defs.PostView> (json, Json.options)
+              let tp = TimelinePost.ofPostView pv
+
+              match tp.Embed with
+              | Some (PostEmbed.Images images) ->
+                  Expect.equal images.Length 1 "one image"
+                  Expect.equal images.[0].Alt "a photo" "alt text"
+                  Expect.stringContains images.[0].Thumb "thumb.jpg" "thumb url"
+              | other -> failtest $"Expected Images embed, got {other}"
+
+          testCase "TimelinePost.ofPostView maps external link embed"
+          <| fun _ ->
+              let json =
+                  """{"uri":"at://did:plc:a/app.bsky.feed.post/1","cid":"bafyreiabc","author":{"did":"did:plc:a","handle":"a.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"link","createdAt":"2024-01-01T00:00:00Z"},"embed":{"$type":"app.bsky.embed.external#view","external":{"uri":"https://example.com","title":"Example","description":"A site"}},"indexedAt":"2024-01-01T00:00:00Z"}"""
+
+              let pv = JsonSerializer.Deserialize<AppBskyFeed.Defs.PostView> (json, Json.options)
+              let tp = TimelinePost.ofPostView pv
+
+              match tp.Embed with
+              | Some (PostEmbed.ExternalLink link) ->
+                  Expect.equal link.Title "Example" "title"
+                  Expect.equal link.Description "A site" "description"
+              | other -> failtest $"Expected ExternalLink embed, got {other}"
+
+          testCase "TimelinePost.ofPostView with no embed returns None"
+          <| fun _ ->
+              let json =
+                  """{"uri":"at://did:plc:a/app.bsky.feed.post/1","cid":"bafyreiabc","author":{"did":"did:plc:a","handle":"a.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"hello","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"}"""
+
+              let pv = JsonSerializer.Deserialize<AppBskyFeed.Defs.PostView> (json, Json.options)
+              let tp = TimelinePost.ofPostView pv
+              Expect.isNone tp.Embed "no embed" ]
 
 // ── PDS resolution after login ──────────────────────────────────────
 

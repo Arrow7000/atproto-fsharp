@@ -271,6 +271,86 @@ module Profile =
               |> Option.bind (fun v -> v.Muted)
               |> Option.defaultValue false }
 
+/// <summary>An image attached to a post.</summary>
+type PostImage =
+    { Thumb : string
+      Fullsize : string
+      Alt : string }
+
+/// <summary>A video attached to a post.</summary>
+type PostVideo =
+    { Thumbnail : string option
+      Playlist : string option
+      Alt : string option }
+
+/// <summary>An external link card attached to a post.</summary>
+type PostExternalLink =
+    { Uri : string
+      Title : string
+      Description : string
+      Thumb : string option }
+
+/// <summary>Media within a record-with-media embed.</summary>
+[<RequireQualifiedAccess>]
+type PostMediaEmbed =
+    | Images of PostImage list
+    | Video of PostVideo
+    | ExternalLink of PostExternalLink
+
+/// <summary>Embedded content in a post (images, video, link card, quoted post, or combination).</summary>
+[<RequireQualifiedAccess>]
+type PostEmbed =
+    | Images of PostImage list
+    | Video of PostVideo
+    | ExternalLink of PostExternalLink
+    | QuotedPost of AppBskyEmbed.Record.ViewRecordUnion
+    | RecordWithMedia of AppBskyEmbed.Record.ViewRecordUnion * PostMediaEmbed
+    | Unknown
+
+module PostEmbed =
+
+    let private uriToString (u : FSharp.ATProto.Syntax.Uri) = FSharp.ATProto.Syntax.Uri.value u
+
+    let private mapImage (vi : AppBskyEmbed.Images.ViewImage) : PostImage =
+        { Thumb = uriToString vi.Thumb
+          Fullsize = uriToString vi.Fullsize
+          Alt = vi.Alt }
+
+    let private mapVideo (vv : AppBskyEmbed.Video.View) : PostVideo =
+        { Thumbnail = vv.Thumbnail |> Option.map uriToString
+          Playlist = Some (uriToString vv.Playlist)
+          Alt = vv.Alt }
+
+    let private mapExternal (ve : AppBskyEmbed.External.ViewExternal) : PostExternalLink =
+        { Uri = uriToString ve.Uri
+          Title = ve.Title
+          Description = ve.Description
+          Thumb = ve.Thumb |> Option.map uriToString }
+
+    let private mapMediaUnion (mu : AppBskyEmbed.RecordWithMedia.ViewMediaUnion) : PostMediaEmbed =
+        match mu with
+        | AppBskyEmbed.RecordWithMedia.ViewMediaUnion.View iv ->
+            PostMediaEmbed.Images (iv.Images |> List.map mapImage)
+        | AppBskyEmbed.RecordWithMedia.ViewMediaUnion.View2 vv ->
+            PostMediaEmbed.Video (mapVideo vv)
+        | AppBskyEmbed.RecordWithMedia.ViewMediaUnion.View3 ev ->
+            PostMediaEmbed.ExternalLink (mapExternal ev.External)
+        | _ -> PostMediaEmbed.Images []
+
+    let ofEmbedUnion (eu : AppBskyFeed.Defs.PostViewEmbedUnion) : PostEmbed =
+        match eu with
+        | AppBskyFeed.Defs.PostViewEmbedUnion.View iv ->
+            PostEmbed.Images (iv.Images |> List.map mapImage)
+        | AppBskyFeed.Defs.PostViewEmbedUnion.View2 vv ->
+            PostEmbed.Video (mapVideo vv)
+        | AppBskyFeed.Defs.PostViewEmbedUnion.View3 ev ->
+            PostEmbed.ExternalLink (mapExternal ev.External)
+        | AppBskyFeed.Defs.PostViewEmbedUnion.View4 rv ->
+            PostEmbed.QuotedPost rv.Record
+        | AppBskyFeed.Defs.PostViewEmbedUnion.View5 rwm ->
+            PostEmbed.RecordWithMedia (rwm.Record.Record, mapMediaUnion rwm.Media)
+        | _ -> PostEmbed.Unknown
+
 /// <summary>
 /// A post with engagement counts and viewer state, used in feeds and timelines.
 /// Maps from <c>PostView</c>.
@@ -288,7 +368,8 @@ type TimelinePost =
       IndexedAt : DateTimeOffset
       IsLiked : bool
       IsReposted : bool
-      IsBookmarked : bool }
+      IsBookmarked : bool
+      Embed : PostEmbed option }
 
 module TimelinePost =
 
@@ -310,7 +391,8 @@ module TimelinePost =
           IsBookmarked =
               viewer
               |> Option.bind (fun v -> v.Bookmarked)
-              |> Option.defaultValue false }
+              |> Option.defaultValue false
+          Embed = pv.Embed |> Option.map PostEmbed.ofEmbedUnion }
 
 /// <summary>Reason a post appeared in a feed.</summary>
 type FeedReason =
@@ -3899,7 +3981,8 @@ type TestFactory private () =
           IndexedAt = indexedAt |> Option.defaultValue DateTimeOffset.UtcNow
           IsLiked = isLiked |> Option.defaultValue false
           IsReposted = isReposted |> Option.defaultValue false
-          IsBookmarked = isBookmarked |> Option.defaultValue false }
+          IsBookmarked = isBookmarked |> Option.defaultValue false
+          Embed = None }
 
     /// <summary>
     /// Create a <see cref="LikeRef"/> with a default AT-URI. Override by passing a uri.
