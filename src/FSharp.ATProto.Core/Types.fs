@@ -65,8 +65,11 @@ type AtpAgent =
     {
         /// <summary>The <see cref="System.Net.Http.HttpClient"/> used for all HTTP requests to the PDS.</summary>
         HttpClient : HttpClient
-        /// <summary>The base URL of the PDS, always ending with a trailing slash (e.g. "https://bsky.social/").</summary>
-        BaseUrl : System.Uri
+        /// <summary>
+        /// The base URL of the PDS, always ending with a trailing slash (e.g. "https://bsky.social/").
+        /// Updated after login to point to the user's actual PDS (resolved from the DID document).
+        /// </summary>
+        mutable BaseUrl : System.Uri
         /// <summary>
         /// The current authenticated session, or <c>None</c> if not logged in.
         /// This field is mutable and is updated automatically by <see cref="AtpAgent.login"/>

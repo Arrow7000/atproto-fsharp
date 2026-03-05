@@ -5919,6 +5919,76 @@ let viaAttributionTests =
               let err = Expect.wantError result "should fail without session"
               Expect.equal err.StatusCode 401 "status code" ]
 
+// ── PDS resolution after login ──────────────────────────────────────
+
+[<Tests>]
+let pdsResolutionTests =
+    testList
+        "PDS resolution after login"
+        [ testCase "login resolves PDS endpoint from DID document"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun req ->
+                      let url = req.RequestUri.ToString ()
+
+                      if url.Contains ("createSession") then
+                          jsonResponse
+                              HttpStatusCode.OK
+                              {| accessJwt = "jwt"
+                                 refreshJwt = "refresh"
+                                 did = "did:plc:testuser"
+                                 handle = "test.bsky.social" |}
+                      elif url.Contains ("plc.directory") then
+                          jsonResponse
+                              HttpStatusCode.OK
+                              {| id = "did:plc:testuser"
+                                 alsoKnownAs = [| "at://test.bsky.social" |]
+                                 service =
+                                  [| {| id = "#atproto_pds"
+                                        ``type`` = "AtprotoPersonalDataServer"
+                                        serviceEndpoint = "https://pds.example.com" |} |]
+                                 verificationMethod = [||] |}
+                      else
+                          jsonResponse HttpStatusCode.OK {| |})
+
+              let result =
+                  Bluesky.loginWithClient agent.HttpClient "https://bsky.social" "test" "pass"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              match result with
+              | Ok agent ->
+                  Expect.equal (agent.BaseUrl.ToString ()) "https://pds.example.com/" "BaseUrl should be updated to PDS"
+              | Error e -> failtest $"login failed: {e}"
+
+          testCase "login keeps original URL if PDS resolution fails"
+          <| fun _ ->
+              let agent =
+                  createMockAgent (fun req ->
+                      let url = req.RequestUri.ToString ()
+
+                      if url.Contains ("createSession") then
+                          jsonResponse
+                              HttpStatusCode.OK
+                              {| accessJwt = "jwt"
+                                 refreshJwt = "refresh"
+                                 did = "did:plc:testuser"
+                                 handle = "test.bsky.social" |}
+                      elif url.Contains ("plc.directory") then
+                          jsonResponse HttpStatusCode.NotFound {| |}
+                      else
+                          jsonResponse HttpStatusCode.OK {| |})
+
+              let result =
+                  Bluesky.loginWithClient agent.HttpClient "https://bsky.social" "test" "pass"
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              match result with
+              | Ok agent ->
+                  Expect.equal (agent.BaseUrl.ToString ()) "https://bsky.social/" "BaseUrl should remain original"
+              | Error e -> failtest $"login failed: {e}" ]
+
 // ── Union deserialization tests ──────────────────────────────────────
 
 [<Tests>]

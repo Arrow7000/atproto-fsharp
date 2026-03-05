@@ -735,11 +735,33 @@ module Bluesky =
     /// let! agent = Bluesky.login "https://bsky.social" "my-handle.bsky.social" "app-password"
     /// </code>
     /// </example>
+    /// Resolve the user's PDS endpoint from their DID document and update the agent's BaseUrl.
+    /// Silently keeps the original URL if resolution fails (best-effort).
+    let private resolvePdsEndpoint (agent : AtpAgent) : Task<unit> =
+        task {
+            match agent.Session with
+            | Some session ->
+                let! identityResult = Identity.resolveDid agent session.Did
+
+                match identityResult with
+                | Ok identity ->
+                    match identity.PdsEndpoint with
+                    | Some pdsUrl -> agent.BaseUrl <- System.Uri (FSharp.ATProto.Syntax.Uri.value pdsUrl)
+                    | None -> ()
+                | Error _ -> ()
+            | None -> ()
+        }
+
     let login (baseUrl : string) (identifier : string) (password : string) : Task<Result<AtpAgent, XrpcError>> =
         task {
             let agent = AtpAgent.create baseUrl
             let! result = AtpAgent.login identifier password agent
-            return result |> Result.map (fun _ -> agent)
+
+            match result with
+            | Ok _ ->
+                do! resolvePdsEndpoint agent
+                return Ok agent
+            | Error e -> return Error e
         }
 
     /// <summary>
@@ -760,7 +782,12 @@ module Bluesky =
         task {
             let agent = AtpAgent.createWithClient client baseUrl
             let! result = AtpAgent.login identifier password agent
-            return result |> Result.map (fun _ -> agent)
+
+            match result with
+            | Ok _ ->
+                do! resolvePdsEndpoint agent
+                return Ok agent
+            | Error e -> return Error e
         }
 
     /// <summary>
