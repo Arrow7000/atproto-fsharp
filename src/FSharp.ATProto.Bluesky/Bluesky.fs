@@ -1896,6 +1896,165 @@ module Bluesky =
     let updateHandle (agent : AtpAgent) (handle : Handle) : Task<Result<unit, XrpcError>> =
         ComAtprotoIdentity.UpdateHandle.call agent { Handle = handle }
 
+    // ── Profile mutation ────────────────────────────────────────────
+
+    let private profileCollection =
+        Nsid.parse "app.bsky.actor.profile" |> Result.defaultWith failwith
+
+    let private selfRkey =
+        RecordKey.parse "self" |> Result.defaultWith failwith
+
+    let private getProfileRecord (agent : AtpAgent) : Task<Result<AppBskyActor.Profile.Profile * Cid, XrpcError>> =
+        task {
+            match agent.Session with
+            | None ->
+                return Error { StatusCode = 401; Error = Some "NotLoggedIn"; Message = Some "Not logged in" }
+            | Some session ->
+                let! result =
+                    ComAtprotoRepo.GetRecord.query
+                        agent
+                        { Repo = Did.value session.Did
+                          Collection = profileCollection
+                          Rkey = selfRkey
+                          Cid = None }
+
+                return
+                    result
+                    |> Result.map (fun output ->
+                        let profile =
+                            System.Text.Json.JsonSerializer.Deserialize<AppBskyActor.Profile.Profile> (
+                                output.Value,
+                                Json.options
+                            )
+
+                        let cid =
+                            output.Cid
+                            |> Option.defaultWith (fun () ->
+                                Cid.parse "bafyreiabc" |> Result.defaultWith failwith)
+
+                        (profile, cid))
+        }
+
+    let private putProfileRecord
+        (agent : AtpAgent)
+        (profile : AppBskyActor.Profile.Profile)
+        (swapCid : Cid)
+        : Task<Result<unit, XrpcError>> =
+        task {
+            match agent.Session with
+            | None ->
+                return Error { StatusCode = 401; Error = Some "NotLoggedIn"; Message = Some "Not logged in" }
+            | Some session ->
+                let record =
+                    System.Text.Json.JsonSerializer.SerializeToElement (profile, Json.options)
+
+                let! result =
+                    ComAtprotoRepo.PutRecord.call
+                        agent
+                        { Repo = Did.value session.Did
+                          Collection = profileCollection
+                          Rkey = selfRkey
+                          Record = record
+                          SwapRecord = Some swapCid
+                          SwapCommit = None
+                          Validate = None }
+
+                return result |> Result.map ignore
+        }
+
+    /// <summary>
+    /// Update the authenticated user's profile by applying a transform function.
+    /// Reads the current profile, applies the transform, then writes back with optimistic concurrency.
+    /// </summary>
+    /// <param name="agent">An authenticated <see cref="AtpAgent"/>.</param>
+    /// <param name="transform">A function that transforms the current profile record.</param>
+    /// <returns><c>Ok ()</c> on success, or an <see cref="XrpcError"/> (including on swap conflict).</returns>
+    let updateProfile
+        (agent : AtpAgent)
+        (transform : AppBskyActor.Profile.Profile -> AppBskyActor.Profile.Profile)
+        : Task<Result<unit, XrpcError>> =
+        taskResult {
+            let! (profile, cid) = getProfileRecord agent
+            let updated = transform profile
+            do! putProfileRecord agent updated cid
+        }
+
+    let private setProfileField
+        (agent : AtpAgent)
+        (update : AppBskyActor.Profile.Profile -> AppBskyActor.Profile.Profile)
+        : Task<Result<unit, XrpcError>> =
+        task {
+            let! readResult = getProfileRecord agent
+
+            match readResult with
+            | Error e -> return Error e
+            | Ok (profile, cid) ->
+                let updated = update profile
+                let! putResult = putProfileRecord agent updated cid
+
+                match putResult with
+                | Ok () -> return Ok ()
+                | Error e when e.Error = Some "InvalidSwap" ->
+                    let! retryRead = getProfileRecord agent
+
+                    match retryRead with
+                    | Error e2 -> return Error e2
+                    | Ok (profile2, cid2) ->
+                        let updated2 = update profile2
+                        return! putProfileRecord agent updated2 cid2
+                | Error e -> return Error e
+        }
+
+    /// <summary>Set or clear the authenticated user's display name. Retries once on conflict.</summary>
+    let setDisplayName (agent : AtpAgent) (name : string option) : Task<Result<unit, XrpcError>> =
+        setProfileField agent (fun p -> { p with DisplayName = name })
+
+    /// <summary>Set or clear the authenticated user's bio/description. Retries once on conflict.</summary>
+    let setDescription (agent : AtpAgent) (description : string option) : Task<Result<unit, XrpcError>> =
+        setProfileField agent (fun p -> { p with Description = description })
+
+    /// <summary>
+    /// Set or clear the authenticated user's avatar image.
+    /// Uploads the blob first, then updates the profile record. Retries once on conflict.
+    /// Pass <c>None</c> to clear the avatar.
+    /// </summary>
+    let setAvatar
+        (agent : AtpAgent)
+        (avatar : (byte[] * ImageMime) option)
+        : Task<Result<unit, XrpcError>> =
+        task {
+            match avatar with
+            | None -> return! setProfileField agent (fun p -> { p with Avatar = None })
+            | Some (data, mime) ->
+                let! blobResult = uploadBlob agent data mime
+
+                match blobResult with
+                | Error e -> return Error e
+                | Ok blobRef ->
+                    return! setProfileField agent (fun p -> { p with Avatar = Some blobRef.Json })
+        }
+
+    /// <summary>
+    /// Set or clear the authenticated user's banner image.
+    /// Uploads the blob first, then updates the profile record. Retries once on conflict.
+    /// Pass <c>None</c> to clear the banner.
+    /// </summary>
+    let setBanner
+        (agent : AtpAgent)
+        (banner : (byte[] * ImageMime) option)
+        : Task<Result<unit, XrpcError>> =
+        task {
+            match banner with
+            | None -> return! setProfileField agent (fun p -> { p with Banner = None })
+            | Some (data, mime) ->
+                let! blobResult = uploadBlob agent data mime
+
+                match blobResult with
+                | Error e -> return Error e
+                | Ok blobRef ->
+                    return! setProfileField agent (fun p -> { p with Banner = Some blobRef.Json })
+        }
+
     // ── Video upload ─────────────────────────────────────────────────
 
     /// <summary>

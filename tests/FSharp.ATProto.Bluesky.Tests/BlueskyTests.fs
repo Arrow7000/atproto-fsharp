@@ -5920,6 +5920,108 @@ let viaAttributionTests =
               let err = Expect.wantError result "should fail without session"
               Expect.equal err.StatusCode 401 "status code" ]
 
+// ── Profile mutation tests ──────────────────────────────────────────
+
+[<Tests>]
+let profileMutationTests =
+    testList
+        "Profile mutation"
+        [ testCase "setDisplayName reads, merges, and writes profile"
+          <| fun _ ->
+              let mutable capturedRequests = []
+
+              let agent =
+                  createMockAgent (fun req ->
+                      capturedRequests <- req :: capturedRequests
+                      let url = req.RequestUri.ToString ()
+
+                      if url.Contains ("getRecord") then
+                          jsonResponse
+                              HttpStatusCode.OK
+                              {| uri = "at://did:plc:testuser/app.bsky.actor.profile/self"
+                                 cid = "bafyreiabc"
+                                 value =
+                                  {| displayName = "Old Name"
+                                     description = "My bio" |} |}
+                      elif url.Contains ("putRecord") then
+                          jsonResponse
+                              HttpStatusCode.OK
+                              {| uri = "at://did:plc:testuser/app.bsky.actor.profile/self"
+                                 cid = "bafyreinew" |}
+                      else
+                          jsonResponse HttpStatusCode.OK {| |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.setDisplayName agent (Some "New Name")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+
+              let putReq =
+                  capturedRequests
+                  |> List.find (fun r -> r.RequestUri.ToString().Contains ("putRecord"))
+
+              let body = putReq.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "My bio" "should preserve existing description"
+              Expect.stringContains body "New Name" "should set new name"
+
+          testCase "updateProfile applies transform function"
+          <| fun _ ->
+              let mutable capturedRequests = []
+
+              let agent =
+                  createMockAgent (fun req ->
+                      capturedRequests <- req :: capturedRequests
+                      let url = req.RequestUri.ToString ()
+
+                      if url.Contains ("getRecord") then
+                          jsonResponse
+                              HttpStatusCode.OK
+                              {| uri = "at://did:plc:testuser/app.bsky.actor.profile/self"
+                                 cid = "bafyreiabc"
+                                 value =
+                                  {| displayName = "Original"
+                                     description = "Original bio" |} |}
+                      elif url.Contains ("putRecord") then
+                          jsonResponse
+                              HttpStatusCode.OK
+                              {| uri = "at://did:plc:testuser/app.bsky.actor.profile/self"
+                                 cid = "bafyreinew" |}
+                      else
+                          jsonResponse HttpStatusCode.OK {| |})
+
+              agent.Session <- Some testSession
+
+              let result =
+                  Bluesky.updateProfile agent (fun p -> { p with Description = Some "Updated bio" })
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              Expect.isOk result "should succeed"
+
+              let putReq =
+                  capturedRequests
+                  |> List.find (fun r -> r.RequestUri.ToString().Contains ("putRecord"))
+
+              let body = putReq.Content.ReadAsStringAsync().Result
+              Expect.stringContains body "Updated bio" "should have new description"
+              Expect.stringContains body "Original" "should preserve display name"
+
+          testCase "setDisplayName returns error without session"
+          <| fun _ ->
+              let agent = createMockAgent (fun _ -> jsonResponse HttpStatusCode.OK {| |})
+
+              let result =
+                  Bluesky.setDisplayName agent (Some "Name")
+                  |> Async.AwaitTask
+                  |> Async.RunSynchronously
+
+              let err = Expect.wantError result "should fail"
+              Expect.equal err.StatusCode 401 "status code" ]
+
 // ── Notification content tests ──────────────────────────────────────
 
 [<Tests>]
