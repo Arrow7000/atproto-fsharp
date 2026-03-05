@@ -76,8 +76,11 @@ module AtpAgent =
     /// <param name="agent">The agent to copy with chat proxy configuration.</param>
     /// <returns>A new <see cref="AtpAgent"/> with the chat proxy header prepended to <see cref="AtpAgent.ExtraHeaders"/>.</returns>
     /// <remarks>
-    /// The returned agent shares the same <see cref="System.Net.Http.HttpClient"/> and session
-    /// as the original. Changes to the session on either agent are independent (the record is copied).
+    /// The returned agent shares the same <see cref="System.Net.Http.HttpClient"/> as the original
+    /// but has an independent <see cref="AtpAgent.Session"/> field (it is a record copy).
+    /// If you need chat functionality, prefer using the <see cref="FSharp.ATProto.Bluesky.Chat"/>
+    /// module functions directly — they handle the proxy header automatically and always use the
+    /// current session from the original agent.
     /// </remarks>
     let withChatProxy (agent : AtpAgent) : AtpAgent =
         { agent with
