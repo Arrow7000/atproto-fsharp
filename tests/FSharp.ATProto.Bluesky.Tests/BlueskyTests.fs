@@ -5920,6 +5920,60 @@ let viaAttributionTests =
               let err = Expect.wantError result "should fail without session"
               Expect.equal err.StatusCode 401 "status code" ]
 
+// ── Notification content tests ──────────────────────────────────────
+
+[<Tests>]
+let notificationContentTests =
+    testList
+        "Notification content"
+        [ testCase "Notification.ofRaw maps Like with PostRef"
+          <| fun _ ->
+              let json =
+                  """{"uri":"at://did:plc:liker/app.bsky.feed.like/abc","cid":"bafyreiabc","author":{"did":"did:plc:liker","handle":"liker.bsky.social","displayName":"Liker"},"reason":"like","reasonSubject":"at://did:plc:me/app.bsky.feed.post/xyz","record":{"$type":"app.bsky.feed.like","subject":{"uri":"at://did:plc:me/app.bsky.feed.post/xyz","cid":"bafyreicde"},"createdAt":"2024-01-01T00:00:00Z"},"isRead":false,"indexedAt":"2024-01-01T00:00:00Z"}"""
+
+              let raw =
+                  JsonSerializer.Deserialize<AppBskyNotification.ListNotifications.Notification> (json, Json.options)
+
+              let n = Notification.ofRaw raw
+              Expect.equal (AtUri.value n.RecordUri) "at://did:plc:liker/app.bsky.feed.like/abc" "recordUri"
+
+              match n.Content with
+              | NotificationContent.Like post ->
+                  Expect.equal (AtUri.value post.Uri) "at://did:plc:me/app.bsky.feed.post/xyz" "liked post uri"
+              | other -> failtest $"Expected Like, got {other}"
+
+          testCase "Notification.ofRaw maps Reply with text"
+          <| fun _ ->
+              let json =
+                  """{"uri":"at://did:plc:replier/app.bsky.feed.post/reply1","cid":"bafyreiabc","author":{"did":"did:plc:replier","handle":"replier.bsky.social"},"reason":"reply","reasonSubject":"at://did:plc:me/app.bsky.feed.post/orig","record":{"$type":"app.bsky.feed.post","text":"nice post!","createdAt":"2024-01-01T00:00:00Z"},"isRead":false,"indexedAt":"2024-01-01T00:00:00Z"}"""
+
+              let raw =
+                  JsonSerializer.Deserialize<AppBskyNotification.ListNotifications.Notification> (json, Json.options)
+
+              let n = Notification.ofRaw raw
+
+              match n.Content with
+              | NotificationContent.Reply (text, inReplyTo) ->
+                  Expect.equal text "nice post!" "reply text"
+                  Expect.equal (AtUri.value inReplyTo.Uri) "at://did:plc:me/app.bsky.feed.post/orig" "in reply to"
+              | other -> failtest $"Expected Reply, got {other}"
+
+          testCase "Notification.ofRaw maps Follow"
+          <| fun _ ->
+              let json =
+                  """{"uri":"at://did:plc:follower/app.bsky.graph.follow/abc","cid":"bafyreiabc","author":{"did":"did:plc:follower","handle":"follower.bsky.social"},"reason":"follow","record":{"$type":"app.bsky.graph.follow","subject":"did:plc:me","createdAt":"2024-01-01T00:00:00Z"},"isRead":true,"indexedAt":"2024-01-01T00:00:00Z"}"""
+
+              let raw =
+                  JsonSerializer.Deserialize<AppBskyNotification.ListNotifications.Notification> (json, Json.options)
+
+              let n = Notification.ofRaw raw
+
+              match n.Content with
+              | NotificationContent.Follow -> ()
+              | other -> failtest $"Expected Follow, got {other}"
+
+              Expect.isTrue n.IsRead "is read" ]
+
 // ── FeedItem reply parent tests ─────────────────────────────────────
 
 [<Tests>]
@@ -6173,6 +6227,9 @@ let testFactoryTests =
           testCase "Notification creates with defaults"
           <| fun _ ->
               let n = TestFactory.Notification ()
-              Expect.equal n.Kind NotificationKind.Like "default kind is Like"
-              Expect.isFalse n.IsRead "default not read"
-              Expect.isNone n.SubjectUri "default no subject URI" ]
+
+              match n.Content with
+              | NotificationContent.Like _ -> ()
+              | other -> failtest $"Expected Like, got {other}"
+
+              Expect.isFalse n.IsRead "default not read" ]

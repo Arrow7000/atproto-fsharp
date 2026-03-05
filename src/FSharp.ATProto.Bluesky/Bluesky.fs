@@ -428,47 +428,81 @@ module FeedItem =
           Reason = reason
           ReplyParent = replyParent }
 
-/// <summary>The kind of notification received.</summary>
+/// <summary>The content of a notification, varying by kind.</summary>
 [<RequireQualifiedAccess>]
-type NotificationKind =
-    | Like
-    | Repost
+type NotificationContent =
+    | Like of post : PostRef
+    | Repost of post : PostRef
     | Follow
-    | Mention
-    | Reply
-    | Quote
-    | StarterpackJoined
-    | Unknown of string
-
-module NotificationKind =
-
-    let ofReason (r : AppBskyNotification.ListNotifications.NotificationReason) : NotificationKind =
-        match r with
-        | AppBskyNotification.ListNotifications.NotificationReason.Like -> NotificationKind.Like
-        | AppBskyNotification.ListNotifications.NotificationReason.Repost -> NotificationKind.Repost
-        | AppBskyNotification.ListNotifications.NotificationReason.Follow -> NotificationKind.Follow
-        | AppBskyNotification.ListNotifications.NotificationReason.Mention -> NotificationKind.Mention
-        | AppBskyNotification.ListNotifications.NotificationReason.Reply -> NotificationKind.Reply
-        | AppBskyNotification.ListNotifications.NotificationReason.Quote -> NotificationKind.Quote
-        | AppBskyNotification.ListNotifications.NotificationReason.StarterpackJoined ->
-            NotificationKind.StarterpackJoined
-        | AppBskyNotification.ListNotifications.NotificationReason.Unknown s -> NotificationKind.Unknown s
-        | other -> NotificationKind.Unknown(string other)
+    | Reply of text : string * inReplyTo : PostRef
+    | Mention of text : string
+    | Quote of text : string * quotedPost : PostRef
+    | StarterpackJoined of starterPackUri : AtUri
+    | Unknown of reason : string
 
 /// <summary>A notification from the user's notification feed.</summary>
 type Notification =
-    { Kind : NotificationKind
+    { RecordUri : AtUri
       Author : ProfileSummary
-      SubjectUri : AtUri option
+      Content : NotificationContent
       IsRead : bool
       IndexedAt : DateTimeOffset }
 
 module Notification =
 
+    let private extractText (record : System.Text.Json.JsonElement) : string =
+        match record.TryGetProperty ("text") with
+        | true, v when v.ValueKind = System.Text.Json.JsonValueKind.String -> v.GetString ()
+        | _ -> ""
+
+    let private extractSubjectCid (record : System.Text.Json.JsonElement) : Cid option =
+        match record.TryGetProperty ("subject") with
+        | true, subj ->
+            match subj.TryGetProperty ("cid") with
+            | true, cidEl when cidEl.ValueKind = System.Text.Json.JsonValueKind.String ->
+                Cid.parse (cidEl.GetString ()) |> Result.toOption
+            | _ -> None
+        | _ -> None
+
+    let private makePostRef (subjectUri : AtUri option) (record : System.Text.Json.JsonElement) : PostRef =
+        let uri =
+            subjectUri
+            |> Option.defaultWith (fun () ->
+                AtUri.parse "at://unknown/unknown/unknown" |> Result.defaultWith failwith)
+
+        let cid =
+            extractSubjectCid record
+            |> Option.defaultWith (fun () ->
+                Cid.parse "bafyreie5737gdxlw5i64a" |> Result.defaultWith failwith)
+
+        { PostRef.Uri = uri; Cid = cid }
+
     let ofRaw (n : AppBskyNotification.ListNotifications.Notification) : Notification =
-        { Kind = NotificationKind.ofReason n.Reason
+        let content =
+            match n.Reason with
+            | AppBskyNotification.ListNotifications.NotificationReason.Like ->
+                NotificationContent.Like (makePostRef n.ReasonSubject n.Record)
+            | AppBskyNotification.ListNotifications.NotificationReason.Repost ->
+                NotificationContent.Repost (makePostRef n.ReasonSubject n.Record)
+            | AppBskyNotification.ListNotifications.NotificationReason.Follow ->
+                NotificationContent.Follow
+            | AppBskyNotification.ListNotifications.NotificationReason.Reply ->
+                NotificationContent.Reply (extractText n.Record, makePostRef n.ReasonSubject n.Record)
+            | AppBskyNotification.ListNotifications.NotificationReason.Mention ->
+                NotificationContent.Mention (extractText n.Record)
+            | AppBskyNotification.ListNotifications.NotificationReason.Quote ->
+                NotificationContent.Quote (extractText n.Record, makePostRef n.ReasonSubject n.Record)
+            | AppBskyNotification.ListNotifications.NotificationReason.StarterpackJoined ->
+                match n.ReasonSubject with
+                | Some uri -> NotificationContent.StarterpackJoined uri
+                | None -> NotificationContent.Unknown "starterpack-joined"
+            | AppBskyNotification.ListNotifications.NotificationReason.Unknown s ->
+                NotificationContent.Unknown s
+            | other -> NotificationContent.Unknown (string other)
+
+        { RecordUri = n.Uri
           Author = ProfileSummary.ofView n.Author
-          SubjectUri = n.ReasonSubject
+          Content = content
           IsRead = n.IsRead
           IndexedAt = ProfileSummary.toDateTimeOffset n.IndexedAt }
 
@@ -4045,14 +4079,17 @@ type TestFactory private () =
     /// Create a <see cref="Notification"/> with sensible defaults.
     /// </summary>
     static member Notification
-        (?kind : NotificationKind,
+        (?recordUri : AtUri,
          ?author : ProfileSummary,
-         ?subjectUri : AtUri,
+         ?content : NotificationContent,
          ?isRead : bool,
          ?indexedAt : DateTimeOffset)
         : Notification =
-        { Kind = kind |> Option.defaultValue NotificationKind.Like
+        { RecordUri =
+              recordUri
+              |> Option.defaultWith (fun () ->
+                  AtUri.parse "at://did:plc:testfactory/app.bsky.feed.like/abc" |> Result.defaultWith failwith)
           Author = author |> Option.defaultValue (TestFactory.ProfileSummary ())
-          SubjectUri = subjectUri
+          Content = content |> Option.defaultValue (NotificationContent.Like (TestFactory.PostRef ()))
           IsRead = isRead |> Option.defaultValue false
           IndexedAt = indexedAt |> Option.defaultValue DateTimeOffset.UtcNow }
