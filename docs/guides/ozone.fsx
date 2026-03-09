@@ -46,7 +46,7 @@ open FSharp.ATProto.Syntax
 
 The target of a moderation action:
 
-```fsharp
+```
 type OzoneSubject =
     | Account of Did      // an entire account
     | Record of PostRef   // a specific record (post, etc.)
@@ -73,13 +73,13 @@ The action to perform:
 
 ### TeamRole
 
-```fsharp
+```
 type TeamRole = Admin | Moderator | Triage | Verifier
 ```
 
 ### TeamMember
 
-```fsharp
+```
 type TeamMember =
     { Did : Did
       Role : TeamRole

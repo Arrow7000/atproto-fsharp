@@ -59,7 +59,7 @@ taskResult {
 (**
 Each image is described by an `ImageUpload` record:
 
-```fsharp
+```
 type ImageUpload =
     { Data : byte[]       // raw image bytes
       MimeType : ImageMime // Jpeg, Png, Gif, Webp, or Custom of string
@@ -68,7 +68,7 @@ type ImageUpload =
 
 The `MimeType` field uses the `ImageMime` discriminated union for type-safe MIME type selection:
 
-```fsharp
+```
 type ImageMime =
     | Png
     | Jpeg
@@ -142,7 +142,7 @@ taskResult {
 (**
 The `BlobRef` type:
 
-```fsharp
+```
 type BlobRef =
     { Json : JsonElement   // raw blob reference for embedding in custom records
       Ref : Cid            // content identifier

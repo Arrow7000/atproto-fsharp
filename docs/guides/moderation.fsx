@@ -27,6 +27,7 @@ open FSharp.ATProto.Bluesky
 
 let agent = Unchecked.defaultof<AtpAgent>
 let post = Unchecked.defaultof<TimelinePost>
+let postRef = Unchecked.defaultof<PostRef>
 let someHandle = Unchecked.defaultof<Handle>
 let listUri = Unchecked.defaultof<AtUri>
 let userDid = Unchecked.defaultof<Did>
@@ -128,7 +129,7 @@ taskResult {
     // Report a post
     let! reportId =
         Bluesky.reportContent agent
-            (ReportSubject.Record post)
+            (ReportSubject.Record postRef)
             ComAtprotoModeration.Defs.ReasonType.ReasonSpam
             (Some "This is spam content")
 
@@ -138,7 +139,7 @@ taskResult {
 (**
 `ReportSubject` has two cases:
 
-```fsharp
+```
 [<RequireQualifiedAccess>]
 type ReportSubject =
     | Account of Did     // report an entire account
@@ -185,7 +186,7 @@ The `Profile` domain type returned by `Bluesky.getProfile` includes fields that 
 *)
 
 taskResult {
-    let! profile = Bluesky.getProfile agent "someone.bsky.social"
+    let! profile = Bluesky.getProfile agent someHandle
 
     if profile.IsMuted then printfn "You have muted this user"
     if profile.IsBlocking then printfn "You are blocking this user"
@@ -210,7 +211,7 @@ taskResult {
               Reason = Some "Detailed description here"
               ModTool = None }
 
-    printfn "Report %d filed at %s" output.Id output.CreatedAt
+    printfn "Report %d filed at %A" output.Id output.CreatedAt
 }
 
 (**
@@ -245,22 +246,23 @@ open FSharp.ATProto.Moderation
 let prefs : ModerationPrefs =
     { AdultContentEnabled = false
       Labels = Map.ofList [ "nsfw", LabelVisibility.Warn ]
-      LabelerSettings = Map.empty
       MutedWords = []
-      HiddenPosts = Set.empty }
+      HiddenPosts = [] }
 
 // Labels on a post
-let labels = [ { Value = "nsfw"; Source = labelerDid; Neg = false; CreatedAt = System.DateTimeOffset.UtcNow } ]
+let labels : Label list =
+    [ { Src = Did.value labelerDid; Uri = AtUri.value postUri; Val = "nsfw"; Neg = false; Cts = None } ]
 
-// Get moderation decision
-let decision = Moderation.moderatePost prefs labels [] "" System.DateTimeOffset.UtcNow postUri
+// Get moderation decision for a content list context
+let decision = Moderation.moderatePost prefs labels "" [] [] false false None ModerationContext.ContentList
 
-// Check what to do in content list context
-match Moderation.moderate decision ModerationContext.ContentList with
-| ModerationAction.Blur -> printfn "Blur this content"
+// Check the primary action
+match decision.Action with
 | ModerationAction.Filter -> printfn "Hide from feed"
+| ModerationAction.Blur -> printfn "Blur this content"
 | ModerationAction.Alert -> printfn "Show with warning"
-| _ -> printfn "Show normally"
+| ModerationAction.Inform -> printfn "Show informational indicator"
+| ModerationAction.NoAction -> printfn "Show normally"
 
 (**
 ### Built-in Labels
@@ -276,7 +278,7 @@ The engine includes 8 built-in label definitions: `porn`, `sexual`, `nudity`, `g
 | `Moderation.moderateNotification` | Compute decision for a notification |
 | `Moderation.moderateFeedGenerator` | Compute decision for a feed generator |
 | `Moderation.moderateUserList` | Compute decision for a user list |
-| `Moderation.moderate` | Apply decision to a specific UI context |
+| `Moderation.moderate` | General-purpose moderation (labels + mute/block state + target type) |
 | `Labels.findLabel` | Look up a built-in label definition |
 | `Labels.interpretLabelValueDefinition` | Convert a labeler's custom label to a `CustomLabelValueDef` |
 *)

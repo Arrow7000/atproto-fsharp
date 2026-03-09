@@ -72,7 +72,7 @@ We recommend `taskResult` for most use cases.
 
 All errors are represented as an `XrpcError` record:
 
-```fsharp
+```
 type XrpcError =
     { StatusCode: int
       Error: string option

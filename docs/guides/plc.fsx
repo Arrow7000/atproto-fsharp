@@ -16,7 +16,7 @@ All read functions take an `HttpClient` directly -- no `AtpAgent` needed.
 
 ## Types
 
-```fsharp
+```
 type PlcDocument =
     { Did : Did
       AlsoKnownAs : string list                  // e.g. ["at://handle.bsky.social"]
@@ -58,11 +58,11 @@ task {
         printfn "Handle: %A" doc.AlsoKnownAs
         for svc in doc.Services do
             printfn "Service %s: %s" svc.Key svc.Value.Endpoint
-    | Error (PlcError.NotFound d) ->
+    | Error (Plc.PlcError.NotFound d) ->
         printfn "DID not found: %s" d
-    | Error (PlcError.HttpError (code, body)) ->
+    | Error (Plc.PlcError.HttpError (code, body)) ->
         printfn "HTTP %d: %s" code body
-    | Error (PlcError.ParseError msg) ->
+    | Error (Plc.PlcError.ParseError msg) ->
         printfn "Parse error: %s" msg
 }
 
@@ -105,7 +105,7 @@ Build unsigned operations for DID document management:
 *)
 
 (*** hide ***)
-let prevCid = Unchecked.defaultof<FSharp.ATProto.DRISL.Cid>
+let prevCid = Unchecked.defaultof<string>
 let rotationKeys = Unchecked.defaultof<string list>
 let verificationMethods = Unchecked.defaultof<Map<string, string>>
 let alsoKnownAs = Unchecked.defaultof<string list>

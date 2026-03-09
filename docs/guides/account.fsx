@@ -56,7 +56,7 @@ taskResult {
 
 The `AtpSession` record contains the JWTs and identity needed to restore a session without re-authenticating:
 
-```fsharp
+```
 type AtpSession =
     { AccessJwt : string
       RefreshJwt : string
@@ -80,7 +80,7 @@ let savedSession = Unchecked.defaultof<AtpSession>
 (***)
 
 // Restore later (no network call)
-let agent = Bluesky.resumeSession "https://bsky.social" savedSession
+let restoredAgent = Bluesky.resumeSession "https://bsky.social" savedSession
 
 (**
 The access JWT expires after a short period. The library automatically refreshes it using the refresh JWT on the first 401 response, so a restored session remains functional as long as the refresh JWT is valid.
@@ -109,10 +109,6 @@ taskResult {
 
 ### Creating an Account
 *)
-
-(*** hide ***)
-let agent = Unchecked.defaultof<AtpAgent>
-(***)
 
 taskResult {
     let handle = Handle.parse "new-user.my-pds.example" |> Result.defaultWith failwith

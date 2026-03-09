@@ -65,10 +65,12 @@ let keyPair = Keys.generate Algorithm.P256
 let imported = Keys.importPrivateKey Algorithm.K256 somePrivateBytes
 
 // Import a compressed public key (33 bytes) -- returns Result
-let pubKey = Keys.importPublicKey Algorithm.P256 compressedBytes
-
-// Decompress to 65-byte uncompressed form (0x04 + X + Y)
-let uncompressed = Keys.decompress pubKey
+match Keys.importPublicKey Algorithm.P256 compressedBytes with
+| Ok pubKey ->
+    // Decompress to 65-byte uncompressed form (0x04 + X + Y)
+    let uncompressed = Keys.decompress pubKey
+    printfn "Uncompressed: %d bytes" uncompressed.Length
+| Error msg -> printfn "Import failed: %s" msg
 
 // Extract the public key from a key pair
 let pub = Keys.publicKey keyPair

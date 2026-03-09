@@ -22,6 +22,7 @@ AT Protocol uses OAuth 2.0 with two mandatory security extensions: **DPoP** (Dem
 #r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
 #r "../../src/FSharp.ATProto.DRISL/bin/Release/net10.0/FSharp.ATProto.DRISL.dll"
 #r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
 #r "../../src/FSharp.ATProto.OAuth/bin/Release/net10.0/FSharp.ATProto.OAuth.dll"
 #r "../../src/FSharp.ATProto.OAuthServer/bin/Release/net10.0/FSharp.ATProto.OAuthServer.dll"
 open FSharp.ATProto.Syntax
@@ -96,7 +97,7 @@ let! session = OAuthClient.completeAuthorization httpClient clientMetadata authS
 
 This returns an `OAuthSession` containing DPoP-bound tokens:
 
-```fsharp
+```
 type OAuthSession = {
     AccessToken: string
     RefreshToken: string option
@@ -170,7 +171,7 @@ The `DPoP` module provides low-level utilities if you need to work with DPoP pro
 
 All OAuth operations return `Result<'T, OAuthError>`:
 
-```fsharp
+```
 type OAuthError =
     | DiscoveryFailed of message: string
     | TokenRequestFailed of error: string * description: string option

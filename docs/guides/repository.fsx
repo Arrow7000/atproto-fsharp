@@ -18,7 +18,7 @@ The MST is the core data structure that stores records in a repository. Keys are
 
 ### Types
 
-```fsharp
+```
 type Entry =
     { Key : string
       Value : Cid
@@ -111,7 +111,7 @@ match Mst.deserialize blocks rootCid with
 
 Every repository state is anchored by a signed commit that references the MST root.
 
-```fsharp
+```
 type SignedCommit =
     { Did : Did
       Version : int       // always 3

@@ -36,7 +36,7 @@ open Microsoft.AspNetCore.Http
 
 Each endpoint is described by an `XrpcEndpoint` record:
 
-```fsharp
+```
 type XrpcEndpoint = {
     Nsid: Nsid
     Method: XrpcMethod       // XrpcMethod.Query (GET) or XrpcMethod.Procedure (POST)
@@ -48,7 +48,7 @@ type XrpcEndpoint = {
 
 The server configuration holds all registered endpoints, an optional token verifier, and global rate limits:
 
-```fsharp
+```
 type XrpcServerConfig = {
     Endpoints: XrpcEndpoint list
     VerifyToken: (string -> Task<Result<ClaimsPrincipal, string>>) option
@@ -129,7 +129,7 @@ Endpoints marked with `withAuth` reject unauthenticated requests with a 401 erro
 
 `RateLimiter` implements a per-client sliding window rate limiter. Clients are identified by IP address. Configure rate limits per-endpoint or globally:
 
-```fsharp
+```
 type RateLimitConfig = {
     MaxRequests: int
     Window: TimeSpan

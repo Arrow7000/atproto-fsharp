@@ -31,7 +31,7 @@ open FSharp.ATProto.Syntax
 
 A feed skeleton response is built from these types:
 
-```fsharp
+```
 type SkeletonItem = {
     Post: AtUri
     Reason: SkeletonReason option
@@ -45,14 +45,14 @@ type SkeletonFeed = {
 
 Each `SkeletonItem` contains a post AT-URI. The optional `Reason` field can indicate that a post is included because someone reposted it:
 
-```fsharp
+```
 type SkeletonReason =
     | RepostBy of did: Did * indexedAt: string
 ```
 
 Your feed algorithm receives a `FeedQuery` with the requested feed URI, page limit, and optional cursor for pagination:
 
-```fsharp
+```
 type FeedQuery = {
     Feed: AtUri
     Limit: int
@@ -64,7 +64,7 @@ type FeedQuery = {
 
 The `IFeedAlgorithm` interface has a single method:
 
-```fsharp
+```
 type IFeedAlgorithm =
     abstract member GetFeedSkeleton : query: FeedQuery -> Task<SkeletonFeed>
 ```
@@ -105,7 +105,7 @@ let myFeed2 =
 
 `FeedGeneratorConfig` ties your algorithms to a hostname and DID:
 
-```fsharp
+```
 type FeedGeneratorConfig = {
     Hostname: string
     ServiceDid: Did
@@ -119,7 +119,7 @@ The `Feeds` map is keyed by the record key (rkey) portion of the feed AT-URI. Fo
 
 `Descriptions` are returned by the `describeFeedGenerator` endpoint so clients know what feeds you offer:
 
-```fsharp
+```
 type FeedDescription = {
     Uri: AtUri
     DisplayName: string

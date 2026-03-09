@@ -101,7 +101,7 @@ match Did.parse "did:plc:z72i7hdynmk6r22z27h6tvur" with
 
 All fields use the library's typed identifiers, not raw strings:
 
-```fsharp
+```
 type AtprotoIdentity =
     { Did: Did                  // Typed DID -- use Did.value to get the string
       Handle: Handle option     // Typed Handle -- present only if verified
@@ -123,7 +123,7 @@ let showIdentity (id: Identity.AtprotoIdentity) =
 
 Identity resolution functions return errors via the `IdentityError` discriminated union:
 
-```fsharp
+```
 type IdentityError =
     | XrpcError of XrpcError         // An XRPC call failed (network, auth, etc.)
     | DocumentParseError of string   // The DID document couldn't be fetched or parsed

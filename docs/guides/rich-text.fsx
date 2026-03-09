@@ -78,7 +78,7 @@ let detected = RichText.detect "Hello @my-handle.bsky.social! #atproto"
 (**
 The `DetectedFacet` type is a discriminated union:
 
-```fsharp
+```
 type DetectedFacet =
     | DetectedMention of byteStart: int * byteEnd: int * handle: string
     | DetectedLink of byteStart: int * byteEnd: int * uri: string

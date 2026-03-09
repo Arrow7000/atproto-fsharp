@@ -121,9 +121,9 @@ let filterTests = testList "post filter" [
         let bob = TestFactory.ProfileSummary(displayName = "Bob")
 
         let notifications = [
-            TestFactory.Notification(kind = NotificationKind.Like, author = alice)
-            TestFactory.Notification(kind = NotificationKind.Follow, author = bob)
-            TestFactory.Notification(kind = NotificationKind.Repost, author = alice)
+            TestFactory.Notification(content = NotificationContent.Like(TestFactory.PostRef()), author = alice)
+            TestFactory.Notification(content = NotificationContent.Follow, author = bob)
+            TestFactory.Notification(content = NotificationContent.Repost(TestFactory.PostRef()), author = alice)
         ]
 
         let byAuthor = notifications |> List.groupBy (fun n -> n.Author.DisplayName)

@@ -14,7 +14,7 @@ AT Protocol backend services -- feed generators, labelers, and other service pro
 
 ## Algorithm
 
-```fsharp
+```
 type Algorithm = ES256 | ES256K
 ```
 
@@ -24,7 +24,7 @@ type Algorithm = ES256 | ES256K
 
 Service auth JWTs carry these claims:
 
-```fsharp
+```
 type Claims =
     { Iss : Did               // Issuer -- your service's DID
       Aud : Did               // Audience -- the target service's DID

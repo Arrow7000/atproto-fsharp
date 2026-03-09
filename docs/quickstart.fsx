@@ -60,7 +60,7 @@ open FSharp.ATProto.Syntax
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 
-let main _ =
+let loginExample () =
     let result =
         taskResult {
             let! agent = Bluesky.login "https://bsky.social" "your-handle.bsky.social" "your-app-password"
