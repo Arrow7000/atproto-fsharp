@@ -1,3 +1,4 @@
+(**
 ---
 title: Raw XRPC
 category: Advanced Guides
@@ -14,8 +15,21 @@ The convenience API (`Bluesky.*`, `Chat.*`) covers common operations with domain
 ## Query Endpoints
 
 Query (GET) endpoints use a `query` function that takes an `AtpAgent` and a `Params` record, and returns a typed `Output` record:
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+(***)
+
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 
@@ -29,15 +43,19 @@ taskResult {
     for feed in result.Feeds do
         printfn "%s" feed.DisplayName
 }
-```
 
+(**
 Every field on the `Params` and `Output` records is fully typed. Optional protocol fields are `option` types, so the compiler ensures you handle them.
 
 ## Procedure Endpoints
 
 Procedure (POST) endpoints use a `call` function that takes an `AtpAgent` and an `Input` record. Some return a typed `Output` record; others return `unit` for void operations:
+*)
 
-```fsharp
+(*** hide ***)
+let interaction = Unchecked.defaultof<AppBskyFeed.Defs.Interaction>
+(***)
+
 taskResult {
     let! _result =
         AppBskyFeed.SendInteractions.call agent
@@ -45,8 +63,8 @@ taskResult {
 
     return ()
 }
-```
 
+(**
 The return type tells you which kind you're dealing with -- check the generated `Output` type or look at the AT Protocol reference for the endpoint.
 
 ## Finding the Right Endpoint
@@ -67,8 +85,8 @@ For the full list of endpoints, see the [AT Protocol HTTP Reference](https://doc
 ## Custom Pagination
 
 For paginated endpoints that don't have a pre-built paginator, use `Xrpc.paginate` directly. It returns an `IAsyncEnumerable` that fetches pages lazily:
+*)
 
-```fsharp
 let pages =
     Xrpc.paginate<AppBskyFeed.GetActorFeeds.Params, AppBskyFeed.GetActorFeeds.Output>
         AppBskyFeed.GetActorFeeds.TypeId
@@ -76,8 +94,8 @@ let pages =
         (fun output -> output.Cursor)
         (fun cursor input -> { input with Cursor = cursor })
         agent
-```
 
+(**
 The five arguments are: the endpoint type ID, initial parameters (with `Cursor = None`), a function to extract the cursor from the response, a function to inject a new cursor into the parameters, and the agent. The paginator stops automatically when the server returns no cursor.
 
 See the [Pagination guide](pagination.html) for patterns on consuming the `IAsyncEnumerable` result.
@@ -85,8 +103,8 @@ See the [Pagination guide](pagination.html) for patterns on consuming the `IAsyn
 ## Chat Endpoints
 
 Chat endpoints (`chat.bsky.*`) require a proxy header. Create a chat-proxied agent with `AtpAgent.withChatProxy` before calling them:
+*)
 
-```fsharp
 taskResult {
     let chatAgent = AtpAgent.withChatProxy agent
 
@@ -97,15 +115,15 @@ taskResult {
     for convo in result.Convos do
         printfn "Conversation %s with %d members" convo.Id convo.Members.Length
 }
-```
 
+(**
 The `Chat.*` convenience functions handle this automatically, but when using raw XRPC wrappers for chat endpoints, you need to set up the proxy yourself.
 
 ## Mixing Convenience and Raw
 
 You can freely mix convenience functions and raw XRPC calls in the same `taskResult` block. Both use the same `AtpAgent` and return `Task<Result<'T, XrpcError>>`, so they compose naturally:
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
 
@@ -125,6 +143,7 @@ taskResult {
 
     return ()
 }
-```
 
+(**
 The convenience layer and the raw wrappers are complementary. Use `Bluesky.*` and `Chat.*` for the operations they cover, and drop to the generated wrappers when you need parameters or endpoints the convenience layer doesn't expose.
+*)

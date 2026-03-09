@@ -1,3 +1,4 @@
+(**
 ---
 title: Testing
 category: Infrastructure
@@ -14,20 +15,32 @@ The `TestFactory` class provides static factory methods for creating domain type
 `TestFactory` lives in the `FSharp.ATProto.Bluesky` namespace. Add a reference to `FSharp.ATProto.Bluesky` in your test project.
 
 ## Basic Usage
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "nuget: Expecto, 10.2.3"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+(***)
+
 open FSharp.ATProto.Bluesky
 
 // Minimal -- all defaults
 let post = TestFactory.TimelinePost()
 
 // Override specific fields
-let post = TestFactory.TimelinePost(text = "Hello world", likeCount = 42L)
+let post2 = TestFactory.TimelinePost(text = "Hello world", likeCount = 42L)
 
 // Create a profile
 let profile = TestFactory.ProfileSummary(displayName = "Alice")
-```
 
+(**
 Default values are deterministic: the default DID is `did:plc:testfactory`, the default handle is `test.bsky.social`, and so on. This keeps test output stable.
 
 ## Available Factory Methods
@@ -82,8 +95,12 @@ TestFactory.Notification(
 ```
 
 ## Example: Testing a Filter Function
+*)
 
-```fsharp
+(*** hide ***)
+open Expecto
+(***)
+
 open FSharp.ATProto.Bluesky
 open Expecto
 
@@ -113,11 +130,11 @@ let filterTests = testList "post filter" [
         Expect.equal byAuthor.Length 2 "Should have 2 authors"
     }
 ]
-```
 
+(**
 ## Example: Testing Undo Logic
+*)
 
-```fsharp
 let undoTests = test "undo references have valid URIs" {
     let likeRef = TestFactory.LikeRef()
     let followRef = TestFactory.FollowRef()
@@ -133,4 +150,3 @@ let undoTests = test "undo references have valid URIs" {
         "app.bsky.graph.follow"
         "FollowRef URI should reference the follow collection"
 }
-```

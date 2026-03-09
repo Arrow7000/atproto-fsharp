@@ -52,35 +52,37 @@ taskResult {
 
 ## Getting Started
 
-See the [Quickstart](docs/quickstart.fsx) to get up and running in 5 minutes.
+See the [Quickstart](https://arrow7000.github.io/atproto-fsharp/quickstart.html) to get up and running in 5 minutes.
 
 ## Features
 
-- **Posts** -- create, reply, quote, delete, with automatic rich text detection ([guide](docs/guides/posts.fsx))
-- **Rich text** -- mentions, links, and hashtags detected and resolved automatically ([guide](docs/guides/rich-text.md))
-- **Images** -- upload and attach with typed `ImageMime` and alt text ([guide](docs/guides/media.md))
-- **Social graph** -- follow, block, like, repost, mute, with typed refs and generic undo ([guide](docs/guides/social.fsx))
-- **Feeds** -- timeline, author feed, actor likes, bookmarks ([guide](docs/guides/feeds.fsx))
-- **Profiles** -- get, search, typeahead, batch fetch, upsert ([guide](docs/guides/profiles.fsx))
-- **Chat / DMs** -- conversations, messages, reactions, with automatic proxy headers ([guide](docs/guides/chat.fsx))
-- **Notifications** -- fetch, count unread, mark seen ([guide](docs/guides/notifications.fsx))
-- **Moderation** -- report content, mute threads, mod lists, and a full moderation engine ([guide](docs/guides/moderation.md))
-- **Identity** -- DID resolution, handle verification, PDS discovery ([guide](docs/guides/identity.md))
-- **Lists** -- create and manage lists and starter packs ([guide](docs/guides/lists.md))
-- **Preferences** -- saved feeds, muted words, content filtering ([guide](docs/guides/preferences.md))
-- **Streaming** -- real-time events via Jetstream and Firehose ([guide](docs/guides/streaming.md))
-- **Video** -- upload and post video content ([guide](docs/guides/media.md))
-- **Pagination** -- lazy `IAsyncEnumerable` paginators for timeline, followers, notifications ([guide](docs/guides/pagination.md))
-- **OAuth** -- OAuth 2.0 client with DPoP/PKCE, plus authorization server ([guide](docs/guides/oauth.md))
+- **Posts** -- create, reply, quote, delete, with automatic rich text detection ([guide](https://arrow7000.github.io/atproto-fsharp/guides/posts.html))
+- **Rich text** -- mentions, links, and hashtags detected and resolved automatically ([guide](https://arrow7000.github.io/atproto-fsharp/guides/rich-text.html))
+- **Images** -- upload and attach with typed `ImageMime` and alt text ([guide](https://arrow7000.github.io/atproto-fsharp/guides/media.html))
+- **Social graph** -- follow, block, like, repost, mute, with typed refs and generic undo ([guide](https://arrow7000.github.io/atproto-fsharp/guides/social.html))
+- **Feeds** -- timeline, author feed, actor likes, bookmarks ([guide](https://arrow7000.github.io/atproto-fsharp/guides/feeds.html))
+- **Profiles** -- get, search, typeahead, batch fetch, upsert ([guide](https://arrow7000.github.io/atproto-fsharp/guides/profiles.html))
+- **Chat / DMs** -- conversations, messages, reactions, with automatic proxy headers ([guide](https://arrow7000.github.io/atproto-fsharp/guides/chat.html))
+- **Notifications** -- fetch, count unread, mark seen ([guide](https://arrow7000.github.io/atproto-fsharp/guides/notifications.html))
+- **Moderation** -- report content, mute threads, mod lists, and a full moderation engine ([guide](https://arrow7000.github.io/atproto-fsharp/guides/moderation.html))
+- **Identity** -- DID resolution, handle verification, PDS discovery ([guide](https://arrow7000.github.io/atproto-fsharp/guides/identity.html))
+- **Lists** -- create and manage lists and starter packs ([guide](https://arrow7000.github.io/atproto-fsharp/guides/lists.html))
+- **Preferences** -- saved feeds, muted words, content filtering ([guide](https://arrow7000.github.io/atproto-fsharp/guides/preferences.html))
+- **Streaming** -- real-time events via Jetstream and Firehose ([guide](https://arrow7000.github.io/atproto-fsharp/guides/streaming.html))
+- **Video** -- upload and post video content ([guide](https://arrow7000.github.io/atproto-fsharp/guides/media.html))
+- **Pagination** -- lazy `IAsyncEnumerable` paginators for timeline, followers, notifications ([guide](https://arrow7000.github.io/atproto-fsharp/guides/pagination.html))
+- **OAuth** -- OAuth 2.0 client with DPoP/PKCE, plus authorization server ([guide](https://arrow7000.github.io/atproto-fsharp/guides/oauth.html))
 - **Server-side** -- feed generator framework, XRPC server, service auth
-- **Full XRPC access** -- all 237 Bluesky endpoints available as typed wrappers ([guide](docs/guides/raw-xrpc.md))
+- **Full XRPC access** -- all 237 Bluesky endpoints available as typed wrappers ([guide](https://arrow7000.github.io/atproto-fsharp/guides/raw-xrpc.html))
 
 ## Documentation
 
-- [Quickstart](docs/quickstart.fsx) -- zero to first post
-- [Build a Bot](docs/guides/build-a-bot.fsx) -- end-to-end tutorial
-- [Concepts](docs/concepts.md) -- AT Protocol terms explained (DID, Handle, AT-URI, PDS, Lexicon)
-- [Guides](docs/guides/) -- 25+ guides covering posts, social, feeds, profiles, media, chat, notifications, moderation, streaming, OAuth, and more
+Full docs at [arrow7000.github.io/atproto-fsharp](https://arrow7000.github.io/atproto-fsharp/).
+
+- [Quickstart](https://arrow7000.github.io/atproto-fsharp/quickstart.html) -- zero to first post
+- [Build a Bot](https://arrow7000.github.io/atproto-fsharp/guides/build-a-bot.html) -- end-to-end tutorial
+- [Concepts](https://arrow7000.github.io/atproto-fsharp/concepts.html) -- AT Protocol terms explained (DID, Handle, AT-URI, PDS, Lexicon)
+- [All Guides](https://arrow7000.github.io/atproto-fsharp/) -- 25+ guides covering posts, social, feeds, profiles, media, chat, notifications, moderation, streaming, OAuth, and more
 
 ## Building & Testing
 
@@ -105,6 +107,8 @@ To ensure correctness the project validates against ground truth at every layer:
 - **XRPC / Bluesky** -- [tested](tests/FSharp.ATProto.Bluesky.Tests/) via mock HTTP handlers that verify request construction, multi-step orchestration (e.g. thread root resolution), error handling, and domain type mapping (note: the mocks don't validate against real Bluesky API responses -- that contract is covered by the generated types matching the lexicon schemas above)
 
 All told, 2,623 tests across 14 projects, with zero reliance on manual testing or live API calls.
+
+Documentation guides are written as [literate F# scripts](https://fsprojects.github.io/FSharp.Formatting/literate.html) (`.fsx` files) -- every code snippet is compiler-checked during the docs build, so examples can never drift out of sync with the library.
 
 ## License
 

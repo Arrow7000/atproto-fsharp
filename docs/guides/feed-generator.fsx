@@ -1,3 +1,4 @@
+(**
 ---
 title: Feed Generator
 category: Server-Side
@@ -12,12 +13,20 @@ keywords: fsharp, atproto, bluesky, feed, generator, algorithm, server
 A feed generator is an AT Protocol service that provides custom feed algorithms. When a user subscribes to a custom feed, Bluesky's app view calls your feed generator to get a "skeleton" -- a list of post AT-URIs -- and then hydrates those posts with full content before displaying them. Your generator decides *which* posts appear and in *what order*; the app view handles everything else.
 
 `FSharp.ATProto.FeedGenerator` provides an ASP.NET minimal API framework for building feed generators. It handles the protocol-level endpoints so you can focus on your feed logic.
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.FeedGenerator/bin/Release/net10.0/FSharp.ATProto.FeedGenerator.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.FeedGenerator
+(***)
+
 open FSharp.ATProto.FeedGenerator
 open FSharp.ATProto.Syntax
-```
 
+(**
 ## Key Types
 
 A feed skeleton response is built from these types:
@@ -63,8 +72,14 @@ type IFeedAlgorithm =
 You can implement this interface directly, or use the helper functions in the `FeedAlgorithm` module.
 
 `FeedAlgorithm.fromFunction` wraps an async function:
+*)
 
-```fsharp
+(*** hide ***)
+let fetchRecentPosts (_limit: int) (_cursor: string option) : System.Threading.Tasks.Task<FSharp.ATProto.FeedGenerator.SkeletonItem list> = Unchecked.defaultof<_>
+let nextCursor = Unchecked.defaultof<string option>
+let allPosts = Unchecked.defaultof<AtUri list>
+(***)
+
 let myFeed =
     FeedAlgorithm.fromFunction (fun query ->
         task {
@@ -72,20 +87,20 @@ let myFeed =
             let! posts = fetchRecentPosts query.Limit query.Cursor
             return { Feed = posts; Cursor = nextCursor }
         })
-```
 
+(**
 `FeedAlgorithm.fromSync` wraps a synchronous function -- useful for feeds backed by in-memory data:
+*)
 
-```fsharp
-let myFeed =
+let myFeed2 =
     FeedAlgorithm.fromSync (fun query ->
         let posts =
             allPosts
             |> List.take (min query.Limit (List.length allPosts))
             |> List.map (fun uri -> { Post = uri; Reason = None })
         { Feed = posts; Cursor = None })
-```
 
+(**
 ## Server Configuration
 
 `FeedGeneratorConfig` ties your algorithms to a hostname and DID:
@@ -124,8 +139,8 @@ type FeedDescription = {
 | `GET /xrpc/app.bsky.feed.getFeedSkeleton` | Returns the feed skeleton for a query |
 
 ## Complete Example
+*)
 
-```fsharp
 open FSharp.ATProto.FeedGenerator
 open FSharp.ATProto.Syntax
 
@@ -157,8 +172,16 @@ let config : FeedGeneratorConfig =
             Avatar = None } ]
       Port = 3000 }
 
+(*** hide ***)
+// FeedServer.configure and app.Run() would start the server;
+// omitted here to avoid side effects during fsdocs build.
+(***)
+
+(**
+```fsharp
 let app = FeedServer.configure config
 app.Run()
 ```
 
 The server starts on port 3000. Bluesky's app view will call `GET /xrpc/app.bsky.feed.getFeedSkeleton?feed=at://...&limit=50` and your algorithm returns the skeleton. The framework handles parameter parsing, limit clamping (1--100, default 50), unknown feed errors, and JSON serialization.
+*)

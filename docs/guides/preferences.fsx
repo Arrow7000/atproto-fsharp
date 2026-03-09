@@ -1,3 +1,4 @@
+(**
 ---
 title: Preferences
 category: Type Reference
@@ -12,13 +13,28 @@ keywords: fsharp, atproto, bluesky, preferences, settings, muted-words, content-
 FSharp.ATProto provides convenience functions for reading and modifying Bluesky user preferences. Each function performs a read-modify-write under the hood via `upsertPreferences`, so concurrent modifications are safe.
 
 All examples use `taskResult {}`. See the [Error Handling guide](error-handling.html) for details.
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let feedGeneratorUri = Unchecked.defaultof<AtUri>
+let labelerDid = Unchecked.defaultof<Did>
+let postUri = Unchecked.defaultof<AtUri>
+(***)
+
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 open FSharp.ATProto.Syntax
-```
 
+(**
 ## Functions
 
 | Function | Description |
@@ -38,8 +54,8 @@ open FSharp.ATProto.Syntax
 ## Muted Words
 
 Muted words hide posts containing the word from your feeds and notifications. The `addMutedWord` function takes an `AppBskyActor.Defs.MutedWord` record:
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
 
@@ -55,17 +71,17 @@ taskResult {
     // Remove it later
     do! Bluesky.removeMutedWord agent "spoilers"
 }
-```
 
+(**
 ## Saved Feeds
 
 Add or remove feeds from the user's saved feeds list:
+*)
 
-```fsharp
 taskResult {
     let feed : AppBskyActor.Defs.SavedFeed =
         { Id = System.Guid.NewGuid().ToString()
-          Type = "feed"
+          Type = AppBskyActor.Defs.SavedFeedType.Feed
           Value = AtUri.value feedGeneratorUri
           Pinned = true }
 
@@ -74,8 +90,8 @@ taskResult {
     // Remove by the feed ID
     do! Bluesky.removeSavedFeed agent feed.Id
 }
-```
 
+(**
 ## Content Filtering
 
 Control how content labels affect your experience. The `ContentLabelPrefVisibility` DU has these cases:
@@ -86,8 +102,8 @@ Control how content labels affect your experience. The `ContentLabelPrefVisibili
 | `Warn` | Show a warning overlay (default for most labels) |
 | `Hide` | Hide labeled content entirely |
 | `Ignore` | Ignore the label |
+*)
 
-```fsharp
 taskResult {
     // Warn on NSFW content instead of hiding
     do! Bluesky.setContentLabelPref agent
@@ -101,16 +117,24 @@ taskResult {
             AppBskyActor.Defs.ContentLabelPrefVisibility.Hide
             (Some labelerDid)
 }
-```
 
+(**
 ### Adult Content
 
 Toggle the adult content master switch:
+*)
 
-```fsharp
+(*** hide ***)
+taskResult {
+(***)
+
 do! Bluesky.setAdultContentEnabled agent true
-```
 
+(*** hide ***)
+}
+(***)
+
+(**
 ## Thread Sorting
 
 Set how replies are sorted when viewing a thread. The `ThreadViewPrefSort` DU options:
@@ -122,28 +146,36 @@ Set how replies are sorted when viewing a thread. The `ThreadViewPrefSort` DU op
 | `MostLikes` | Sort by like count |
 | `Random` | Random order |
 | `Hotness` | Sort by engagement |
+*)
 
-```fsharp
+(*** hide ***)
+taskResult {
+(***)
+
 do! Bluesky.setThreadViewPref agent AppBskyActor.Defs.ThreadViewPrefSort.Oldest
-```
 
+(*** hide ***)
+}
+(***)
+
+(**
 ## Hidden Posts
 
 Hide or unhide individual posts from your feeds:
+*)
 
-```fsharp
 taskResult {
     do! Bluesky.addHiddenPost agent postUri
     // later...
     do! Bluesky.removeHiddenPost agent postUri
 }
-```
 
+(**
 ## Custom Preference Updates
 
 For modifications not covered by the convenience functions, use `upsertPreferences` directly. It reads the current preferences, applies your update function, and writes the result back:
+*)
 
-```fsharp
 taskResult {
     do! Bluesky.upsertPreferences agent (fun prefs ->
         // prefs is a JsonElement list -- filter, modify, or append
@@ -151,4 +183,3 @@ taskResult {
             // your custom logic here
             true))
 }
-```

@@ -1,3 +1,4 @@
+(**
 ---
 title: Media
 category: Advanced Guides
@@ -16,17 +17,30 @@ FSharp.ATProto provides convenience methods for uploading images and attaching t
 > **Size limit:** Bluesky enforces a **1 MB maximum** per image blob. If your images may exceed this, resize them before uploading. The library sends bytes directly to the PDS without resizing, and oversized uploads will be rejected by the server.
 
 > **Video:** See the [Video](#video) section below for video upload support.
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
-```
 
+let agent = Unchecked.defaultof<AtpAgent>
+let postRef = Unchecked.defaultof<PostRef>
+(***)
+
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+(**
 ## Posting with Images
 
 `Bluesky.postWithImages` uploads each image, constructs the embed record, auto-detects [rich text](rich-text.html) facets, and creates the [post](posts.html) -- all in one call:
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
 
@@ -41,8 +55,8 @@ taskResult {
     printfn "Posted: %s" (AtUri.value postRef.Uri)
     return postRef
 }
-```
 
+(**
 Each image is described by an `ImageUpload` record:
 
 ```fsharp
@@ -70,8 +84,8 @@ Alt text is required. It describes the image content for screen readers. Write i
 ## Multiple Images
 
 Bluesky supports up to 4 images per post. Each gets its own `ImageUpload` with independent alt text:
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
 
@@ -86,15 +100,15 @@ taskResult {
 
     return postRef
 }
-```
 
+(**
 Images are uploaded sequentially. If any upload fails, the entire operation short-circuits and returns the error without creating the post.
 
 ## Rich Text with Images
 
 `postWithImages` auto-detects mentions, links, and hashtags in the text, just like `Bluesky.post`. See the [Rich Text guide](rich-text.html) for how facet detection works.
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
 
@@ -108,15 +122,15 @@ taskResult {
 
     return postRef
 }
-```
 
+(**
 The `@friend.bsky.social` mention is resolved to a [DID](../concepts.html), the `#fsharp` hashtag becomes a clickable facet, and the image is attached as an embed.
 
 ## Uploading Blobs Directly
 
 `Bluesky.uploadBlob` is the lower-level API for uploading binary data to the PDS. It returns a typed `BlobRef`:
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
     let data = System.IO.File.ReadAllBytes "diagram.png"
@@ -124,8 +138,8 @@ taskResult {
     printfn "Uploaded: CID=%s, size=%d bytes" (Cid.value blobRef.Ref) blobRef.Size
     return blobRef
 }
-```
 
+(**
 The `BlobRef` type:
 
 ```fsharp
@@ -152,38 +166,40 @@ Upload and post video content. Video processing is asynchronous -- the server tr
 | `Bluesky.postWithVideo` | Upload, wait for processing, and create a post -- all in one call |
 
 ### Quick Example
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "handle" "app-password"
     let videoBytes = System.IO.File.ReadAllBytes("clip.mp4")
-    let! post = Bluesky.postWithVideo agent "Check out this video!" videoBytes "video/mp4" "A short clip"
+    let! post = Bluesky.postWithVideo agent "Check out this video!" videoBytes Mp4 (Some "A short clip")
     printfn "Posted video: %s" (AtUri.value post.Uri)
 }
-```
 
+(**
 ### Step-by-Step
 
 For more control over the upload process:
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "handle" "app-password"
     let videoBytes = System.IO.File.ReadAllBytes("clip.mp4")
 
     // 1. Upload the video
-    let! jobStatus = Bluesky.uploadVideo agent videoBytes "video/mp4"
+    let! jobStatus = Bluesky.uploadVideo agent videoBytes Mp4
 
     // 2. Wait for server-side processing (max 60 poll attempts)
-    let! completed = Bluesky.awaitVideoProcessing agent jobStatus.JobId 60
+    let! completed = Bluesky.awaitVideoProcessing agent jobStatus.JobId (Some 60)
 
     // 3. Create a post with the processed video
     // (use raw XRPC with the blob ref from the completed job)
+    ()
 }
-```
 
+(**
 > **Note:** Videos have server-enforced size limits. MP4 is the supported format.
 
 ## Supported Formats
 
 Bluesky accepts **JPEG**, **PNG**, **GIF**, and **WebP** images. Use the corresponding `ImageMime` case (`Jpeg`, `Png`, `Gif`, `Webp`) or `Custom of string` for anything else.
+*)

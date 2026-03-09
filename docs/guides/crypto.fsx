@@ -1,3 +1,4 @@
+(**
 ---
 title: Cryptography
 category: Infrastructure
@@ -16,16 +17,25 @@ P-256 uses the native .NET `ECDsa` API. K-256 uses BouncyCastle, since .NET does
 ## Algorithm
 
 The `Algorithm` discriminated union selects a curve:
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.DRISL/bin/Release/net10.0/FSharp.ATProto.DRISL.dll"
+#r "../../src/FSharp.ATProto.Crypto/bin/Release/net10.0/FSharp.ATProto.Crypto.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Crypto
+(***)
+
 type Algorithm = P256 | K256
-```
 
+(**
 All functions that deal with keys or signatures take an `Algorithm` to identify the curve. Use `Algorithm.P256` for P-256 and `Algorithm.K256` for secp256k1.
 
 ## Key Types
+*)
 
-```fsharp
 type PublicKey =
     { Algorithm : Algorithm
       CompressedBytes : byte[] }  // 33 bytes: 0x02/0x03 prefix + 32-byte X
@@ -34,13 +44,18 @@ type KeyPair =
     { Algorithm : Algorithm
       PrivateKeyBytes : byte[]        // 32 bytes
       CompressedPublicKey : byte[] }  // 33 bytes
-```
 
+(**
 ## Key Management
 
 The `Keys` module provides generation, import, and decompression:
+*)
 
-```fsharp
+(*** hide ***)
+let somePrivateBytes = Unchecked.defaultof<byte[]>
+let compressedBytes = Unchecked.defaultof<byte[]>
+(***)
+
 open FSharp.ATProto.Crypto
 
 // Generate a new key pair
@@ -57,42 +72,43 @@ let uncompressed = Keys.decompress pubKey
 
 // Extract the public key from a key pair
 let pub = Keys.publicKey keyPair
-```
 
+(**
 ## Signing and Verification
 
 The `Signing` module produces 64-byte compact ECDSA signatures (r || s, 32 bytes each) with **low-S normalization** as required by the AT Protocol. Data is hashed with SHA-256 internally.
+*)
 
-```fsharp
-open FSharp.ATProto.Crypto
+(*** hide ***)
+let keyPair2 = Keys.generate Algorithm.P256
+(***)
 
-let keyPair = Keys.generate Algorithm.P256
 let data = System.Text.Encoding.UTF8.GetBytes "hello"
 
 // Sign -- returns 64-byte compact signature
-let signature = Signing.sign keyPair data
+let signature = Signing.sign keyPair2 data
 
 // Verify -- rejects high-S signatures
-let isValid = Signing.verify (Keys.publicKey keyPair) data signature
+let isValid = Signing.verify (Keys.publicKey keyPair2) data signature
 // true
-```
 
+(**
 `Signing.verify` returns `false` for invalid, high-S, or DER-encoded signatures. It never throws.
 
 ## Multikey and did:key Encoding
 
 The `Multikey` module encodes and decodes public keys in the `did:key` format used by AT Protocol DID documents. Keys are serialized as base58btc with a multicodec prefix (P-256: `0x1200`, K-256: `0xe7`).
+*)
 
-```fsharp
-open FSharp.ATProto.Crypto
-
-let keyPair = Keys.generate Algorithm.P256
+(*** hide ***)
+let keyPair3 = Keys.generate Algorithm.P256
+(***)
 
 // Encode as did:key (e.g. "did:key:zDnae...")
-let didKey = Multikey.keyPairToDid keyPair
+let didKey = Multikey.keyPairToDid keyPair3
 
 // Encode just the multibase portion (e.g. "zDnae...")
-let multibase = Multikey.encodeMultibase (Keys.publicKey keyPair)
+let multibase = Multikey.encodeMultibase (Keys.publicKey keyPair3)
 
 // Decode a did:key string back to a PublicKey
 match Multikey.decodeDid didKey with
@@ -103,17 +119,16 @@ match Multikey.decodeDid didKey with
 match Multikey.decodeMultibase multibase with
 | Ok pubKey -> printfn "Got key with %d bytes" pubKey.CompressedBytes.Length
 | Error msg -> printfn "Decode failed: %s" msg
-```
 
+(**
 ## Base58
 
 The `Base58` module provides standalone base58btc encoding and decoding using the Bitcoin alphabet. This is used internally by `Multikey` but is available for direct use if needed.
+*)
 
-```fsharp
 let encoded = Base58.encode [| 0uy; 1uy; 2uy |]
 // "12c"
 
 match Base58.decode encoded with
 | Ok bytes -> printfn "Decoded %d bytes" bytes.Length
 | Error msg -> printfn "Invalid base58: %s" msg
-```

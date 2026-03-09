@@ -1,3 +1,4 @@
+(**
 ---
 title: Ozone
 category: Advanced Guides
@@ -14,13 +15,31 @@ The `Ozone` module provides convenience methods for Ozone moderation tooling (`t
 All Ozone functions require a `serviceDid` parameter -- the DID of the Ozone moderation service. The proxy header is applied automatically; you do not need to configure it manually.
 
 All examples use `taskResult {}`. See the [Error Handling guide](error-handling.html) for details.
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let serviceDid = Unchecked.defaultof<Did>
+let offendingPostRef = Unchecked.defaultof<PostRef>
+let userDid = Unchecked.defaultof<Did>
+let recordUri = Unchecked.defaultof<AtUri>
+let newModeratorDid = Unchecked.defaultof<Did>
+(***)
+
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 open FSharp.ATProto.Syntax
-```
 
+(**
 ## Key Types
 
 ### OzoneSubject
@@ -80,8 +99,8 @@ type TeamMember =
 | `Ozone.getSubjects` | Get detailed subject information |
 
 ### Taking Down a Post and Adding a Label
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "mod-handle.bsky.social" "app-password"
 
@@ -105,8 +124,8 @@ taskResult {
 
     return ()
 }
-```
 
+(**
 ## Repository Inspection
 
 | Function | Description |
@@ -114,16 +133,16 @@ taskResult {
 | `Ozone.getRepo` | Get detailed moderation view for an account by DID |
 | `Ozone.getRecord` | Get detailed moderation view for a record by AT-URI |
 | `Ozone.searchRepos` | Search accounts in the moderation system |
+*)
 
-```fsharp
 taskResult {
     let! repoDetail = Ozone.getRepo agent serviceDid userDid
     let! recordDetail = Ozone.getRecord agent serviceDid recordUri
     let! searchResults = Ozone.searchRepos agent serviceDid "spam" (Some 10L) None
     return ()
 }
-```
 
+(**
 ## Team Management
 
 | Function | Description |
@@ -132,11 +151,11 @@ taskResult {
 | `Ozone.addMember` | Add a team member with a role |
 | `Ozone.removeMember` | Remove a team member |
 | `Ozone.updateMember` | Update a member's role or disabled status |
+*)
 
-```fsharp
 taskResult {
     // Add a new moderator
-    let! member = Ozone.addMember agent serviceDid newModeratorDid TeamRole.Moderator
+    let! _newMember = Ozone.addMember agent serviceDid newModeratorDid TeamRole.Moderator
 
     // Promote to admin
     let! _ = Ozone.updateMember agent serviceDid newModeratorDid (Some TeamRole.Admin) None
@@ -147,8 +166,8 @@ taskResult {
     for m in page.Items do
         printfn "%s - %A" (Did.value m.Did) m.Role
 }
-```
 
+(**
 ## Communication Templates
 
 Templates for standardized moderation communications:
@@ -159,8 +178,8 @@ Templates for standardized moderation communications:
 | `Ozone.createTemplate` | Create a new template |
 | `Ozone.updateTemplate` | Update an existing template |
 | `Ozone.deleteTemplate` | Delete a template by ID |
+*)
 
-```fsharp
 taskResult {
     let! template =
         Ozone.createTemplate agent serviceDid
@@ -177,4 +196,3 @@ taskResult {
     // Delete it
     do! Ozone.deleteTemplate agent serviceDid template.Id
 }
-```

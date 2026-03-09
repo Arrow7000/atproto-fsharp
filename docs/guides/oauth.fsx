@@ -1,3 +1,4 @@
+(**
 ---
 title: OAuth
 category: Server-Side
@@ -14,16 +15,41 @@ AT Protocol uses OAuth 2.0 with two mandatory security extensions: **DPoP** (Dem
 ## OAuth Client
 
 `FSharp.ATProto.OAuth` implements the full client-side OAuth flow. Use this when building an application that needs to authenticate Bluesky users through their browser.
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.DRISL/bin/Release/net10.0/FSharp.ATProto.DRISL.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.OAuth/bin/Release/net10.0/FSharp.ATProto.OAuth.dll"
+#r "../../src/FSharp.ATProto.OAuthServer/bin/Release/net10.0/FSharp.ATProto.OAuthServer.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.OAuth
+open FSharp.ATProto.OAuthServer
+open System
+(***)
+
 open FSharp.ATProto.OAuth
 open System.Net.Http
-```
 
+(**
 ### Discovery
 
 Before starting an authorization flow, discover the authorization server for the user's PDS. `Discovery.discover` performs two-step discovery: it fetches the PDS's protected resource metadata (RFC 9728) to find the authorization server, then fetches the authorization server metadata (RFC 8414):
+*)
 
+(*** hide ***)
+let httpClient = Unchecked.defaultof<HttpClient>
+let serverMetadata = Unchecked.defaultof<AuthorizationServerMetadata>
+let authState = Unchecked.defaultof<AuthorizationState>
+let authorizationCode = Unchecked.defaultof<string>
+let session = Unchecked.defaultof<OAuthSession>
+let saveSession (_s: OAuthSession) = ()
+(***)
+
+(**
 ```fsharp
 let httpClient = new HttpClient()
 let! serverMetadata = Discovery.discover httpClient "https://bsky.social"
@@ -36,8 +62,8 @@ You can also discover each step separately with `Discovery.discoverProtectedReso
 The flow has three phases: start, user approval, and completion.
 
 **1. Start the authorization flow.** `OAuthClient.startAuthorization` generates a PKCE challenge and DPoP key pair, submits a Pushed Authorization Request (PAR) if the server supports it, and returns the URL to redirect the user to:
+*)
 
-```fsharp
 let clientMetadata : ClientMetadata =
     { ClientId = "https://myapp.example.com/client-metadata.json"
       ClientUri = Some "https://myapp.example.com"
@@ -49,6 +75,8 @@ let clientMetadata : ClientMetadata =
       ApplicationType = "web"
       DpopBoundAccessTokens = true }
 
+(**
+```fsharp
 // serverMetadata is the AuthorizationServerMetadata from discovery
 let! result = OAuthClient.startAuthorization httpClient clientMetadata serverMetadata "https://myapp.example.com/callback"
 let authorizationUrl, authState = result
@@ -82,7 +110,14 @@ type OAuthSession = {
 ### Using the Session with AtpAgent
 
 `OAuthBridge.resumeSession` bridges an `OAuthSession` to an `AtpAgent`, so all convenience functions (`Bluesky.post`, `Bluesky.like`, etc.) work with OAuth authentication. It configures DPoP proof generation on every request and automatic token refresh on 401:
+*)
 
+(*** hide ***)
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+(***)
+
+(**
 ```fsharp
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
@@ -113,12 +148,13 @@ let! newSession = OAuthClient.refreshToken httpClient clientMetadata session
 ```
 
 Check expiration with `OAuthBridge.isExpired`:
+*)
 
-```fsharp
 if OAuthBridge.isExpired session then
     // refresh the token
-```
+    ()
 
+(**
 ### DPoP Utilities
 
 The `DPoP` module provides low-level utilities if you need to work with DPoP proofs directly:
@@ -150,11 +186,11 @@ type OAuthError =
 `FSharp.ATProto.OAuthServer` implements an AT Protocol-compliant authorization server. Use this if you are running your own PDS and need to issue tokens to client applications.
 
 The server enforces the AT Protocol's mandatory security requirements: Pushed Authorization Requests (PAR), DPoP-bound tokens, and PKCE with S256.
+*)
 
-```fsharp
 open FSharp.ATProto.OAuthServer
-```
 
+(**
 ### Endpoints
 
 The server exposes these routes:
@@ -186,7 +222,14 @@ The server defines four store interfaces for persistence. All have in-memory imp
 ### Configuration
 
 Use the builder pattern to configure and launch the server:
+*)
 
+(*** hide ***)
+let myAccountStore = Unchecked.defaultof<IAccountStore>
+let myTokenStore = Unchecked.defaultof<ITokenStore>
+(***)
+
+(**
 ```fsharp
 let app =
     OAuthServer.defaults
@@ -217,3 +260,4 @@ All builder functions:
 | `withConsentPath path` | Path for the consent UI (default: `/consent`) |
 
 If you omit the signing key, token store, request store, replay store, or account store, the server uses in-memory defaults. This is convenient for development but not suitable for production -- tokens and sessions are lost on restart.
+*)

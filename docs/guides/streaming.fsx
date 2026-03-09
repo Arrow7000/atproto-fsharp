@@ -1,3 +1,4 @@
+(**
 ---
 title: Streaming
 category: Advanced Guides
@@ -10,13 +11,22 @@ keywords: fsharp, atproto, bluesky, streaming, jetstream, firehose, websocket, e
 # Streaming
 
 The `FSharp.ATProto.Streaming` package provides real-time event streams over WebSocket. Two protocols are supported: **Jetstream** (JSON, simpler) and **Firehose** (CBOR, full fidelity). Both return `IAsyncEnumerable<Result<Event, StreamError>>` for incremental consumption.
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.DRISL/bin/Release/net10.0/FSharp.ATProto.DRISL.dll"
+#r "../../src/FSharp.ATProto.Streaming/bin/Release/net10.0/FSharp.ATProto.Streaming.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Streaming
+(***)
+
 open FSharp.ATProto.Streaming
 open FSharp.ATProto.Syntax
 open System.Threading
-```
 
+(**
 ## Jetstream
 
 Jetstream is a JSON-based relay that provides a filtered, lightweight view of the AT Protocol event stream. It is the recommended starting point for most applications.
@@ -41,8 +51,8 @@ Jetstream is a JSON-based relay that provides a filtered, lightweight view of th
 | `Jetstream.defaultOptions` | Default options pointing at `jetstream1.us-east.bsky.network` |
 
 ### Subscribing to Posts
+*)
 
-```fsharp
 let cts = new CancellationTokenSource()
 
 let options =
@@ -71,28 +81,32 @@ task {
     // Cancel to disconnect
     cts.Cancel()
 }
-```
 
+(**
 ### Filtering by DID
 
 To receive events only for specific accounts, set `WantedDids`:
+*)
 
-```fsharp
-let options =
+(*** hide ***)
+let options2 =
+(***)
     { Jetstream.defaultOptions with
         WantedDids = [ "did:plc:abc123"; "did:plc:def456" ] }
-```
 
+(**
 ### Resuming from a Cursor
 
 Jetstream cursors are microsecond timestamps. To resume from where you left off:
+*)
 
-```fsharp
-let options =
+(*** hide ***)
+let options3 =
+(***)
     { Jetstream.defaultOptions with
         Cursor = Some 1709312400000000L }
-```
 
+(**
 ## Firehose
 
 The Firehose provides the full-fidelity CBOR event stream from `com.atproto.sync.subscribeRepos`. It includes raw CAR blocks and is suitable for indexers and relay operators.
@@ -117,18 +131,20 @@ The Firehose provides the full-fidelity CBOR event stream from `com.atproto.sync
 | `Firehose.defaultOptions` | Default options pointing at `bsky.network` |
 
 ### Subscribing to the Firehose
+*)
 
-```fsharp
-let cts = new CancellationTokenSource()
+(*** hide ***)
+let cts2 = new CancellationTokenSource()
+(***)
 
-let options =
+let firehoseOptions =
     { Firehose.defaultOptions with
         Cursor = None }
 
-let events = Firehose.subscribe options cts.Token
+let firehoseEvents = Firehose.subscribe firehoseOptions cts2.Token
 
 task {
-    let enumerator = events.GetAsyncEnumerator(cts.Token)
+    let enumerator = firehoseEvents.GetAsyncEnumerator(cts2.Token)
 
     while! enumerator.MoveNextAsync() do
         match enumerator.Current with
@@ -143,15 +159,14 @@ task {
             printfn "Stream error: %A" e
         | _ -> ()
 
-    cts.Cancel()
+    cts2.Cancel()
 }
-```
 
+(**
 ## Graceful Shutdown
 
 Both `subscribe` functions respect `CancellationToken`. Cancel the token to close the WebSocket connection cleanly. After cancellation, `MoveNextAsync` returns `false` and the enumerator disposes the underlying WebSocket.
+*)
 
-```fsharp
 // Run for 30 seconds then stop
 cts.CancelAfter(30_000)
-```

@@ -1,3 +1,4 @@
+(**
 ---
 title: Lists
 category: Type Reference
@@ -12,13 +13,29 @@ keywords: fsharp, atproto, bluesky, lists, starter-packs, moderation
 FSharp.ATProto provides convenience functions for creating and managing Bluesky lists (moderation, curation, and reference lists) and starter packs.
 
 All examples use `taskResult {}`. See the [Error Handling guide](error-handling.html) for details.
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let someHandle = Unchecked.defaultof<Handle>
+let listUri = Unchecked.defaultof<AtUri>
+let user1Did = Unchecked.defaultof<Did>
+let user2Did = Unchecked.defaultof<Did>
+(***)
+
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 open FSharp.ATProto.Syntax
-```
 
+(**
 ## Domain Types
 
 | Type | Fields | Description |
@@ -46,8 +63,8 @@ The `AppBskyGraph.Defs.ListPurpose` DU controls what kind of list you are creati
 | `Bluesky.getList` | Get list details and members |
 | `Bluesky.getLists` | Get lists created by a user (SRTP: `Handle`, `Did`, `ProfileSummary`, `Profile`) |
 | `Bluesky.getListFeed` | Get posts from a list-based feed |
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
 
@@ -60,11 +77,11 @@ taskResult {
     // Get a specific list with its members
     let! detail = Bluesky.getList agent listUri None None
 
-    for member in detail.Items do
-        printfn "  - %s" (Handle.value member.Handle)
+    for m in detail.Items do
+        printfn "  - %s" (Handle.value m.Handle)
 }
-```
 
+(**
 ## Managing Lists
 
 | Function | Description |
@@ -75,8 +92,8 @@ taskResult {
 | `Bluesky.removeListItem` | Remove a user from a list |
 
 ### Creating a List and Adding Members
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
 
@@ -97,21 +114,21 @@ taskResult {
     // Delete the entire list
     do! Bluesky.deleteList agent listRef.Uri
 }
-```
 
+(**
 ### List Feed
 
 For curation lists, you can read posts from all list members as a feed:
+*)
 
-```fsharp
 taskResult {
     let! page = Bluesky.getListFeed agent listUri (Some 25L) None
 
     for item in page.Items do
         printfn "%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
 }
-```
 
+(**
 ## Starter Packs
 
 Starter packs are built on top of curation lists. Create a list first, then wrap it in a starter pack:
@@ -120,8 +137,8 @@ Starter packs are built on top of curation lists. Create a list first, then wrap
 |---|---|
 | `Bluesky.createStarterPack` | Create a starter pack from a list |
 | `Bluesky.deleteStarterPack` | Delete a starter pack |
+*)
 
-```fsharp
 taskResult {
     let! agent = Bluesky.login "https://bsky.social" "handle.bsky.social" "app-password"
 
@@ -146,4 +163,3 @@ taskResult {
 
     printfn "Starter pack created: %s" (AtUri.value starterPackRef.Uri)
 }
-```

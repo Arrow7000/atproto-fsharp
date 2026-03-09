@@ -1,3 +1,4 @@
+(**
 ---
 title: XRPC Server
 category: Server-Side
@@ -10,13 +11,27 @@ keywords: fsharp, atproto, xrpc, server, api, rate-limiting, authentication
 # XRPC Server
 
 `FSharp.ATProto.XrpcServer` provides a framework for building AT Protocol-compliant XRPC servers with built-in authentication and rate limiting. It maps XRPC endpoints to ASP.NET minimal API routes, handling error formatting, bearer token verification, and sliding-window rate limiting automatically.
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#I "/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App/10.0.3/"
+#r "Microsoft.AspNetCore.Http.Abstractions.dll"
+#r "Microsoft.AspNetCore.Http.Results.dll"
+#r "Microsoft.Extensions.Primitives.dll"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.XrpcServer/bin/Release/net10.0/FSharp.ATProto.XrpcServer.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.XrpcServer
+open System.Security.Claims
+open Microsoft.AspNetCore.Http
+(***)
+
 open FSharp.ATProto.XrpcServer
 open FSharp.ATProto.Syntax
 open Microsoft.AspNetCore.Http
-```
 
+(**
 ## Key Types
 
 Each endpoint is described by an `XrpcEndpoint` record:
@@ -45,8 +60,8 @@ type XrpcServerConfig = {
 ## Defining Endpoints
 
 Use `XrpcServer.endpoint` to create an endpoint, then pipe through `withRateLimit` and `withAuth` as needed:
+*)
 
-```fsharp
 let nsid = Nsid.parse "app.example.getProfile" |> Result.defaultWith failwith
 
 let getProfile =
@@ -60,11 +75,15 @@ let getProfile =
         })
     |> XrpcServer.withRateLimit { MaxRequests = 100; Window = System.TimeSpan.FromMinutes 1.0 }
     |> XrpcServer.withAuth
-```
 
+(**
 For POST endpoints, use `XrpcMethod.Procedure` and read the request body with `Middleware.tryReadJsonBody`:
+*)
 
-```fsharp
+(*** hide ***)
+let createItemNsid = Nsid.parse "app.example.createItem" |> Result.defaultWith failwith
+(***)
+
 let createItem =
     XrpcServer.endpoint createItemNsid XrpcMethod.Procedure (fun ctx ->
         task {
@@ -76,8 +95,8 @@ let createItem =
                 return Middleware.invalidRequest msg XrpcServerConfig.defaultJsonOptions
         })
     |> XrpcServer.withAuth
-```
 
+(**
 ## Authentication
 
 The `Auth` module extracts and verifies bearer tokens. You provide a `verifyToken` function that validates the token string and returns a `ClaimsPrincipal` on success:
@@ -137,8 +156,8 @@ The `Middleware` module provides helpers for common request/response patterns:
 ## Building and Running
 
 Compose the server configuration with the builder functions, then call `XrpcServer.configure` or `XrpcServer.configureWithPort`:
+*)
 
-```fsharp
 let myTokenVerifier (token: string) =
     task { return Ok (System.Security.Claims.ClaimsPrincipal()) }
 
@@ -149,6 +168,13 @@ let config =
     |> XrpcServer.withTokenVerifier myTokenVerifier
     |> XrpcServer.withGlobalRateLimit { MaxRequests = 1000; Window = System.TimeSpan.FromMinutes 5.0 }
 
+(*** hide ***)
+// XrpcServer.configureWithPort and app.Run() would start the server;
+// omitted here to avoid side effects during fsdocs build.
+(***)
+
+(**
+```fsharp
 let app = XrpcServer.configureWithPort 3000 config
 app.Run()
 ```
@@ -156,3 +182,4 @@ app.Run()
 `configure` returns a `WebApplication` without binding a port (useful when you want to control hosting yourself). `configureWithPort` binds to the specified port.
 
 The server automatically registers a `GET /_health` endpoint that returns `{ "version": "1.0.0" }` for health checks.
+*)

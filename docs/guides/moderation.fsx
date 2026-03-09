@@ -1,3 +1,4 @@
+(**
 ---
 title: Moderation
 category: Advanced Guides
@@ -12,18 +13,37 @@ keywords: fsharp, atproto, bluesky, moderation, mute, block, report
 FSharp.ATProto provides convenience functions for muting users and threads, subscribing to moderation lists, and filing reports. All actions are server-side and persist across devices.
 
 All examples assume you have an authenticated agent:
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+#r "../../src/FSharp.ATProto.Moderation/bin/Release/net10.0/FSharp.ATProto.Moderation.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let post = Unchecked.defaultof<TimelinePost>
+let someHandle = Unchecked.defaultof<Handle>
+let listUri = Unchecked.defaultof<AtUri>
+let userDid = Unchecked.defaultof<Did>
+let postUri = Unchecked.defaultof<AtUri>
+let labelerDid = Unchecked.defaultof<Did>
+(***)
+
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 open FSharp.ATProto.Syntax
-```
 
+(**
 ## Muting a User
 
 `Bluesky.muteUser` accepts a `Profile`, `ProfileSummary`, or `Did` directly. Muted users' posts are hidden from your feeds and notifications, but the muted user is never notified:
+*)
 
-```fsharp
 taskResult {
     let! profile = Bluesky.getProfile agent someHandle
 
@@ -33,21 +53,29 @@ taskResult {
     // later...
     do! Bluesky.unmuteUser agent profile
 }
-```
 
+(**
 When you only have a handle string, use `muteUserByHandle` -- it resolves the identifier for you:
+*)
 
-```fsharp
+(*** hide ***)
+taskResult {
+(***)
+
 do! Bluesky.muteUserByHandle agent "spammer.bsky.social"
-```
 
+(*** hide ***)
+}
+(***)
+
+(**
 Muting is invisible. The muted user can still see and interact with your posts -- you just will not see theirs.
 
 ## Muting a Thread
 
 `Bluesky.muteThread` accepts a `TimelinePost`, `PostRef`, or `AtUri`. Posts in the muted thread are hidden from your notifications:
+*)
 
-```fsharp
 taskResult {
     // Pass the post directly -- no need to extract .Uri
     do! Bluesky.muteThread agent post
@@ -55,8 +83,8 @@ taskResult {
     // later...
     do! Bluesky.unmuteThread agent post
 }
-```
 
+(**
 Useful for silencing noisy threads you have been mentioned in. Thread muting only affects notifications -- the thread remains visible if you navigate to it.
 
 ## Moderation Lists
@@ -66,36 +94,36 @@ Bluesky supports community-maintained moderation lists. You can subscribe to a l
 ### Mute lists
 
 Subscribing to a mute list mutes all accounts on it. As the list owner updates membership, the effect follows automatically:
+*)
 
-```fsharp
 taskResult {
     do! Bluesky.muteModList agent listUri
 
     // later...
     do! Bluesky.unmuteModList agent listUri
 }
-```
 
+(**
 ### Block lists
 
 `blockModList` creates a `listblock` record and returns a `ListBlockRef` you pass to `unblockModList` to undo:
+*)
 
-```fsharp
 taskResult {
     let! blockRef = Bluesky.blockModList agent listUri
 
     // later...
     do! Bluesky.unblockModList agent blockRef
 }
-```
 
+(**
 Block lists apply the same restrictions as individual blocks.
 
 ## Reporting Content
 
 `Bluesky.reportContent` takes a `ReportSubject` (what to report), a `ReasonType` (why), and an optional description. On success it returns the report ID:
+*)
 
-```fsharp
 taskResult {
     // Report a post
     let! reportId =
@@ -106,8 +134,8 @@ taskResult {
 
     printfn "Report filed (ID: %d)" reportId
 }
-```
 
+(**
 `ReportSubject` has two cases:
 
 ```fsharp
@@ -118,8 +146,8 @@ type ReportSubject =
 ```
 
 To report an account instead of a post:
+*)
 
-```fsharp
 taskResult {
     let! reportId =
         Bluesky.reportContent agent
@@ -129,8 +157,8 @@ taskResult {
 
     printfn "Report filed (ID: %d)" reportId
 }
-```
 
+(**
 ### Reason types
 
 The `ComAtprotoModeration.Defs.ReasonType` DU includes these common cases:
@@ -154,8 +182,8 @@ The `Profile` domain type returned by `Bluesky.getProfile` includes fields that 
 - `IsMuted` -- whether you have muted this user
 - `IsBlocking` -- whether you are blocking this user
 - `IsBlockedBy` -- whether this user is blocking you
+*)
 
-```fsharp
 taskResult {
     let! profile = Bluesky.getProfile agent "someone.bsky.social"
 
@@ -163,15 +191,15 @@ taskResult {
     if profile.IsBlocking then printfn "You are blocking this user"
     if profile.IsBlockedBy then printfn "This user is blocking you"
 }
-```
 
+(**
 See the [Profiles guide](profiles.html) for more on the `Profile` domain type.
 
 ## Power Users: Raw XRPC
 
 If you need access to response fields the convenience layer does not expose, drop to the raw XRPC call:
+*)
 
-```fsharp
 taskResult {
     let! output =
         ComAtprotoModeration.CreateReport.call agent
@@ -184,8 +212,8 @@ taskResult {
 
     printfn "Report %d filed at %s" output.Id output.CreatedAt
 }
-```
 
+(**
 This gives access to the full response, including `CreatedAt`, `ReportedBy`, and the resolved `Subject` union.
 
 ## Moderation Engine
@@ -209,8 +237,8 @@ The engine takes moderation preferences, labels on content/accounts, and context
 | `CustomLabelValueDef` | Custom label definition from a labeler |
 
 ### Usage
+*)
 
-```fsharp
 open FSharp.ATProto.Moderation
 
 // Set up preferences
@@ -222,10 +250,10 @@ let prefs : ModerationPrefs =
       HiddenPosts = Set.empty }
 
 // Labels on a post
-let labels = [ { Value = "nsfw"; Source = labelerDid; Neg = false; CreatedAt = DateTimeOffset.UtcNow } ]
+let labels = [ { Value = "nsfw"; Source = labelerDid; Neg = false; CreatedAt = System.DateTimeOffset.UtcNow } ]
 
 // Get moderation decision
-let decision = Moderation.moderatePost prefs labels [] "" DateTimeOffset.UtcNow postUri
+let decision = Moderation.moderatePost prefs labels [] "" System.DateTimeOffset.UtcNow postUri
 
 // Check what to do in content list context
 match Moderation.moderate decision ModerationContext.ContentList with
@@ -233,8 +261,8 @@ match Moderation.moderate decision ModerationContext.ContentList with
 | ModerationAction.Filter -> printfn "Hide from feed"
 | ModerationAction.Alert -> printfn "Show with warning"
 | _ -> printfn "Show normally"
-```
 
+(**
 ### Built-in Labels
 
 The engine includes 8 built-in label definitions: `porn`, `sexual`, `nudity`, `graphic-media`, `gore`, `nsfl`, `!hide`, `!warn`. Custom labels from labeler services are supported via `Labels.interpretLabelValueDefinition`.
@@ -251,3 +279,4 @@ The engine includes 8 built-in label definitions: `porn`, `sexual`, `nudity`, `g
 | `Moderation.moderate` | Apply decision to a specific UI context |
 | `Labels.findLabel` | Look up a built-in label definition |
 | `Labels.interpretLabelValueDefinition` | Convert a labeler's custom label to a `CustomLabelValueDef` |
+*)

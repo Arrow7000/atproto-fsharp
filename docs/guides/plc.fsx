@@ -1,3 +1,4 @@
+(**
 ---
 title: PLC Directory
 category: Infrastructure
@@ -32,8 +33,19 @@ type PlcError =
 ```
 
 ## Resolving a DID
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.DRISL/bin/Release/net10.0/FSharp.ATProto.DRISL.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+(***)
+
 open FSharp.ATProto.Core
 open FSharp.ATProto.Syntax
 
@@ -53,15 +65,15 @@ task {
     | Error (PlcError.ParseError msg) ->
         printfn "Parse error: %s" msg
 }
-```
 
+(**
 The optional third parameter overrides the PLC Directory URL (defaults to `https://plc.directory`).
 
 ## Audit Log
 
 Get the full operation history for a DID:
+*)
 
-```fsharp
 task {
     match! Plc.getAuditLog client did None with
     | Ok entries ->
@@ -69,29 +81,37 @@ task {
             printfn "[%O] %A (nullified: %b)" entry.CreatedAt entry.Operation.Type entry.Nullified
     | Error err -> printfn "Error: %A" err
 }
-```
 
+(**
 Each `AuditEntry` contains the signed `PlcOperation`, its CID, whether it has been nullified, and the timestamp.
 
 ## Bulk Export
 
 The export endpoint returns operations across all DIDs as NDJSON, useful for building mirrors or analytics:
+*)
 
-```fsharp
 task {
     match! Plc.export client None (Some 100) None with
     | Ok entries -> printfn "Got %d entries" entries.Length
     | Error err -> printfn "Error: %A" err
 }
-```
 
+(**
 Parameters: `after` (ISO 8601 cursor for pagination), `count` (max entries), and `baseUrl`.
 
 ## Creating Operations
 
 Build unsigned operations for DID document management:
+*)
 
-```fsharp
+(*** hide ***)
+let prevCid = Unchecked.defaultof<FSharp.ATProto.DRISL.Cid>
+let rotationKeys = Unchecked.defaultof<string list>
+let verificationMethods = Unchecked.defaultof<Map<string, string>>
+let alsoKnownAs = Unchecked.defaultof<string list>
+let services = Unchecked.defaultof<Map<string, Plc.PlcService>>
+(***)
+
 // Genesis operation (first operation for a new DID)
 let genesis =
     Plc.createGenesisOp
@@ -108,17 +128,25 @@ let rotation =
 
 // Tombstone (deactivate the DID)
 let tombstone = Plc.createTombstoneOp prevCid
-```
 
+(**
 ## Signing and Submitting
 
 Sign an operation and submit it to the PLC Directory. The signing function is injected -- this module does not depend on `FSharp.ATProto.Crypto` directly.
+*)
 
+(*** hide ***)
+let sign = Unchecked.defaultof<byte[] -> byte[]>
+(***)
+
+(**
 ```fsharp
 open FSharp.ATProto.Crypto
 
 let keyPair = Keys.generate Algorithm.P256
 let sign = Signing.sign keyPair
+```
+*)
 
 // Sign the operation
 let signed = Plc.signOperation sign genesis
@@ -129,6 +157,7 @@ task {
     | Ok () -> printfn "Operation submitted"
     | Error err -> printfn "Error: %A" err
 }
-```
 
+(**
 `signOperation` serializes the operation to canonical JSON (omitting the `sig` field), signs it, and returns the operation with the base64url-encoded signature populated.
+*)

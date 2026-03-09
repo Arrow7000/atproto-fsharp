@@ -56,7 +56,9 @@ taskResult {
 
 ## Documentation
 
-Full docs at [arrow7000.github.io/atproto-fsharp](https://arrow7000.github.io/atproto-fsharp/)
+Full docs at [arrow7000.github.io/atproto-fsharp](https://arrow7000.github.io/atproto-fsharp/).
+
+All documentation guides are written as literate F# scripts -- every code snippet is compiler-checked during the docs build, so examples are always in sync with the library.
 
 ## License
 

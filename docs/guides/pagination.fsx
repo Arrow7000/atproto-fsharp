@@ -1,3 +1,4 @@
+(**
 ---
 title: Pagination
 category: Advanced Guides
@@ -16,8 +17,21 @@ All examples below use the `taskResult` computation expression, which short-circ
 ## Single-Page Queries
 
 Most use cases only need one page. Use the convenience functions in the `Bluesky` module -- they accept an optional page size and an optional cursor, and return a single `Page<'T>`:
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let myHandle = Unchecked.defaultof<Handle>
+(***)
+
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 
@@ -26,8 +40,8 @@ taskResult {
     for item in page.Items do
         printfn "@%s: %s" item.Post.Author.DisplayName item.Post.Text
 }
-```
 
+(**
 There are matching single-page functions for most read endpoints: `getFollowers`, `getFollows`, `getAuthorFeed`, `getNotifications`, `searchPosts`, `searchActors`, and more.
 
 ## Pre-Built Paginators
@@ -49,8 +63,8 @@ When you need to process an unbounded result set without loading everything into
 ## Consuming Pages
 
 Here is how to iterate through all pages of your home timeline:
+*)
 
-```fsharp
 task {
     let pages = Bluesky.paginateTimeline agent (Some 25L)
     let enumerator = pages.GetAsyncEnumerator()
@@ -69,11 +83,11 @@ task {
                 printfn "Error: %A" err
                 hasMore <- false
 }
-```
 
+(**
 To take a fixed number of pages, add a counter:
+*)
 
-```fsharp
 task {
     let pages = Bluesky.paginateTimeline agent (Some 25L)
     let enumerator = pages.GetAsyncEnumerator()
@@ -92,15 +106,15 @@ task {
             | Error _ ->
                 hasMore <- false
 }
-```
 
+(**
 **A note on `IAsyncEnumerable`.** This is a .NET interface, not a native F# type, so consuming it requires manual enumerator management as shown above. If you prefer a more functional style, consider the [FSharp.Control.TaskSeq](https://github.com/fsprojects/FSharp.Control.TaskSeq) NuGet package, which provides `taskSeq {}` computation expressions for async sequences.
 
 ## Custom Pagination
 
 For endpoints without a pre-built paginator, use `Xrpc.paginate` directly. It takes five arguments: the endpoint's `TypeId`, initial parameters (with `Cursor = None`), a cursor extractor, a cursor setter, and the agent.
+*)
 
-```fsharp
 let pages =
     Xrpc.paginate<AppBskyFeed.GetAuthorFeed.Params, AppBskyFeed.GetAuthorFeed.Output>
         AppBskyFeed.GetAuthorFeed.TypeId
@@ -110,22 +124,22 @@ let pages =
         (fun o -> o.Cursor)
         (fun c p -> { p with Cursor = c })
         agent
-```
 
+(**
 Chat endpoints need the chat proxy agent:
+*)
 
-```fsharp
 let chatAgent = AtpAgent.withChatProxy agent
 
-let pages =
+let chatPages =
     Xrpc.paginate<ChatBskyConvo.ListConvos.Params, ChatBskyConvo.ListConvos.Output>
         ChatBskyConvo.ListConvos.TypeId
         { Limit = Some 20L; Cursor = None; ReadState = None; Status = None }
         (fun o -> o.Cursor)
         (fun c p -> { p with Cursor = c })
         chatAgent
-```
 
+(**
 The pre-built paginators are just this pattern pre-wired for common endpoints.
 
 ## How Cursors Work
@@ -140,3 +154,4 @@ Each call to `MoveNextAsync` on the enumerator:
 4. If the cursor is `None` or an error occurs, marks the sequence as finished
 
 You never need to manage cursors yourself -- the paginator handles it all. Pages are fetched lazily, so you only pay for the pages you actually consume.
+*)

@@ -1,3 +1,4 @@
+(**
 ---
 title: Identity Resolution
 category: Advanced Guides
@@ -21,8 +22,22 @@ Handles can change; DIDs cannot. The `Identity` module provides functions to res
 ## Resolving an Identity (Recommended)
 
 `resolveIdentity` is the recommended entry point. It accepts a plain `string` -- either a handle or a DID -- performs forward and reverse resolution, and checks that both sides agree.
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+#r "../../src/FSharp.ATProto.Bluesky/bin/Release/net10.0/FSharp.ATProto.Bluesky.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open FSharp.ATProto.Bluesky
+
+let agent = Unchecked.defaultof<AtpAgent>
+let handle = Unchecked.defaultof<Handle>
+let did = Unchecked.defaultof<Did>
+(***)
+
 open FSharp.ATProto.Core
 open FSharp.ATProto.Bluesky
 open FSharp.ATProto.Syntax
@@ -37,8 +52,8 @@ taskResult {
 
     return identity
 }
-```
 
+(**
 Unlike `resolveHandle` and `resolveDid` which take typed `Handle` and `Did` respectively, `resolveIdentity` accepts a plain `string` -- it figures out whether you gave it a handle or a DID and does the right thing.
 
 The verification works as follows:
@@ -53,8 +68,8 @@ If the bidirectional check fails, the returned `AtprotoIdentity` will have `Hand
 If you already have a typed `Handle` or `Did`, you can use the single-direction functions directly. These perform one lookup without bidirectional verification.
 
 **Resolve a Handle to a DID:**
+*)
 
-```fsharp
 // Handle.parse returns Result<Handle, string> -- handle the error first
 match Handle.parse "my-handle.bsky.social" with
 | Ok handle ->
@@ -62,12 +77,13 @@ match Handle.parse "my-handle.bsky.social" with
         let! did = Identity.resolveHandle agent handle
         printfn "DID: %s" (Did.value did)
     }
+    |> ignore
 | Error msg -> printfn "Invalid handle: %s" msg
-```
 
+(**
 **Resolve a DID to full identity info:**
+*)
 
-```fsharp
 match Did.parse "did:plc:z72i7hdynmk6r22z27h6tvur" with
 | Ok did ->
     taskResult {
@@ -75,9 +91,10 @@ match Did.parse "did:plc:z72i7hdynmk6r22z27h6tvur" with
         printfn "Handle: %s" (identity.Handle |> Option.map Handle.value |> Option.defaultValue "(none)")
         printfn "PDS: %s" (identity.PdsEndpoint |> Option.map string |> Option.defaultValue "(none)")
     }
+    |> ignore
 | Error msg -> printfn "Invalid DID: %s" msg
-```
 
+(**
 `resolveDid` fetches the DID document and extracts the **handle** from `alsoKnownAs`, the **PDS endpoint** from the `service` entries, and the **signing key** from the `verificationMethod` entries. Both `did:plc:` (via the PLC directory) and `did:web:` (via `.well-known/did.json`) methods are supported.
 
 ## The AtprotoIdentity Type
@@ -93,15 +110,15 @@ type AtprotoIdentity =
 ```
 
 To print or display these values, use the accessor functions:
+*)
 
-```fsharp
 let showIdentity (id: Identity.AtprotoIdentity) =
     printfn "DID: %s" (Did.value id.Did)
     printfn "Handle: %s" (id.Handle |> Option.map Handle.value |> Option.defaultValue "(unverified)")
     printfn "PDS: %s" (id.PdsEndpoint |> Option.map string |> Option.defaultValue "(unknown)")
     printfn "Key: %s" (id.SigningKey |> Option.defaultValue "(none)")
-```
 
+(**
 ## Error Handling
 
 Identity resolution functions return errors via the `IdentityError` discriminated union:
@@ -113,8 +130,12 @@ type IdentityError =
 ```
 
 You can pattern match on this to handle each case differently:
+*)
 
-```fsharp
+(*** hide ***)
+let result = Unchecked.defaultof<Result<Identity.AtprotoIdentity, IdentityError>>
+(***)
+
 match result with
 | Ok identity ->
     printfn "Resolved: %s" (Did.value identity.Did)
@@ -122,8 +143,8 @@ match result with
     printfn "Network or API error: %A" xrpcErr
 | Error (IdentityError.DocumentParseError msg) ->
     printfn "Malformed DID document: %s" msg
-```
 
+(**
 `XrpcError` covers failures during XRPC calls -- authentication issues, network problems, rate limiting. `DocumentParseError` covers cases where a DID document was retrieved but couldn't be parsed into a valid identity (missing required fields, malformed JSON, etc.).
 
 ## Parsing DID Documents Directly
@@ -152,3 +173,4 @@ Note that `parseDidDocument` returns `Result<AtprotoIdentity, string>` (not `Ide
 | `parseDidDocument` | `JsonElement` | `Result<AtprotoIdentity, string>` | 0 | None |
 
 Use `resolveIdentity` when you need confidence that a handle and DID actually belong together -- it's the safest choice for displaying user identity in your application. Use `resolveHandle` or `resolveDid` when you only need a quick lookup and trust the input. Use `parseDidDocument` when you already have the raw DID document in hand.
+*)

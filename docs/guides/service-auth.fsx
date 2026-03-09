@@ -1,3 +1,4 @@
+(**
 ---
 title: Service Auth
 category: Infrastructure
@@ -35,14 +36,43 @@ type Claims =
 ## Creating Tokens
 
 The `createToken` function takes a signing function (`byte[] -> byte[]`) that should produce a 64-byte compact ECDSA signature. If you are using `FSharp.ATProto.Crypto`, this is `Signing.sign keyPair`.
+*)
 
-```fsharp
+(*** hide ***)
+#nowarn "20"
+#r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.DRISL/bin/Release/net10.0/FSharp.ATProto.DRISL.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
+open System
+(***)
+
 open FSharp.ATProto.Core
 open FSharp.ATProto.Syntax
+
+(*** hide ***)
+module Crypto =
+    module Keys =
+        type Algorithm = P256
+        type KeyPair = { Dummy: int }
+        let generate (_alg: Algorithm) : KeyPair = Unchecked.defaultof<_>
+    module Signing =
+        let sign (_kp: Keys.KeyPair) : (byte[] -> byte[]) = Unchecked.defaultof<_>
+        let verify (_pub: unit) (_data: byte[]) (_sig: byte[]) : bool = Unchecked.defaultof<_>
+
+let keyPair = Crypto.Keys.generate Crypto.Keys.P256
+let sign = Crypto.Signing.sign keyPair
+(***)
+
+(**
+```fsharp
 open FSharp.ATProto.Crypto
 
 let keyPair = Keys.generate Algorithm.P256
 let sign = Signing.sign keyPair
+```
+*)
 
 let iss = Did.parse "did:web:feed.example.com" |> Result.defaultWith failwith
 let aud = Did.parse "did:plc:target-pds" |> Result.defaultWith failwith
@@ -56,55 +86,68 @@ let claims : ServiceAuth.Claims =
       Lxm = Nsid.parse "app.bsky.feed.getFeedSkeleton" |> Result.toOption }
 
 let token = ServiceAuth.createToken ServiceAuth.Algorithm.ES256 sign claims
-```
 
+(**
 For the common case where you want a token that expires in 60 seconds:
+*)
 
-```fsharp
-let token =
+let token2 =
     ServiceAuth.createTokenNow
         ServiceAuth.Algorithm.ES256
         sign
         iss
         aud
         (Nsid.parse "app.bsky.feed.getFeedSkeleton" |> Result.toOption)
-```
 
+(**
 ## Parsing and Validating Tokens
 
 Parse claims from a JWT **without** verifying the signature:
+*)
 
-```fsharp
 match ServiceAuth.parseClaims token with
 | Ok (claims, alg) ->
     printfn "Issuer: %s" (Did.value claims.Iss)
     printfn "Algorithm: %A" alg
 | Error msg ->
     printfn "Parse error: %s" msg
-```
 
+(**
 Validate a JWT by verifying both the signature and the expiration:
+*)
 
+(*** hide ***)
+let verifyFn = Unchecked.defaultof<byte[] -> byte[] -> bool>
+(***)
+
+(**
 ```fsharp
 let verifyFn = Signing.verify (Keys.publicKey keyPair)
+```
+*)
 
 match ServiceAuth.validateToken verifyFn token with
 | Ok claims -> printfn "Valid token from %s" (Did.value claims.Iss)
 | Error msg -> printfn "Invalid: %s" msg
-```
 
+(**
 `validateToken` returns `Error` if the signature is invalid or the token has expired.
 
 ## Agent Integration
 
 `withServiceAuth` configures an `AtpAgent` to automatically attach a `Bearer` token to every request. The NSID is extracted from the request URL path, so each request gets a correctly scoped token.
+*)
 
-```fsharp
 open FSharp.ATProto.Core
+
+(**
+```fsharp
 open FSharp.ATProto.Crypto
 
 let keyPair = Keys.generate Algorithm.P256
 let sign = Signing.sign keyPair
+```
+*)
 
 let agent =
     AtpAgent.create "https://bsky.social"
@@ -113,6 +156,7 @@ let agent =
         sign
         iss   // your service's DID
         aud   // the target PDS DID
-```
 
+(**
 The agent will generate a fresh JWT for each request with a 60-second expiry and the correct `lxm` claim.
+*)
