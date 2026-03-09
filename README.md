@@ -52,18 +52,18 @@ taskResult {
 
 ## Getting Started
 
-See the [Quickstart](docs/quickstart.md) to get up and running in 5 minutes.
+See the [Quickstart](docs/quickstart.fsx) to get up and running in 5 minutes.
 
 ## Features
 
-- **Posts** -- create, reply, quote, delete, with automatic rich text detection ([guide](docs/guides/posts.md))
+- **Posts** -- create, reply, quote, delete, with automatic rich text detection ([guide](docs/guides/posts.fsx))
 - **Rich text** -- mentions, links, and hashtags detected and resolved automatically ([guide](docs/guides/rich-text.md))
 - **Images** -- upload and attach with typed `ImageMime` and alt text ([guide](docs/guides/media.md))
-- **Social graph** -- follow, block, like, repost, mute, with typed refs and generic undo ([guide](docs/guides/social.md))
-- **Feeds** -- timeline, author feed, actor likes, bookmarks ([guide](docs/guides/feeds.md))
-- **Profiles** -- get, search, typeahead, batch fetch, upsert ([guide](docs/guides/profiles.md))
-- **Chat / DMs** -- conversations, messages, reactions, with automatic proxy headers ([guide](docs/guides/chat.md))
-- **Notifications** -- fetch, count unread, mark seen ([guide](docs/guides/notifications.md))
+- **Social graph** -- follow, block, like, repost, mute, with typed refs and generic undo ([guide](docs/guides/social.fsx))
+- **Feeds** -- timeline, author feed, actor likes, bookmarks ([guide](docs/guides/feeds.fsx))
+- **Profiles** -- get, search, typeahead, batch fetch, upsert ([guide](docs/guides/profiles.fsx))
+- **Chat / DMs** -- conversations, messages, reactions, with automatic proxy headers ([guide](docs/guides/chat.fsx))
+- **Notifications** -- fetch, count unread, mark seen ([guide](docs/guides/notifications.fsx))
 - **Moderation** -- report content, mute threads, mod lists, and a full moderation engine ([guide](docs/guides/moderation.md))
 - **Identity** -- DID resolution, handle verification, PDS discovery ([guide](docs/guides/identity.md))
 - **Lists** -- create and manage lists and starter packs ([guide](docs/guides/lists.md))
@@ -77,8 +77,8 @@ See the [Quickstart](docs/quickstart.md) to get up and running in 5 minutes.
 
 ## Documentation
 
-- [Quickstart](docs/quickstart.md) -- zero to first post
-- [Build a Bot](docs/guides/build-a-bot.md) -- end-to-end tutorial
+- [Quickstart](docs/quickstart.fsx) -- zero to first post
+- [Build a Bot](docs/guides/build-a-bot.fsx) -- end-to-end tutorial
 - [Concepts](docs/concepts.md) -- AT Protocol terms explained (DID, Handle, AT-URI, PDS, Lexicon)
 - [Guides](docs/guides/) -- 25+ guides covering posts, social, feeds, profiles, media, chat, notifications, moderation, streaming, OAuth, and more
 
@@ -90,7 +90,7 @@ Requires [.NET 10 SDK](https://dotnet.microsoft.com/download).
 dotnet build && dotnet test
 ```
 
-2,608 tests across 14 projects.
+2,623 tests across 14 projects.
 
 ## AI Transparency
 
@@ -104,7 +104,7 @@ To ensure correctness the project validates against ground truth at every layer:
 - **Rich text** -- [property-based tests](tests/FSharp.ATProto.Bluesky.Tests/RichTextTests.fs) verify byte-range correctness and facet ordering
 - **XRPC / Bluesky** -- [tested](tests/FSharp.ATProto.Bluesky.Tests/) via mock HTTP handlers that verify request construction, multi-step orchestration (e.g. thread root resolution), error handling, and domain type mapping (note: the mocks don't validate against real Bluesky API responses -- that contract is covered by the generated types matching the lexicon schemas above)
 
-All told, 2,608 tests across 14 projects, with zero reliance on manual testing or live API calls.
+All told, 2,623 tests across 14 projects, with zero reliance on manual testing or live API calls.
 
 ## License
 
