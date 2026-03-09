@@ -52,36 +52,36 @@ taskResult {
 
 ## Getting Started
 
-See the [Quickstart](https://arrow7000.github.io/atproto-fsharp/quickstart.html) to get up and running in 5 minutes.
+See the [Quickstart](https://arrow7000.github.io/atproto-fsharp/quickstart) to get up and running in 5 minutes.
 
 ## Features
 
-- **Posts** -- create, reply, quote, delete, with automatic rich text detection ([guide](https://arrow7000.github.io/atproto-fsharp/guides/posts.html))
-- **Rich text** -- mentions, links, and hashtags detected and resolved automatically ([guide](https://arrow7000.github.io/atproto-fsharp/guides/rich-text.html))
-- **Images** -- upload and attach with typed `ImageMime` and alt text ([guide](https://arrow7000.github.io/atproto-fsharp/guides/media.html))
-- **Social graph** -- follow, block, like, repost, mute, with typed refs and generic undo ([guide](https://arrow7000.github.io/atproto-fsharp/guides/social.html))
-- **Feeds** -- timeline, author feed, actor likes, bookmarks ([guide](https://arrow7000.github.io/atproto-fsharp/guides/feeds.html))
-- **Profiles** -- get, search, typeahead, batch fetch, upsert ([guide](https://arrow7000.github.io/atproto-fsharp/guides/profiles.html))
-- **Chat / DMs** -- conversations, messages, reactions, with automatic proxy headers ([guide](https://arrow7000.github.io/atproto-fsharp/guides/chat.html))
-- **Notifications** -- fetch, count unread, mark seen ([guide](https://arrow7000.github.io/atproto-fsharp/guides/notifications.html))
-- **Moderation** -- report content, mute threads, mod lists, and a full moderation engine ([guide](https://arrow7000.github.io/atproto-fsharp/guides/moderation.html))
-- **Identity** -- DID resolution, handle verification, PDS discovery ([guide](https://arrow7000.github.io/atproto-fsharp/guides/identity.html))
-- **Lists** -- create and manage lists and starter packs ([guide](https://arrow7000.github.io/atproto-fsharp/guides/lists.html))
-- **Preferences** -- saved feeds, muted words, content filtering ([guide](https://arrow7000.github.io/atproto-fsharp/guides/preferences.html))
-- **Streaming** -- real-time events via Jetstream and Firehose ([guide](https://arrow7000.github.io/atproto-fsharp/guides/streaming.html))
-- **Video** -- upload and post video content ([guide](https://arrow7000.github.io/atproto-fsharp/guides/media.html))
-- **Pagination** -- lazy `IAsyncEnumerable` paginators for timeline, followers, notifications ([guide](https://arrow7000.github.io/atproto-fsharp/guides/pagination.html))
-- **OAuth** -- OAuth 2.0 client with DPoP/PKCE, plus authorization server ([guide](https://arrow7000.github.io/atproto-fsharp/guides/oauth.html))
+- **Posts** -- create, reply, quote, delete, with automatic rich text detection ([guide](https://arrow7000.github.io/atproto-fsharp/guides/posts))
+- **Rich text** -- mentions, links, and hashtags detected and resolved automatically ([guide](https://arrow7000.github.io/atproto-fsharp/guides/rich-text))
+- **Images** -- upload and attach with typed `ImageMime` and alt text ([guide](https://arrow7000.github.io/atproto-fsharp/guides/media))
+- **Social graph** -- follow, block, like, repost, mute, with typed refs and generic undo ([guide](https://arrow7000.github.io/atproto-fsharp/guides/social))
+- **Feeds** -- timeline, author feed, actor likes, bookmarks ([guide](https://arrow7000.github.io/atproto-fsharp/guides/feeds))
+- **Profiles** -- get, search, typeahead, batch fetch, upsert ([guide](https://arrow7000.github.io/atproto-fsharp/guides/profiles))
+- **Chat / DMs** -- conversations, messages, reactions, with automatic proxy headers ([guide](https://arrow7000.github.io/atproto-fsharp/guides/chat))
+- **Notifications** -- fetch, count unread, mark seen ([guide](https://arrow7000.github.io/atproto-fsharp/guides/notifications))
+- **Moderation** -- report content, mute threads, mod lists, and a full moderation engine ([guide](https://arrow7000.github.io/atproto-fsharp/guides/moderation))
+- **Identity** -- DID resolution, handle verification, PDS discovery ([guide](https://arrow7000.github.io/atproto-fsharp/guides/identity))
+- **Lists** -- create and manage lists and starter packs ([guide](https://arrow7000.github.io/atproto-fsharp/guides/lists))
+- **Preferences** -- saved feeds, muted words, content filtering ([guide](https://arrow7000.github.io/atproto-fsharp/guides/preferences))
+- **Streaming** -- real-time events via Jetstream and Firehose ([guide](https://arrow7000.github.io/atproto-fsharp/guides/streaming))
+- **Video** -- upload and post video content ([guide](https://arrow7000.github.io/atproto-fsharp/guides/media))
+- **Pagination** -- lazy `IAsyncEnumerable` paginators for timeline, followers, notifications ([guide](https://arrow7000.github.io/atproto-fsharp/guides/pagination))
+- **OAuth** -- OAuth 2.0 client with DPoP/PKCE, plus authorization server ([guide](https://arrow7000.github.io/atproto-fsharp/guides/oauth))
 - **Server-side** -- feed generator framework, XRPC server, service auth
-- **Full XRPC access** -- all 237 Bluesky endpoints available as typed wrappers ([guide](https://arrow7000.github.io/atproto-fsharp/guides/raw-xrpc.html))
+- **Full XRPC access** -- all 237 Bluesky endpoints available as typed wrappers ([guide](https://arrow7000.github.io/atproto-fsharp/guides/raw-xrpc))
 
 ## Documentation
 
 Full docs at [arrow7000.github.io/atproto-fsharp](https://arrow7000.github.io/atproto-fsharp/).
 
-- [Quickstart](https://arrow7000.github.io/atproto-fsharp/quickstart.html) -- zero to first post
-- [Build a Bot](https://arrow7000.github.io/atproto-fsharp/guides/build-a-bot.html) -- end-to-end tutorial
-- [Concepts](https://arrow7000.github.io/atproto-fsharp/concepts.html) -- AT Protocol terms explained (DID, Handle, AT-URI, PDS, Lexicon)
+- [Quickstart](https://arrow7000.github.io/atproto-fsharp/quickstart) -- zero to first post
+- [Build a Bot](https://arrow7000.github.io/atproto-fsharp/guides/build-a-bot) -- end-to-end tutorial
+- [Concepts](https://arrow7000.github.io/atproto-fsharp/concepts) -- AT Protocol terms explained (DID, Handle, AT-URI, PDS, Lexicon)
 - [All Guides](https://arrow7000.github.io/atproto-fsharp/) -- 25+ guides covering posts, social, feeds, profiles, media, chat, notifications, moderation, streaming, OAuth, and more
 
 ## Building & Testing
