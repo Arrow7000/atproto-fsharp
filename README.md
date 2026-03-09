@@ -82,7 +82,7 @@ Full docs at [arrow7000.github.io/atproto-fsharp](https://arrow7000.github.io/at
 - [Quickstart](https://arrow7000.github.io/atproto-fsharp/quickstart) -- zero to first post
 - [Build a Bot](https://arrow7000.github.io/atproto-fsharp/guides/build-a-bot) -- end-to-end tutorial
 - [Concepts](https://arrow7000.github.io/atproto-fsharp/concepts) -- AT Protocol terms explained (DID, Handle, AT-URI, PDS, Lexicon)
-- [All Guides](https://arrow7000.github.io/atproto-fsharp/) -- 25+ guides covering posts, social, feeds, profiles, media, chat, notifications, moderation, streaming, OAuth, and more
+
 
 ## Building & Testing
 
