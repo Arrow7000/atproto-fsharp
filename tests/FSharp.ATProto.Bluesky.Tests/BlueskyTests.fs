@@ -6076,30 +6076,81 @@ let notificationContentTests =
 
               Expect.isTrue n.IsRead "is read" ]
 
-// ── FeedItem reply parent tests ─────────────────────────────────────
+// ── FeedItem context tests ──────────────────────────────────────────
 
 [<Tests>]
-let feedItemReplyParentTests =
+let feedItemContextTests =
     testList
-        "FeedItem reply parent"
-        [ testCase "FeedItem.ofFeedViewPost maps reply parent"
+        "FeedItem context"
+        [ testCase "FeedItem.ofFeedViewPost maps reply to FeedContext.Reply"
           <| fun _ ->
               let json =
                   """{"post":{"uri":"at://did:plc:a/app.bsky.feed.post/1","cid":"bafyreiabc","author":{"did":"did:plc:a","handle":"a.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"reply","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"},"reply":{"parent":{"$type":"app.bsky.feed.defs#postView","uri":"at://did:plc:b/app.bsky.feed.post/2","cid":"bafyreicde","author":{"did":"did:plc:b","handle":"b.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"original","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"},"root":{"$type":"app.bsky.feed.defs#postView","uri":"at://did:plc:b/app.bsky.feed.post/2","cid":"bafyreicde","author":{"did":"did:plc:b","handle":"b.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"original","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"}}}"""
 
               let fvp = JsonSerializer.Deserialize<AppBskyFeed.Defs.FeedViewPost> (json, Json.options)
               let fi = FeedItem.ofFeedViewPost fvp
-              Expect.isSome fi.ReplyParent "should have reply parent"
-              Expect.equal fi.ReplyParent.Value.Text "original" "parent text"
 
-          testCase "FeedItem.ofFeedViewPost with no reply has None ReplyParent"
+              match fi.Context with
+              | FeedContext.Reply parent -> Expect.equal parent.Text "original" "parent text"
+              | other -> failtest $"Expected Reply, got {other}"
+
+          testCase "FeedItem.ofFeedViewPost with no reply has FeedContext.Post"
           <| fun _ ->
               let json =
                   """{"post":{"uri":"at://did:plc:a/app.bsky.feed.post/1","cid":"bafyreiabc","author":{"did":"did:plc:a","handle":"a.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"hello","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"}}"""
 
               let fvp = JsonSerializer.Deserialize<AppBskyFeed.Defs.FeedViewPost> (json, Json.options)
               let fi = FeedItem.ofFeedViewPost fvp
-              Expect.isNone fi.ReplyParent "no reply parent" ]
+              Expect.equal fi.Context FeedContext.Post "no reply = Post context"
+
+          testCase "FeedItem.ofFeedViewPost maps repost to FeedContext.Repost"
+          <| fun _ ->
+              let json =
+                  """{"post":{"uri":"at://did:plc:a/app.bsky.feed.post/1","cid":"bafyreiabc","author":{"did":"did:plc:a","handle":"a.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"hello","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"},"reason":{"$type":"app.bsky.feed.defs#reasonRepost","by":{"did":"did:plc:c","handle":"c.bsky.social"},"indexedAt":"2024-06-15T12:00:00Z"}}"""
+
+              let fvp = JsonSerializer.Deserialize<AppBskyFeed.Defs.FeedViewPost> (json, Json.options)
+              let fi = FeedItem.ofFeedViewPost fvp
+
+              match fi.Context with
+              | FeedContext.Repost (by, _) ->
+                  Expect.equal (Handle.value by.Handle) "c.bsky.social" "reposter handle"
+              | other -> failtest $"Expected Repost, got {other}"
+
+          testCase "FeedItem.ofFeedViewPost maps repost of reply to FeedContext.RepostOfReply"
+          <| fun _ ->
+              let json =
+                  """{"post":{"uri":"at://did:plc:a/app.bsky.feed.post/1","cid":"bafyreiabc","author":{"did":"did:plc:a","handle":"a.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"reply","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"},"reply":{"parent":{"$type":"app.bsky.feed.defs#postView","uri":"at://did:plc:b/app.bsky.feed.post/2","cid":"bafyreicde","author":{"did":"did:plc:b","handle":"b.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"original","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"},"root":{"$type":"app.bsky.feed.defs#postView","uri":"at://did:plc:b/app.bsky.feed.post/2","cid":"bafyreicde","author":{"did":"did:plc:b","handle":"b.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"original","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"}},"reason":{"$type":"app.bsky.feed.defs#reasonRepost","by":{"did":"did:plc:c","handle":"c.bsky.social"},"indexedAt":"2024-06-15T12:00:00Z"}}"""
+
+              let fvp = JsonSerializer.Deserialize<AppBskyFeed.Defs.FeedViewPost> (json, Json.options)
+              let fi = FeedItem.ofFeedViewPost fvp
+
+              match fi.Context with
+              | FeedContext.RepostOfReply (by, _, parent) ->
+                  Expect.equal (Handle.value by.Handle) "c.bsky.social" "reposter handle"
+                  Expect.equal parent.Text "original" "parent text"
+              | other -> failtest $"Expected RepostOfReply, got {other}"
+
+          testCase "FeedItem.ofFeedViewPost maps pin to FeedContext.Pinned"
+          <| fun _ ->
+              let postJson =
+                  """{"uri":"at://did:plc:a/app.bsky.feed.post/1","cid":"bafyreiabc","author":{"did":"did:plc:a","handle":"a.bsky.social"},"record":{"$type":"app.bsky.feed.post","text":"pinned","createdAt":"2024-01-01T00:00:00Z"},"indexedAt":"2024-01-01T00:00:00Z"}"""
+
+              let pv = JsonSerializer.Deserialize<AppBskyFeed.Defs.PostView> (postJson, Json.options)
+
+              let fvp : AppBskyFeed.Defs.FeedViewPost =
+                  { Post = pv
+                    Reason =
+                        Some (
+                            AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin (
+                                JsonDocument.Parse("{}").RootElement
+                            )
+                        )
+                    Reply = None
+                    FeedContext = None
+                    ReqId = None }
+
+              let fi = FeedItem.ofFeedViewPost fvp
+              Expect.equal fi.Context FeedContext.Pinned "pin context" ]
 
 // ── PostEmbed mapping tests ─────────────────────────────────────────
 
@@ -6324,7 +6375,7 @@ let testFactoryTests =
           <| fun _ ->
               let fi = TestFactory.FeedItem ()
               Expect.equal fi.Post.Text "Test post" "default post text"
-              Expect.isNone fi.Reason "default no reason"
+              Expect.equal fi.Context FeedContext.Post "default Post context"
 
           testCase "Notification creates with defaults"
           <| fun _ ->

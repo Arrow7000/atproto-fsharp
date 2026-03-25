@@ -46,22 +46,24 @@ A reference to a specific version of a post record, returned when creating a pos
 
 ### FeedItem
 
-A single item from a feed or timeline, pairing a post with an optional reason.
+A single item from a feed or timeline, pairing a post with context about why it appeared.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `Post` | `TimelinePost` | The post content |
-| `Reason` | `FeedReason option` | Why the post appeared (repost, pin, or `None` for organic) |
-| `ReplyParent` | `TimelinePost option` | The parent post if this is a reply |
+| `Context` | `FeedContext` | Why the post appeared and its associated data |
 
-### FeedReason
+### FeedContext
 
-Discriminated union indicating why a post appeared in a feed.
+Discriminated union describing why a post appeared in a feed. Each case carries exactly the relevant data.
 
 | Case | Fields | Description |
 |------|--------|-------------|
-| `Repost` | `by: ProfileSummary` | Someone reposted this post |
-| `Pin` | -- | Post is pinned |
+| `Post` | -- | An organic post in the feed |
+| `Reply` | `parent: TimelinePost` | A reply, with the parent post |
+| `Repost` | `by: ProfileSummary`, `at: DateTimeOffset` | Someone reposted this post |
+| `RepostOfReply` | `by: ProfileSummary`, `at: DateTimeOffset`, `parent: TimelinePost` | Someone reposted a reply |
+| `Pinned` | -- | Post is pinned |
 
 ### PostEmbed
 

@@ -87,7 +87,7 @@ TestFactory.BlockRef(?uri: AtUri) : BlockRef
 ### FeedItem and Notification
 
 ```fsharp
-TestFactory.FeedItem(?post: TimelinePost, ?reason: FeedReason) : FeedItem
+TestFactory.FeedItem(?post: TimelinePost, ?context: FeedContext) : FeedItem
 
 TestFactory.Notification(
     ?kind: NotificationKind, ?author: ProfileSummary,

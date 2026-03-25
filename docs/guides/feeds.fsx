@@ -18,21 +18,24 @@ All examples use `taskResult {}` -- see the [Error Handling guide](error-handlin
 
 ### FeedItem
 
-A single item in a feed or timeline, pairing a post with the reason it appeared.
+A single item in a feed or timeline, pairing a post with context about why it appeared.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `Post` | `TimelinePost` | The post content and metadata |
-| `Reason` | `FeedReason option` | Why this item appeared (repost, pin, or `None` for organic) |
+| `Context` | `FeedContext` | Why this item appeared and its associated data |
 
-### FeedReason
+### FeedContext
 
-Discriminated union indicating why a post appeared in a feed.
+Discriminated union describing why a post appeared in a feed. Each case carries exactly the relevant data, enabling clean pattern matching (similar to `NotificationContent`).
 
-| Case | Payload | Description |
-|------|---------|-------------|
-| `Repost` | `by : ProfileSummary` | Someone reposted this post |
-| `Pin` | -- | The post is pinned to the author's profile |
+| Case | Fields | Description |
+|------|--------|-------------|
+| `Post` | -- | An organic post in the feed |
+| `Reply` | `parent : TimelinePost` | A reply, with the parent post |
+| `Repost` | `by : ProfileSummary`, `at : DateTimeOffset` | Someone reposted this post |
+| `RepostOfReply` | `by : ProfileSummary`, `at : DateTimeOffset`, `parent : TimelinePost` | Someone reposted a reply |
+| `Pinned` | -- | The post is pinned to the author's profile |
 
 ### TimelinePost
 
@@ -190,20 +193,30 @@ task {
 (**
 For endpoints without a pre-built paginator, use `Xrpc.paginate` directly. See the [Pagination guide](pagination.html) for full details.
 
-## Matching Feed Reasons
+## Matching Feed Context
 
-Match on `FeedReason` to distinguish reposts and pins from organic posts:
+Match on `FeedContext` to handle each kind of feed item in a single pattern match:
 *)
 
 for item in page.Items do
-    match item.Reason with
-    | Some (FeedReason.Repost (by = reposter)) ->
-        printfn "Reposted by @%s: %s"
-            (Handle.value reposter.Handle) item.Post.Text
-    | Some FeedReason.Pin ->
-        printfn "[Pinned] %s" item.Post.Text
-    | None ->
+    match item.Context with
+    | FeedContext.Post ->
         printfn "@%s: %s" (Handle.value item.Post.Author.Handle) item.Post.Text
+    | FeedContext.Reply parent ->
+        printfn "@%s (reply to @%s): %s"
+            (Handle.value item.Post.Author.Handle)
+            (Handle.value parent.Author.Handle)
+            item.Post.Text
+    | FeedContext.Repost (by, _) ->
+        printfn "Reposted by @%s: %s"
+            (Handle.value by.Handle) item.Post.Text
+    | FeedContext.RepostOfReply (by, _, parent) ->
+        printfn "Reposted by @%s (reply to @%s): %s"
+            (Handle.value by.Handle)
+            (Handle.value parent.Author.Handle)
+            item.Post.Text
+    | FeedContext.Pinned ->
+        printfn "[Pinned] %s" item.Post.Text
 
 (**
 ## Custom Feeds

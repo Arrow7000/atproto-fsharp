@@ -99,10 +99,12 @@ let main _ =
 
                 for item in tl.Items do
                     let prefix =
-                        match item.Reason with
-                        | Some (FeedReason.Repost _) -> "[repost] "
-                        | Some FeedReason.Pin -> "[pinned] "
-                        | None -> ""
+                        match item.Context with
+                        | FeedContext.Post -> ""
+                        | FeedContext.Reply _ -> "[reply] "
+                        | FeedContext.Repost _ -> "[repost] "
+                        | FeedContext.RepostOfReply _ -> "[repost of reply] "
+                        | FeedContext.Pinned -> "[pinned] "
 
                     let text = item.Post.Text
                     let truncated = if text.Length > 60 then text.[..59] + "..." else text

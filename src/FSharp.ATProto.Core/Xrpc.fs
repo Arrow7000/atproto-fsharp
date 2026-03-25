@@ -171,7 +171,7 @@ module Xrpc =
                         return Error retryError
                 // Auto-refresh on ExpiredToken
                 elif
-                    error.StatusCode = 401
+                    (error.StatusCode = 400 || error.StatusCode = 401)
                     && error.Error = Some "ExpiredToken"
                     && (agent.Session.IsSome || agent.RefreshAuthentication.IsSome)
                 then
@@ -249,7 +249,7 @@ module Xrpc =
                         return Error retryError
                 // Auto-refresh on ExpiredToken
                 elif
-                    error.StatusCode = 401
+                    (error.StatusCode = 400 || error.StatusCode = 401)
                     && error.Error = Some "ExpiredToken"
                     && (agent.Session.IsSome || agent.RefreshAuthentication.IsSome)
                 then
@@ -320,7 +320,7 @@ module Xrpc =
                         return Error retryError
                 // Auto-refresh on ExpiredToken
                 elif
-                    error.StatusCode = 401
+                    (error.StatusCode = 400 || error.StatusCode = 401)
                     && error.Error = Some "ExpiredToken"
                     && (agent.Session.IsSome || agent.RefreshAuthentication.IsSome)
                 then
@@ -399,7 +399,7 @@ module Xrpc =
                         return Error retryError
                 // Auto-refresh on ExpiredToken
                 elif
-                    error.StatusCode = 401
+                    (error.StatusCode = 400 || error.StatusCode = 401)
                     && error.Error = Some "ExpiredToken"
                     && (agent.Session.IsSome || agent.RefreshAuthentication.IsSome)
                 then
@@ -470,7 +470,7 @@ module Xrpc =
                         return Error retryError
                 // Auto-refresh on ExpiredToken
                 elif
-                    error.StatusCode = 401
+                    (error.StatusCode = 400 || error.StatusCode = 401)
                     && error.Error = Some "ExpiredToken"
                     && (agent.Session.IsSome || agent.RefreshAuthentication.IsSome)
                 then

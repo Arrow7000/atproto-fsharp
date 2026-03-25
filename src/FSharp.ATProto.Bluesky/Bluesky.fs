@@ -394,29 +394,26 @@ module TimelinePost =
               |> Option.defaultValue false
           Embed = pv.Embed |> Option.map PostEmbed.ofEmbedUnion }
 
-/// <summary>Reason a post appeared in a feed.</summary>
-type FeedReason =
-    | Repost of by : ProfileSummary
-    | Pin
+/// <summary>
+/// Context describing why a post appeared in a feed or timeline.
+/// Each case carries exactly the relevant data, enabling clean pattern matching.
+/// </summary>
+[<RequireQualifiedAccess>]
+type FeedContext =
+    | Post
+    | Reply of parent : TimelinePost
+    | Repost of by : ProfileSummary * at : DateTimeOffset
+    | RepostOfReply of by : ProfileSummary * at : DateTimeOffset * parent : TimelinePost
+    | Pinned
 
 /// <summary>A single item in a feed or timeline.</summary>
 type FeedItem =
     { Post : TimelinePost
-      Reason : FeedReason option
-      ReplyParent : TimelinePost option }
+      Context : FeedContext }
 
 module FeedItem =
 
     let ofFeedViewPost (fvp : AppBskyFeed.Defs.FeedViewPost) : FeedItem =
-        let reason =
-            fvp.Reason
-            |> Option.bind (fun r ->
-                match r with
-                | AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonRepost rr ->
-                    Some(FeedReason.Repost(ProfileSummary.ofBasic rr.By))
-                | AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin _ -> Some FeedReason.Pin
-                | _ -> None)
-
         let replyParent =
             fvp.Reply
             |> Option.bind (fun r ->
@@ -424,9 +421,23 @@ module FeedItem =
                 | AppBskyFeed.Defs.ReplyRefParentUnion.PostView pv -> Some (TimelinePost.ofPostView pv)
                 | _ -> None)
 
+        let context =
+            match fvp.Reason with
+            | Some (AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonRepost rr) ->
+                let by = ProfileSummary.ofBasic rr.By
+                let at = ProfileSummary.toDateTimeOffset rr.IndexedAt
+
+                match replyParent with
+                | Some parent -> FeedContext.RepostOfReply (by, at, parent)
+                | None -> FeedContext.Repost (by, at)
+            | Some (AppBskyFeed.Defs.FeedViewPostReasonUnion.ReasonPin _) -> FeedContext.Pinned
+            | _ ->
+                match replyParent with
+                | Some parent -> FeedContext.Reply parent
+                | None -> FeedContext.Post
+
         { Post = TimelinePost.ofPostView fvp.Post
-          Reason = reason
-          ReplyParent = replyParent }
+          Context = context }
 
 /// <summary>The content of a notification, varying by kind.</summary>
 [<RequireQualifiedAccess>]
@@ -4244,12 +4255,11 @@ type TestFactory private () =
         { Uri = uri |> Option.defaultValue defaultBlockUri }
 
     /// <summary>
-    /// Create a <see cref="FeedItem"/> wrapping a <see cref="TimelinePost"/> with no feed reason.
+    /// Create a <see cref="FeedItem"/> wrapping a <see cref="TimelinePost"/> with a feed context.
     /// </summary>
-    static member FeedItem (?post : TimelinePost, ?reason : FeedReason, ?replyParent : TimelinePost) : FeedItem =
+    static member FeedItem (?post : TimelinePost, ?context : FeedContext) : FeedItem =
         { Post = post |> Option.defaultValue (TestFactory.TimelinePost ())
-          Reason = reason
-          ReplyParent = replyParent }
+          Context = context |> Option.defaultValue FeedContext.Post }
 
     /// <summary>
     /// Create a <see cref="Notification"/> with sensible defaults.

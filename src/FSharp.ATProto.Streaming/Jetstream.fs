@@ -93,7 +93,7 @@ module Jetstream =
 
                     let record =
                         match tryGetElement "record" c with
-                        | Some r when r.ValueKind <> JsonValueKind.Null -> Some (r.Clone ())
+                        | Some r when r.ValueKind = JsonValueKind.Object -> Some (r.Clone ())
                         | _ -> None
 
                     Ok (
@@ -176,16 +176,35 @@ module Jetstream =
         (token : CancellationToken)
         : Task<Result<JetstreamEvent, StreamError> option> =
         task {
-            let buffer = ArrayPool<byte>.Shared.Rent maxSize
+            let mutable buffer = ArrayPool<byte>.Shared.Rent (min maxSize 8192)
 
             try
-                let segment = ArraySegment<byte> (buffer)
-                let! wsResult = ws.ReceiveAsync (segment, token)
+                let mutable totalReceived = 0
+                let mutable endOfMessage = false
+                let mutable closed = false
 
-                if wsResult.MessageType = WebSocketMessageType.Close then
+                while not endOfMessage && not closed do
+                    if totalReceived >= buffer.Length then
+                        let newBuffer = ArrayPool<byte>.Shared.Rent (buffer.Length * 2)
+                        Buffer.BlockCopy (buffer, 0, newBuffer, 0, totalReceived)
+                        ArrayPool<byte>.Shared.Return buffer
+                        buffer <- newBuffer
+
+                    let segment =
+                        ArraySegment<byte> (buffer, totalReceived, buffer.Length - totalReceived)
+
+                    let! wsResult = ws.ReceiveAsync (segment, token)
+
+                    if wsResult.MessageType = WebSocketMessageType.Close then
+                        closed <- true
+                    else
+                        totalReceived <- totalReceived + wsResult.Count
+                        endOfMessage <- wsResult.EndOfMessage
+
+                if closed then
                     return Some (Error Closed)
-                elif wsResult.MessageType = WebSocketMessageType.Text then
-                    let text = Encoding.UTF8.GetString (buffer, 0, wsResult.Count)
+                elif totalReceived > 0 then
+                    let text = Encoding.UTF8.GetString (buffer, 0, totalReceived)
                     return Some (parseEvent text)
                 else
                     return None
