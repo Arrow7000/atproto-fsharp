@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/FSharp.ATProto.Pds/FSharp.ATProto.Pds.fsproj" />
     <ProjectReference Include="../../src/FSharp.ATProto.Syntax/FSharp.ATProto.Syntax.fsproj" />
+    <ProjectReference Include="../../src/FSharp.ATProto.Core/FSharp.ATProto.Core.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -12,6 +12,7 @@ open Microsoft.AspNetCore.Hosting
 open Microsoft.AspNetCore.Http
 open FSharp.ATProto.Syntax
 open FSharp.ATProto.Crypto
+open FSharp.ATProto.Core
 
 module internal Json =
 
@@ -134,6 +135,9 @@ module internal Endpoints =
                         state.Sessions.TryAdd (accessToken, session) |> ignore
                         state.RefreshIndex.TryAdd (refreshToken, accessToken) |> ignore
 
+                        state.Config.OnAccountCreated
+                        |> Option.iter (fun f -> f { Did = did; Handle = handle })
+
                         let response =
                             dict [
                                 "did", box (Did.value did)
@@ -201,16 +205,6 @@ module internal Endpoints =
         | auth when auth.StartsWith ("Bearer ", StringComparison.OrdinalIgnoreCase) ->
             Some (auth.Substring 7)
         | _ -> None
-
-    let private authenticate (state : PdsState) (ctx : HttpContext) : SessionInfo option =
-        match extractBearer ctx with
-        | None -> None
-        | Some token ->
-            match state.Sessions.TryGetValue token with
-            | true, session when session.AccessExpiresAt > DateTimeOffset.UtcNow -> Some session
-            | true, _ ->
-                None
-            | false, _ -> None
 
     let private requireAuth (state : PdsState) (ctx : HttpContext) : Result<SessionInfo, IResult> =
         match extractBearer ctx with
@@ -354,6 +348,13 @@ module internal Endpoints =
 
                                 state.Records.[key] <- storedRecord
 
+                                state.Config.OnRecordCreated
+                                |> Option.iter (fun f ->
+                                    f { Did = session.Did
+                                        Collection = collection
+                                        Rkey = rkey
+                                        Uri = uri })
+
                                 let response =
                                     dict [
                                         "uri", box (AtUri.value uri)
@@ -424,7 +425,16 @@ module internal Endpoints =
                         return Json.error 400 "InvalidRequest" "Can only delete from your own repo"
                     else
                         let key = RecordKeys.recordKey session.Did collection rkey
-                        state.Records.TryRemove key |> ignore
+
+                        match state.Records.TryRemove key with
+                        | true, _ ->
+                            state.Config.OnRecordDeleted
+                            |> Option.iter (fun f ->
+                                f { Did = session.Did
+                                    Collection = collection
+                                    Rkey = rkey })
+                        | false, _ -> ()
+
                         return Results.Ok ()
         }
 
@@ -480,8 +490,8 @@ module internal Endpoints =
 /// Personal Data Server for the AT Protocol.
 module Pds =
 
-    /// Create a default PDS builder for the given hostname.
-    let defaults (hostname : string) : PdsBuilder = PdsBuilder.defaults hostname
+    /// Create a PDS builder for the given hostname.
+    let create (hostname : string) : PdsBuilder = PdsBuilder.create hostname
 
     /// Set the port the PDS listens on (default: 2583).
     let withPort (port : int) (builder : PdsBuilder) : PdsBuilder = { builder with Port = port }
@@ -505,6 +515,18 @@ module Pds =
     /// Set the refresh token lifetime (default: 90 days).
     let withRefreshTokenLifetime (lifetime : TimeSpan) (builder : PdsBuilder) : PdsBuilder =
         { builder with RefreshTokenLifetime = lifetime }
+
+    /// Register a handler called when a new account is created.
+    let onAccountCreated (handler : AccountCreatedEvent -> unit) (builder : PdsBuilder) : PdsBuilder =
+        { builder with OnAccountCreated = Some handler }
+
+    /// Register a handler called when a record is created.
+    let onRecordCreated (handler : RecordCreatedEvent -> unit) (builder : PdsBuilder) : PdsBuilder =
+        { builder with OnRecordCreated = Some handler }
+
+    /// Register a handler called when a record is deleted.
+    let onRecordDeleted (handler : RecordDeletedEvent -> unit) (builder : PdsBuilder) : PdsBuilder =
+        { builder with OnRecordDeleted = Some handler }
 
     let internal createState (builder : PdsBuilder) : PdsState =
         let signingKey =
@@ -614,10 +636,56 @@ module Pds =
         let app = webAppBuilder.Build ()
         mapEndpoints builder app
 
+    /// Start a PDS and return a RunningPds for programmatic interaction.
+    let start (builder : PdsBuilder) : Task<RunningPds> =
+        task {
+            let app = configure builder
+            do! app.StartAsync ()
+
+            let url = sprintf "http://localhost:%d" builder.Port
+
+            return
+                { App = app
+                  Url = url
+                  State = createState builder }
+        }
+
+    /// Stop a running PDS.
+    let stop (pds : RunningPds) : Task<unit> =
+        task { do! pds.App.StopAsync () }
+
+    /// Get the base URL of a running PDS.
+    let url (pds : RunningPds) : string = pds.Url
+
+    /// Create a new account on a running PDS and return an authenticated AtpAgent.
+    let createUser
+        (pds : RunningPds)
+        (handle : string)
+        (password : string)
+        : Task<Result<AtpAgent, XrpcError>> =
+        task {
+            let agent = AtpAgent.create pds.Url
+
+            let! result =
+                Xrpc.procedure<
+                    {| handle : string; password : string |},
+                    AtpSession
+                 >
+                    "com.atproto.server.createAccount"
+                    {| handle = handle; password = password |}
+                    agent
+
+            match result with
+            | Ok session ->
+                agent.Session <- Some session
+                return Ok agent
+            | Error e -> return Error e
+        }
+
     /// Configure and immediately run the PDS (blocking).
     let run (hostname : string) (port : int) : unit =
         let app =
-            defaults hostname
+            create hostname
             |> withPort port
             |> configure
 

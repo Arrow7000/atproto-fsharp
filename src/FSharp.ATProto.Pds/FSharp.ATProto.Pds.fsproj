@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FSharp.ATProto.Syntax\FSharp.ATProto.Syntax.fsproj" />
+    <ProjectReference Include="..\FSharp.ATProto.DRISL\FSharp.ATProto.DRISL.fsproj" />
+    <ProjectReference Include="..\FSharp.ATProto.Core\FSharp.ATProto.Core.fsproj" />
     <ProjectReference Include="..\FSharp.ATProto.Crypto\FSharp.ATProto.Crypto.fsproj" />
   </ItemGroup>
 

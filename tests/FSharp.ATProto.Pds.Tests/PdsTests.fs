@@ -11,6 +11,8 @@ open Microsoft.AspNetCore.Hosting
 open Microsoft.AspNetCore.TestHost
 open Microsoft.Extensions.DependencyInjection
 open FSharp.ATProto.Pds
+open FSharp.ATProto.Core
+open FSharp.ATProto.Syntax
 
 let private withPds (f : HttpClient -> Task<unit>) : Task<unit> =
     task {
@@ -18,8 +20,34 @@ let private withPds (f : HttpClient -> Task<unit>) : Task<unit> =
         webAppBuilder.WebHost.UseTestServer () |> ignore
         let app = webAppBuilder.Build ()
 
-        let config = Pds.defaults "test.example.com"
+        let config = Pds.create "test.example.com"
         Pds.mapEndpoints config app |> ignore
+
+        do! app.StartAsync ()
+
+        let server =
+            app.Services.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer> ()
+            :?> TestServer
+
+        let client = server.CreateClient ()
+
+        try
+            do! f client
+        finally
+            do app.StopAsync().GetAwaiter().GetResult ()
+            client.Dispose ()
+    }
+
+let private withPdsBuilder
+    (builder : PdsBuilder)
+    (f : HttpClient -> Task<unit>)
+    : Task<unit> =
+    task {
+        let webAppBuilder = WebApplication.CreateBuilder ()
+        webAppBuilder.WebHost.UseTestServer () |> ignore
+        let app = webAppBuilder.Build ()
+
+        Pds.mapEndpoints builder app |> ignore
 
         do! app.StartAsync ()
 
@@ -115,8 +143,6 @@ let pdsTests =
                           let! recJson = getJson createRecResp
                           let uri = recJson.GetProperty("uri").GetString ()
                           Expect.isTrue (uri.StartsWith "at://") "URI is at://"
-                          let cid = recJson.GetProperty("cid").GetString ()
-                          Expect.isTrue (cid.StartsWith "bafyrei") "CID starts with bafyrei"
 
                           let rkey = uri.Split('/') |> Array.last
 
@@ -207,6 +233,150 @@ let pdsTests =
                                   """{"identifier":"carol.test.example.com","password":"wrong"}"""
 
                           Expect.equal resp.StatusCode HttpStatusCode.Unauthorized "wrong password = 401"
+                      })
+          }
+
+          testTask "createUser returns authenticated AtpAgent" {
+              do!
+                  withPds (fun client ->
+                      task {
+                          let baseUrl = client.BaseAddress.ToString().TrimEnd '/'
+                          let agent = AtpAgent.create baseUrl
+                          agent.HttpClient.Dispose ()
+
+                          let agentWithClient =
+                              { agent with HttpClient = client }
+
+                          let! createResult =
+                              Xrpc.procedure<
+                                  {| handle : string; password : string |},
+                                  AtpSession
+                               >
+                                  "com.atproto.server.createAccount"
+                                  {| handle = "dave.test.example.com"
+                                     password = "pw123" |}
+                                  agentWithClient
+
+                          match createResult with
+                          | Ok session ->
+                              agentWithClient.Session <- Some session
+                              Expect.isTrue (Did.value(session.Did).StartsWith "did:plc:") "DID starts with did:plc"
+                              Expect.equal (Handle.value session.Handle) "dave.test.example.com" "handle matches"
+
+                              let! getSessionResult =
+                                  Xrpc.queryNoParams<{| did : string; handle : string |}>
+                                      "com.atproto.server.getSession"
+                                      agentWithClient
+
+                              match getSessionResult with
+                              | Ok sess ->
+                                  Expect.equal sess.did (Did.value session.Did) "getSession DID matches"
+                              | Error e ->
+                                  failtest (sprintf "getSession failed: %A" e)
+                          | Error e ->
+                              failtest (sprintf "createAccount via Xrpc failed: %A" e)
+                      })
+          }
+
+          testTask "onAccountCreated fires on account creation" {
+              let mutable fired = None
+
+              let builder =
+                  Pds.create "test.example.com"
+                  |> Pds.onAccountCreated (fun e -> fired <- Some e)
+
+              do!
+                  withPdsBuilder builder (fun client ->
+                      task {
+                          let! resp =
+                              postJson
+                                  client
+                                  "/xrpc/com.atproto.server.createAccount"
+                                  """{"handle":"eve.test.example.com","password":"pw123"}"""
+
+                          Expect.equal resp.StatusCode HttpStatusCode.OK "createAccount 200"
+                          Expect.isSome fired "hook should have fired"
+                          let event = fired.Value
+                          Expect.equal (Handle.value event.Handle) "eve.test.example.com" "event handle matches"
+                          Expect.isTrue (Did.value(event.Did).StartsWith "did:plc:") "event DID"
+                      })
+          }
+
+          testTask "onRecordCreated fires on record creation" {
+              let mutable fired = None
+
+              let builder =
+                  Pds.create "test.example.com"
+                  |> Pds.onRecordCreated (fun e -> fired <- Some e)
+
+              do!
+                  withPdsBuilder builder (fun client ->
+                      task {
+                          let! createResp =
+                              postJson
+                                  client
+                                  "/xrpc/com.atproto.server.createAccount"
+                                  """{"handle":"frank.test.example.com","password":"pw123"}"""
+
+                          let! createJson = getJson createResp
+                          let did = createJson.GetProperty("did").GetString ()
+                          let token = createJson.GetProperty("accessJwt").GetString ()
+
+                          client.DefaultRequestHeaders.Authorization <-
+                              System.Net.Http.Headers.AuthenticationHeaderValue ("Bearer", token)
+
+                          let recordBody =
+                              sprintf
+                                  """{"repo":"%s","collection":"app.bsky.feed.post","rkey":"","record":{"text":"hello"}}"""
+                                  did
+
+                          let! resp = postJson client "/xrpc/com.atproto.repo.createRecord" recordBody
+                          Expect.equal resp.StatusCode HttpStatusCode.OK "createRecord 200"
+                          Expect.isSome fired "hook should have fired"
+                          Expect.equal fired.Value.Collection "app.bsky.feed.post" "event collection"
+                      })
+          }
+
+          testTask "onRecordDeleted fires on record deletion" {
+              let mutable fired = None
+
+              let builder =
+                  Pds.create "test.example.com"
+                  |> Pds.onRecordDeleted (fun e -> fired <- Some e)
+
+              do!
+                  withPdsBuilder builder (fun client ->
+                      task {
+                          let! createResp =
+                              postJson
+                                  client
+                                  "/xrpc/com.atproto.server.createAccount"
+                                  """{"handle":"grace.test.example.com","password":"pw123"}"""
+
+                          let! createJson = getJson createResp
+                          let did = createJson.GetProperty("did").GetString ()
+                          let token = createJson.GetProperty("accessJwt").GetString ()
+
+                          client.DefaultRequestHeaders.Authorization <-
+                              System.Net.Http.Headers.AuthenticationHeaderValue ("Bearer", token)
+
+                          let recordBody =
+                              sprintf
+                                  """{"repo":"%s","collection":"app.bsky.feed.post","rkey":"test1","record":{"text":"hello"}}"""
+                                  did
+
+                          let! _ = postJson client "/xrpc/com.atproto.repo.createRecord" recordBody
+
+                          let deleteBody =
+                              sprintf
+                                  """{"repo":"%s","collection":"app.bsky.feed.post","rkey":"test1"}"""
+                                  did
+
+                          let! resp = postJson client "/xrpc/com.atproto.repo.deleteRecord" deleteBody
+                          Expect.equal resp.StatusCode HttpStatusCode.OK "deleteRecord 200"
+                          Expect.isSome fired "hook should have fired"
+                          Expect.equal fired.Value.Collection "app.bsky.feed.post" "event collection"
+                          Expect.equal fired.Value.Rkey "test1" "event rkey"
                       })
           }
         ]

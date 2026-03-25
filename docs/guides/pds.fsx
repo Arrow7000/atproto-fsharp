@@ -15,6 +15,13 @@ keywords: fsharp, atproto, pds, personal data server, server, hosting, accounts,
 ## Quick Start
 
 The simplest possible PDS:
+
+```
+// One-liner: starts a PDS on port 3000 (blocking)
+Pds.run "localhost" 3000
+```
+
+For more control, use the builder pipeline:
 *)
 
 (*** hide ***)
@@ -28,40 +35,57 @@ The simplest possible PDS:
 #r "Microsoft.Extensions.Hosting.Abstractions.dll"
 #r "Microsoft.Extensions.Primitives.dll"
 #r "../../src/FSharp.ATProto.Syntax/bin/Release/net10.0/FSharp.ATProto.Syntax.dll"
+#r "../../src/FSharp.ATProto.DRISL/bin/Release/net10.0/FSharp.ATProto.DRISL.dll"
+#r "../../src/FSharp.ATProto.Core/bin/Release/net10.0/FSharp.ATProto.Core.dll"
 #r "../../src/FSharp.ATProto.Crypto/bin/Release/net10.0/FSharp.ATProto.Crypto.dll"
 #r "../../src/FSharp.ATProto.Pds/bin/Release/net10.0/FSharp.ATProto.Pds.dll"
 open FSharp.ATProto.Pds
 open FSharp.ATProto.Crypto
+open FSharp.ATProto.Syntax
+open FSharp.ATProto.Core
 (***)
 
 open FSharp.ATProto.Pds
 
-(**
-```fsharp
-// One-liner: starts a PDS on port 3000 (blocking)
-Pds.run "localhost" 3000
-```
-
-For more control, use the builder pipeline:
-*)
-
 let app =
-    Pds.defaults "my-pds.example.com"
+    Pds.create "my-pds.example.com"
     |> Pds.withPort 3000
     |> Pds.configure
 
 (**
-```fsharp
+```
 app.Run()
 ```
 
-## Configuration
+## Creating Users with `Pds.createUser`
 
-All configuration is done through pipeline functions on the `PdsBuilder`:
+`Pds.start` returns a `RunningPds` that you can interact with programmatically. The star of the show is `Pds.createUser` -- it creates an account on the PDS **and** returns a ready-to-use `AtpAgent`, exactly like `Bluesky.login`:
+
+```
+task {
+    // Start the PDS (non-blocking)
+    let! pds = Pds.create "localhost" |> Pds.withPort 3000 |> Pds.start
+
+    // One call: account is created and agent is authenticated
+    match! Pds.createUser pds "alice.localhost" "password123" with
+    | Ok agent ->
+        // Use the agent exactly like a Bluesky bot
+        let! _ = Bluesky.post agent "Hello from my own PDS!"
+        ()
+    | Error e ->
+        printfn "Failed: %A" e
+
+    do! Pds.stop pds
+}
+```
+
+`Pds.createUser` handles the full lifecycle: it calls `com.atproto.server.createAccount` on the PDS, sets up the session on the returned `AtpAgent`, and gives you back an agent that is ready for any Bluesky operation -- posting, following, liking, everything.
+
+## Configuration
 
 | Function | Default | Description |
 |----------|---------|-------------|
-| `Pds.defaults hostname` | -- | Create a builder with the given hostname |
+| `Pds.create hostname` | -- | Create a builder with the given hostname |
 | `Pds.withPort port` | `2583` | Set the listening port |
 | `Pds.withSigningKey key` | auto-generated P-256 | Use a specific signing key |
 | `Pds.withAdminPassword pw` | `None` | Set the admin password |
@@ -70,32 +94,67 @@ All configuration is done through pipeline functions on the `PdsBuilder`:
 | `Pds.withRefreshTokenLifetime ts` | 90 days | Set refresh token expiry |
 
 ### Invite Codes
-
-To require invite codes for account creation:
 *)
 
 let restrictedApp =
-    Pds.defaults "my-pds.example.com"
+    Pds.create "my-pds.example.com"
     |> Pds.withPort 3000
     |> Pds.withInviteCode "my-secret-invite"
     |> Pds.configure
 
 (**
-Accounts created without the correct code will receive a 400 `InvalidInviteCode` error.
-
 ### Custom Signing Key
-
-By default, a P-256 key is generated on startup. To use a persistent key:
 *)
 
 let key = Keys.generate Algorithm.P256
 
 let appWithKey =
-    Pds.defaults "my-pds.example.com"
+    Pds.create "my-pds.example.com"
     |> Pds.withSigningKey key
     |> Pds.configure
 
 (**
+## Event Hooks
+
+Register handlers that fire when accounts are created, records are written, or records are deleted. Each hook receives a typed event with exactly the relevant data:
+*)
+
+let appWithHooks =
+    Pds.create "my-pds.example.com"
+    |> Pds.withPort 3000
+    |> Pds.onAccountCreated (fun e ->
+        printfn "Welcome @%s (%s)!" (Handle.value e.Handle) (Did.value e.Did))
+    |> Pds.onRecordCreated (fun e ->
+        if e.Collection = "app.bsky.feed.post" then
+            printfn "New post: %s" (AtUri.value e.Uri))
+    |> Pds.onRecordDeleted (fun e ->
+        printfn "Deleted %s/%s" e.Collection e.Rkey)
+    |> Pds.configure
+
+(**
+| Hook | Event Type | Fields |
+|------|-----------|--------|
+| `Pds.onAccountCreated` | `AccountCreatedEvent` | `Did`, `Handle` |
+| `Pds.onRecordCreated` | `RecordCreatedEvent` | `Did`, `Collection`, `Rkey`, `Uri` |
+| `Pds.onRecordDeleted` | `RecordDeletedEvent` | `Did`, `Collection`, `Rkey` |
+
+## Running Modes
+
+| Function | Returns | Use Case |
+|----------|---------|----------|
+| `Pds.run hostname port` | `unit` (blocks) | Simplest one-liner |
+| `Pds.configure builder` | `WebApplication` | ASP.NET Core integration |
+| `Pds.start builder` | `Task<RunningPds>` | Non-blocking, programmatic interaction |
+| `Pds.mapEndpoints builder app` | `WebApplication` | Compose onto an existing app / TestServer |
+
+### `RunningPds` Functions
+
+| Function | Description |
+|----------|-------------|
+| `Pds.url pds` | Get the base URL |
+| `Pds.createUser pds handle password` | Create account + return authenticated `AtpAgent` |
+| `Pds.stop pds` | Graceful shutdown |
+
 ## Endpoints
 
 The PDS implements the following AT Protocol endpoints:
@@ -104,38 +163,31 @@ The PDS implements the following AT Protocol endpoints:
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `com.atproto.server.describeServer` | GET | -- | Server metadata (DID, available domains, invite requirements) |
-| `com.atproto.server.createAccount` | POST | -- | Register a new account (handle + password) |
-| `com.atproto.server.createSession` | POST | -- | Authenticate with handle/DID + password |
-| `com.atproto.server.refreshSession` | POST | Bearer (refresh) | Exchange a refresh token for new tokens |
+| `com.atproto.server.describeServer` | GET | -- | Server metadata |
+| `com.atproto.server.createAccount` | POST | -- | Register a new account |
+| `com.atproto.server.createSession` | POST | -- | Log in with handle/DID + password |
+| `com.atproto.server.refreshSession` | POST | Bearer (refresh) | Exchange refresh token for new tokens |
 | `com.atproto.server.deleteSession` | POST | Bearer | Revoke the current session |
-| `com.atproto.server.getSession` | GET | Bearer | Get the current session (DID + handle) |
+| `com.atproto.server.getSession` | GET | Bearer | Get current session info |
 
 ### Repository
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `com.atproto.repo.createRecord` | POST | Bearer | Create a record in the authenticated user's repo |
-| `com.atproto.repo.getRecord` | GET | -- | Retrieve a record by repo + collection + rkey |
-| `com.atproto.repo.deleteRecord` | POST | Bearer | Delete a record from the authenticated user's repo |
+| `com.atproto.repo.createRecord` | POST | Bearer | Create a record |
+| `com.atproto.repo.getRecord` | GET | -- | Retrieve a record |
+| `com.atproto.repo.deleteRecord` | POST | Bearer | Delete a record |
 | `com.atproto.repo.listRecords` | GET | -- | List records in a collection |
 
-### Identity
-
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `com.atproto.identity.resolveHandle` | GET | -- | Resolve a handle to a DID |
-
-### Other
+### Identity and Health
 
 | Path | Method | Description |
 |------|--------|-------------|
-| `/_health` | GET | Health check (returns `{ "version": "1.0.0" }`) |
-| `/.well-known/atproto-did` | GET | Handle verification (returns the server's DID) |
+| `com.atproto.identity.resolveHandle` | GET | Resolve handle to DID |
+| `/_health` | GET | Health check |
+| `/.well-known/atproto-did` | GET | Handle verification |
 
 ## Composing with Other Servers
-
-`Pds.mapEndpoints` maps all PDS endpoints onto an existing `WebApplication`, so you can compose PDS functionality with your own routes or other AT Protocol server components:
 *)
 
 (*** hide ***)
@@ -146,7 +198,7 @@ let combined =
     let builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder()
     let webApp = builder.Build()
 
-    let pdsConfig = Pds.defaults "my-pds.example.com"
+    let pdsConfig = Pds.create "my-pds.example.com"
     Pds.mapEndpoints pdsConfig webApp |> ignore
 
     webApp.MapGet("/my-custom-route", System.Func<string>(fun () -> "hello"))
@@ -155,38 +207,6 @@ let combined =
     webApp
 
 (**
-```fsharp
-combined.Run()
-```
-
-This is particularly useful for testing with ASP.NET Core's `TestServer`:
-
-```fsharp
-let builder = WebApplication.CreateBuilder()
-builder.WebHost.UseTestServer() |> ignore
-let app = builder.Build()
-
-Pds.mapEndpoints (Pds.defaults "test.example.com") app |> ignore
-
-do! app.StartAsync()
-let server = app.Services.GetRequiredService<IServer>() :?> TestServer
-let client = server.CreateClient()
-
-// Now use client to make requests against the PDS
-let! response = client.PostAsync("/xrpc/com.atproto.server.createAccount", ...)
-```
-
-## Connecting with the Client Library
-
-A PDS created with `FSharp.ATProto.Pds` speaks the standard AT Protocol, so the client library (`FSharp.ATProto.Core` / `FSharp.ATProto.Bluesky`) connects to it like any other PDS:
-
-```fsharp
-open FSharp.ATProto.Core
-
-// Point the client at your local PDS
-let! loginResult = Bluesky.login "http://localhost:3000" "alice.my-pds.com" "password123"
-```
-
 ## Storage
 
 All state is held in-memory using concurrent dictionaries. Data is lost on restart. This makes the PDS ideal for:

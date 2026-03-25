@@ -6,6 +6,25 @@ open System.Security.Cryptography
 open System.Text.Json
 open FSharp.ATProto.Syntax
 open FSharp.ATProto.Crypto
+open Microsoft.AspNetCore.Builder
+
+/// Fired when a new account is created on the PDS.
+type AccountCreatedEvent =
+    { Did : Did
+      Handle : Handle }
+
+/// Fired when a record is created in a repository.
+type RecordCreatedEvent =
+    { Did : Did
+      Collection : string
+      Rkey : string
+      Uri : AtUri }
+
+/// Fired when a record is deleted from a repository.
+type RecordDeletedEvent =
+    { Did : Did
+      Collection : string
+      Rkey : string }
 
 type PdsAccount =
     { Did : Did
@@ -48,11 +67,20 @@ and PdsBuilder =
       InviteRequired : bool
       InviteCode : string option
       AccessTokenLifetime : TimeSpan
-      RefreshTokenLifetime : TimeSpan }
+      RefreshTokenLifetime : TimeSpan
+      OnAccountCreated : (AccountCreatedEvent -> unit) option
+      OnRecordCreated : (RecordCreatedEvent -> unit) option
+      OnRecordDeleted : (RecordDeletedEvent -> unit) option }
+
+/// A running PDS instance that can be interacted with programmatically.
+type RunningPds =
+    { App : WebApplication
+      Url : string
+      State : PdsState }
 
 module PdsBuilder =
 
-    let defaults (hostname : string) : PdsBuilder =
+    let create (hostname : string) : PdsBuilder =
         { Hostname = hostname
           Port = 2583
           SigningKey = None
@@ -60,7 +88,10 @@ module PdsBuilder =
           InviteRequired = false
           InviteCode = None
           AccessTokenLifetime = TimeSpan.FromHours 2.0
-          RefreshTokenLifetime = TimeSpan.FromDays 90.0 }
+          RefreshTokenLifetime = TimeSpan.FromDays 90.0
+          OnAccountCreated = None
+          OnRecordCreated = None
+          OnRecordDeleted = None }
 
 module internal Passwords =
 
